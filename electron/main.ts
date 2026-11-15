@@ -79,7 +79,10 @@ function createWindow() {
     trafficLightPosition: { x: 12, y: 12 },
   });
 
-  mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
+  // 批4修复：__dirname = <root>/dist-electron/electron（tsc 因 ipc-types 跨目录引用使
+  // rootDir 上浮，产物保留 electron/ 子目录），需上跳两级到项目根 dist/
+  // 打包后 app 根同时含 dist/ 与 dist-electron/electron/，相对关系不变
+  mainWindow.loadFile(path.join(__dirname, '../../dist/index.html'));
 
   mainWindow.on('ready-to-show', () => {
     if (mainWindow) {

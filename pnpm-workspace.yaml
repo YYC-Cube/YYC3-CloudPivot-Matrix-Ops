@@ -4,6 +4,12 @@ allowBuilds:
   electron: true
   electron-winstaller: true
   esbuild: true
+# pnpm 10 兼容字段（pnpm 11 起改读 allowBuilds；本机 10.17 仅识别本字段，
+# 缺失时 electron postinstall 被静默跳过 → Electron 二进制不落盘）
+onlyBuiltDependencies:
+  - electron
+  - esbuild
+  - electron-winstaller
 overrides:
   # @electron/rebuild@3.7.2 上游以 git+ssh 形式声明 @electron/node-gyp，
   # pnpm 11 再生成锁文件时改走 SSH clone，CI（无 SSH 密钥）安装失败。
