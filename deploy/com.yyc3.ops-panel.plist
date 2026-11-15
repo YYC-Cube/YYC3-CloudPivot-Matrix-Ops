@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  YYC³ PivotMatrix Ops — 生产面板 macOS LaunchAgent（开机自启 · 崩溃自愈）
+
+  功能：node deploy/server.mjs — 0.0.0.0:3118 静态托管 dist/ + Ollama 反代 + SPA 回退
+  （批4部署新增；旧 com.yyc3.dashboard.plist 指向已废弃的 Cloudpivotintellimatrix
+    旧仓库路径，保留不删但不再使用）
+
+  安装:
+    cp deploy/com.yyc3.ops-panel.plist ~/Library/LaunchAgents/
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.yyc3.ops-panel.plist
+
+  管理:
+    launchctl kickstart -k gui/$(id -u)/com.yyc3.ops-panel   # 重启
+    launchctl bootout gui/$(id -u)/com.yyc3.ops-panel         # 卸载
+    curl http://localhost:3118/                               # 探活
+
+  日志:
+    tail -f ~/Library/Logs/yyc3/ops-panel.log
+-->
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.yyc3.ops-panel</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/opt/homebrew/bin/node</string>
+        <string>/Users/yanyu/YYC-Cube/personal/YYC3-Cloud-Matrix/deploy/server.mjs</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/yanyu/YYC-Cube/personal/YYC3-Cloud-Matrix</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PORT</key>
+        <string>3118</string>
+        <key>HOST</key>
+        <string>0.0.0.0</string>
+        <key>OLLAMA_HOST</key>
+        <string>127.0.0.1</string>
+        <key>OLLAMA_PORT</key>
+        <string>11434</string>
+    </dict>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>KeepAlive</key>
+    <true/>
+
+    <!-- 异常退出后 10s 重启，避免崩溃风暴 -->
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+
+    <key>StandardOutPath</key>
+    <string>/Users/yanyu/Library/Logs/yyc3/ops-panel.log</string>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/yanyu/Library/Logs/yyc3/ops-panel-err.log</string>
+</dict>
+</plist>
