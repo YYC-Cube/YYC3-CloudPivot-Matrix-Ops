@@ -48,13 +48,11 @@ export interface Achievement {
   color: string;
 }
 
-const SEED_COURSES: Course[] = [
-  { id: "course-1", title: "LLM Prompt Engineering 实战", mentor: "言启·千行", progress: 72, total: 12, done: 9, color: "#FFD700" },
-  { id: "course-2", title: "数据驱动的商业洞察方法论", mentor: "语枢·万物", progress: 45, total: 8, done: 4, color: "#FF69B4" },
-  { id: "course-3", title: "时序预测与异常检测", mentor: "预见·先知", progress: 30, total: 10, done: 3, color: "#00BFFF" },
-  { id: "course-4", title: "TypeScript 类型体操进阶", mentor: "格物·宗师", progress: 88, total: 15, done: 13, color: "#C0C0C0" },
-  { id: "course-5", title: "赛博朋克 UI/UX 设计", mentor: "创想·灵韵", progress: 55, total: 8, done: 4, color: "#FF7043" },
-];
+// 课程为用户真实创建/真实进度的数据，绝不预置伪造课程
+const SEED_COURSES: Course[] = [];
+
+// 历史假课程种子 ID（v0 写入），migrate 时精确清除
+const LEGACY_FAKE_COURSE_IDS = new Set(["course-1", "course-2", "course-3", "course-4", "course-5"]);
 
 export interface AchievementData {
   id: string;
@@ -65,14 +63,18 @@ export interface AchievementData {
   color: string;
 }
 
+// 成就定义（模板）：获得状态 earned 必须由真实行为触发，初始一律 false
 const SEED_ACHIEVEMENTS: AchievementData[] = [
-  { id: "ach-1", name: "初入家门", desc: "完成首次登录并了解8位家人", earned: true, iconName: "Award", color: "#FFD700" },
-  { id: "ach-2", name: "知识探索者", desc: "阅读10篇家人分享的知识文档", earned: true, iconName: "BookOpen", color: "#00d4ff" },
-  { id: "ach-3", name: "对话达人", desc: "与每位家人至少对话一次", earned: true, iconName: "Brain", color: "#FF69B4" },
-  { id: "ach-4", name: "技能大师", desc: "任意技能达到满级", earned: true, iconName: "Award", color: "#00FF88" },
+  { id: "ach-1", name: "初入家门", desc: "完成首次登录并了解8位家人", earned: false, iconName: "Award", color: "#FFD700" },
+  { id: "ach-2", name: "知识探索者", desc: "阅读10篇家人分享的知识文档", earned: false, iconName: "BookOpen", color: "#00d4ff" },
+  { id: "ach-3", name: "对话达人", desc: "与每位家人至少对话一次", earned: false, iconName: "Brain", color: "#FF69B4" },
+  { id: "ach-4", name: "技能大师", desc: "任意技能达到满级", earned: false, iconName: "Award", color: "#00FF88" },
   { id: "ach-5", name: "安全卫士", desc: "完成安全合规课程全部章节", earned: false, iconName: "Shield", color: "#BF00FF" },
   { id: "ach-6", name: "架构先锋", desc: "完成系统架构课程并通过考核", earned: false, iconName: "Database", color: "#FF6B6B" },
 ];
+
+// 历史预置成就 ID：migrate 时重置其 earned 为 false（用户手动 toggle 的同名模板也一并归零，保证真实性）
+const LEGACY_PRESET_ACHIEVEMENT_IDS = new Set(["ach-1", "ach-2", "ach-3", "ach-4", "ach-5", "ach-6"]);
 
 interface FamilySkillsSlice {
   courses: Course[];
@@ -133,6 +135,26 @@ export const useFamilySkillsSlice = create<FamilySkillsSlice>()(
           ),
         })),
     }),
-    { name: "yyc3-family-skills" },
+    {
+      name: "yyc3-family-skills",
+      version: 1,
+      migrate: (persisted, version) => {
+        // v0 → v1：清除假课程种子；预置成就 earned 归零（获得状态必须真实）
+        const state = persisted as
+          | { courses?: Array<{ id: string }>; achievements?: AchievementData[] }
+          | undefined;
+        if (version < 1 && state) {
+          if (Array.isArray(state.courses)) {
+            state.courses = state.courses.filter((c) => !LEGACY_FAKE_COURSE_IDS.has(c.id));
+          }
+          if (Array.isArray(state.achievements)) {
+            state.achievements = state.achievements.map((a) =>
+              LEGACY_PRESET_ACHIEVEMENT_IDS.has(a.id) ? { ...a, earned: false } : a,
+            );
+          }
+        }
+        return state;
+      },
+    },
   ),
 );

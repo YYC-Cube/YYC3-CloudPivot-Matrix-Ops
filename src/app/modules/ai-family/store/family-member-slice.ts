@@ -263,21 +263,44 @@ export const useFamilyMemberSlice = create<FamilyMemberSlice>()(
     }),
     {
       name: 'yyc3-family-members',
-      version: 1,
+      version: 2,
       // 持久化成员数据（模型分配、语音、勋章、人格等用户可编辑字段）
-      partialize: (state) => ({ members: state.members }),
+      // 注意：icon 是 lucide forwardRef 对象，不可序列化——持久化时剔除，rehydrate 时按 id 从默认表恢复
+      partialize: (state) => ({
+        members: state.members.map((m) => {
+          const { icon: _icon, ...rest } = m;
+          return rest;
+        }),
+      }),
       migrate: (persisted, version) => {
         const state = persisted as { members?: UnifiedFamilyMember[] } | undefined;
-        if (version < 1 && state?.members) {
-          // v0 → v1：为历史成员回填三件套人格，用户已编辑的 systemPrompt 保留
-          return {
-            members: state.members.map((m) => ({
+        if (state?.members) {
+          // 任意版本：剔除历史误存的 icon（v1 曾把 forwardRef 对象序列化为 {}，导致渲染崩溃）
+          state.members = state.members.map((m) => {
+            const { icon: _icon, ...rest } = m;
+            return rest as UnifiedFamilyMember;
+          });
+          if (version < 1) {
+            // v0 → v1：为历史成员回填三件套人格，用户已编辑的 systemPrompt 保留
+            state.members = state.members.map((m) => ({
               ...m,
               systemPrompt: m.systemPrompt ?? FAMILY_SYSTEM_PROMPTS[m.id],
-            })),
-          };
+            }));
+          }
         }
         return state as { members: UnifiedFamilyMember[] };
+      },
+      merge: (persisted, current) => {
+        const p = persisted as { members?: UnifiedFamilyMember[] } | undefined;
+        if (!p?.members) { return current; }
+        const iconMap = new Map(DEFAULT_MEMBERS.map((m) => [m.id, m.icon]));
+        return {
+          ...current,
+          members: p.members.map((m) => ({
+            ...m,
+            icon: iconMap.get(m.id) ?? DEFAULT_MEMBERS[0].icon,
+          })),
+        };
       },
     }
   )

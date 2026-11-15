@@ -4,7 +4,7 @@
  * @author: YanYuCloudCube Team
  * @version: v1.0.0
  * @created: 2026-03-31
- * @updated: 2026-03-31
+ * @updated: 2026-11-16
  * @status: active
  * @tags: [component]
  */
@@ -14,15 +14,6 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import { Login } from "../modules/shared/Login";
-import { supabase } from "../lib/supabaseClient";
-
-vi.mock("../lib/supabaseClient", () => ({
-  supabase: {
-    auth: {
-      signInWithPassword: vi.fn(),
-    },
-  },
-}));
 
 vi.mock("../modules/shared/YYC3Logo", () => ({
   YYC3Logo: () => <div data-testid="yyc3-logo">YYC3 Logo</div>,
@@ -62,6 +53,12 @@ describe("Login Component", () => {
     expect(screen.queryByText(/GHOST MODE/i)).not.toBeInTheDocument();
   });
 
+  it("should not show fake demo account hint", () => {
+    render(<Login onLoginSuccess={mockOnLoginSuccess} onGhostLogin={mockOnGhostLogin} />);
+
+    expect(screen.queryByText(/Demo 账号/i)).not.toBeInTheDocument();
+  });
+
   it("should update email and password inputs", () => {
     render(<Login onLoginSuccess={mockOnLoginSuccess} />);
 
@@ -87,77 +84,21 @@ describe("Login Component", () => {
     expect(passwordInput).toHaveAttribute("type", "text");
   });
 
-  it("should call onLoginSuccess on successful login", async () => {
-    vi.mocked(supabase.auth.signInWithPassword).mockResolvedValue({
-      data: {
-        user: { id: "1", email: "test@example.com", role: "admin" as const, name: "Test User" },
-        session: {
-          user: { id: "1", email: "test@example.com", role: "admin" as const, name: "Test User" },
-          token: "mock_token",
-          expiresAt: Date.now() + 8 * 60 * 60 * 1000,
-        },
-      },
-      error: null,
-    });
+  it("should enter on submit without credentials when ghost login is available", () => {
+    render(<Login onLoginSuccess={mockOnLoginSuccess} onGhostLogin={mockOnGhostLogin} />);
 
-    render(<Login onLoginSuccess={mockOnLoginSuccess} />);
+    fireEvent.click(screen.getByTestId("login-submit-button"));
 
-    const emailInput = screen.getByTestId("login-email-input");
-    const passwordInput = screen.getByTestId("login-password-input");
-    const loginButton = screen.getByTestId("login-submit-button");
-
-    fireEvent.change(emailInput, { target: { value: "test@example.com" } });
-    fireEvent.change(passwordInput, { target: { value: "password123" } });
-    fireEvent.click(loginButton);
-
-    await waitFor(() => {
-      expect(mockOnLoginSuccess).toHaveBeenCalled();
-    });
+    expect(mockOnGhostLogin).toHaveBeenCalledTimes(1);
+    expect(mockOnLoginSuccess).not.toHaveBeenCalled();
   });
 
-  it("should show error message on login failure", async () => {
-    vi.mocked(supabase.auth.signInWithPassword).mockResolvedValue({
-      data: null,
-      error: { message: "Invalid credentials" },
-    });
-
+  it("should fall back to onLoginSuccess when ghost login is unavailable", () => {
     render(<Login onLoginSuccess={mockOnLoginSuccess} />);
 
-    const emailInput = screen.getByTestId("login-email-input");
-    const passwordInput = screen.getByTestId("login-password-input");
-    const loginButton = screen.getByTestId("login-submit-button");
+    fireEvent.click(screen.getByTestId("login-submit-button"));
 
-    fireEvent.change(emailInput, { target: { value: "test@example.com" } });
-    fireEvent.change(passwordInput, { target: { value: "wrongpassword" } });
-    fireEvent.click(loginButton);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Invalid credentials/i)).toBeInTheDocument();
-    });
-  });
-
-  it("should disable login button during loading", async () => {
-    let resolveLogin: any;
-    vi.mocked(supabase.auth.signInWithPassword).mockImplementation(
-      () => new Promise((resolve) => {
-        resolveLogin = resolve;
-      })
-    );
-
-    render(<Login onLoginSuccess={mockOnLoginSuccess} />);
-
-    const emailInput = screen.getByTestId("login-email-input");
-    const passwordInput = screen.getByTestId("login-password-input");
-    const loginButton = screen.getByTestId("login-submit-button");
-
-    fireEvent.change(emailInput, { target: { value: "test@example.com" } });
-    fireEvent.change(passwordInput, { target: { value: "password123" } });
-    fireEvent.click(loginButton);
-
-    expect(loginButton).toBeDisabled();
-
-    // Resolve the promise
-    resolveLogin({ data: { user: { id: "1", email: "test@example.com", role: "admin" as const, name: "Test User" } }, error: null });
+    expect(mockOnLoginSuccess).toHaveBeenCalledTimes(1);
   });
 
   it("should call onGhostLogin when ghost mode is activated", async () => {
@@ -192,65 +133,5 @@ describe("Login Component", () => {
     await waitFor(() => {
       expect(mockOnGhostLogin).toHaveBeenCalledTimes(1);
     }, { timeout: 1000 });
-  });
-
-  it("should clear error when ghost mode is activated", async () => {
-    vi.mocked(supabase.auth.signInWithPassword).mockResolvedValue({
-      data: null,
-      error: { message: "Invalid credentials" },
-    });
-
-    render(
-      <Login
-        onLoginSuccess={mockOnLoginSuccess}
-        onGhostLogin={mockOnGhostLogin}
-      />
-    );
-
-    const emailInput = screen.getByTestId("login-email-input");
-    const passwordInput = screen.getByTestId("login-password-input");
-    const loginButton = screen.getByTestId("login-submit-button");
-
-    fireEvent.change(emailInput, { target: { value: "test@example.com" } });
-    fireEvent.change(passwordInput, { target: { value: "wrongpassword" } });
-    fireEvent.click(loginButton);
-
-    await waitFor(() => {
-      expect(screen.getByText(/Invalid credentials/i)).toBeInTheDocument();
-    });
-
-    const ghostButtons = screen.getAllByText(/GHOST MODE/i);
-    fireEvent.click(ghostButtons[0].closest("button")!);
-
-    await waitFor(() => {
-      expect(screen.queryByText(/Invalid credentials/i)).not.toBeInTheDocument();
-    }, { timeout: 1000 });
-  });
-
-  it("should show network error on exception", async () => {
-    vi.mocked(supabase.auth.signInWithPassword).mockRejectedValue(new Error("Network error"));
-
-    render(<Login onLoginSuccess={mockOnLoginSuccess} />);
-
-    const emailInput = screen.getByTestId("login-email-input");
-    const passwordInput = screen.getByTestId("login-password-input");
-    const loginButton = screen.getByTestId("login-submit-button");
-
-    fireEvent.change(emailInput, { target: { value: "test@example.com" } });
-    fireEvent.change(passwordInput, { target: { value: "password123" } });
-    fireEvent.click(loginButton);
-
-    await waitFor(() => {
-      expect(screen.getByText(/登录失败，请检查网络连接/i)).toBeInTheDocument();
-    });
-  });
-
-  it("should not submit form with empty fields", async () => {
-    render(<Login onLoginSuccess={mockOnLoginSuccess} />);
-
-    const loginButton = screen.getByTestId("login-submit-button");
-    fireEvent.click(loginButton);
-
-    expect(mockOnLoginSuccess).not.toHaveBeenCalled();
   });
 });

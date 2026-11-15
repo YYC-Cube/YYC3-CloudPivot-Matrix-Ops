@@ -230,16 +230,18 @@ describe("AIFamilyPage", () => {
   });
 
   // ──────────────────────────────────────────────────────────
-  //  Test 3: 右上角状态徽章渲染（在线/活跃任务/运行时间）
+  //  Test 3: 右上角状态徽章（仅保留实算的在线徽章，假统计已清除）
   // ──────────────────────────────────────────────────────────
-  it("3. should render top-right status badges (online / activeTasks / uptime)", () => {
+  it("3. should render real online badge and no fake statistics", () => {
     render(<AIFamilyPage />);
     expect(screen.getByText("在线")).toBeInTheDocument();
-    expect(screen.getByText("活跃任务")).toBeInTheDocument();
-    expect(screen.getByText("运行时间")).toBeInTheDocument();
+    // 默认成员 7 online + 1 idle → 实算 7/8（由 members 状态推导，非硬编码）
     expect(screen.getByText("7/8")).toBeInTheDocument();
-    expect(screen.getByText("142")).toBeInTheDocument();
-    expect(screen.getByText("99.97%")).toBeInTheDocument();
+    // 假统计徽标必须不存在
+    expect(screen.queryByText("活跃任务")).not.toBeInTheDocument();
+    expect(screen.queryByText("运行时间")).not.toBeInTheDocument();
+    expect(screen.queryByText("142")).not.toBeInTheDocument();
+    expect(screen.queryByText("99.97%")).not.toBeInTheDocument();
   });
 
   // ──────────────────────────────────────────────────────────
@@ -300,7 +302,8 @@ describe("AIFamilyPage", () => {
     expect(screen.getByText("角色定位")).toBeInTheDocument();
     expect(screen.getByText("核心职责")).toBeInTheDocument();
     expect(screen.getByText("核心能力")).toBeInTheDocument();
-    expect(screen.getByText("运行指标")).toBeInTheDocument();
+    // 伪随机生成的「运行指标」区块已删除
+    expect(screen.queryByText("运行指标")).not.toBeInTheDocument();
   });
 
   // ──────────────────────────────────────────────────────────

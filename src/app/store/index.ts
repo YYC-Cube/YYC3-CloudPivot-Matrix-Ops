@@ -25,7 +25,6 @@ export type { PoolConfig } from './slices/db-conn-slice';
 export { useUserMgmtSlice } from './slices/user-mgmt-slice';
 export { useNetworkSlice } from './slices/network-slice';
 export { useFollowUpSlice } from './slices/follow-up-slice';
-export { useModelSlice } from './slices/model-slice';
 export { useFamilyMemberSlice, useFamilyMessageSlice, useFamilySettingsSlice } from '../modules/ai-family/store';
 export { useProviderSlice } from './slices/provider-slice';
 export { useAISuggestionSlice } from './slices/ai-suggestion-slice';

@@ -134,7 +134,6 @@ export default function MyComponent({ title, onAction }: Props) {
 **Slice 列表**:
 - useNodeSlice: 节点数据 (persist)
 - useMetricsSlice: 图表指标 (persist)
-- useModelSlice: 模型配置 (persist)
 - useFollowUpSlice: 跟进数据 (persist)
 - useUserMgmtSlice: 用户管理 (persist)
 - useAISuggestionSlice: AI 分析结果 (persist)

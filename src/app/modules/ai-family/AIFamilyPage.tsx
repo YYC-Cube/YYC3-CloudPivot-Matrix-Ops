@@ -17,7 +17,6 @@ import {
   Sparkles,
   Users,
   X,
-  Zap,
 } from "lucide-react";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useClockMinutes } from "../../hooks/useClock";
@@ -458,11 +457,14 @@ export function AIFamilyPage() {
         </p>
       </div>
 
-      {/* ======== Top-right stats ======== */}
+      {/* ======== Top-right stats（真实：在线数实算成员状态；无真实来源的假指标已移除） ======== */}
       <div className="absolute top-4 right-5 z-10 flex items-center gap-3">
-        <StatusBadge icon={Activity} label={t("aiFamily.online")} value="7/8" color="#00FF88" />
-        <StatusBadge icon={Zap} label={t("aiFamily.activeTasks")} value="142" color="#FFD700" />
-        <StatusBadge icon={Clock} label={t("aiFamily.uptime")} value="99.97%" color="#00BFFF" />
+        <StatusBadge
+          icon={Activity}
+          label={t("aiFamily.online")}
+          value={`${members.filter((m) => m.status !== "idle").length}/${members.length}`}
+          color="#00FF88"
+        />
       </div>
 
       {/* ======== Bottom slogan ======== */}
@@ -515,17 +517,6 @@ function StatusBadge({ icon: Icon, label, value, color }: {
 
 function MemberDetailDrawer({ member, onClose }: { member: ClockMember; onClose: () => void }) {
   const Icon = member.icon;
-
-  const metrics = useMemo(() => {
-    const seed = member.id.split("").reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
-    const pseudoRandom = ((seed * 9301 + 49297) % 233280) / 233280;
-    return {
-      tasks: Math.floor(pseudoRandom * 500) + 100,
-      latency: Math.floor(pseudoRandom * 80) + 20,
-      accuracy: (95 + pseudoRandom * 4.5).toFixed(1),
-      calls: Math.floor(pseudoRandom * 200) + 50,
-    };
-  }, [member.id]);
 
   return (
     <>
@@ -647,16 +638,7 @@ function MemberDetailDrawer({ member, onClose }: { member: ClockMember; onClose:
           </div>
         </div>
 
-        {/* Activity Metrics (mock) */}
-        <div className="px-6 mt-5 mb-6">
-          <SectionTitle label="运行指标" color={member.color} />
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            <MetricCard label="今日处理" value={`${metrics.tasks}`} unit="tasks" color={member.color} />
-            <MetricCard label="平均延迟" value={`${metrics.latency}`} unit="ms" color="#00BFFF" />
-            <MetricCard label="准确率" value={`${metrics.accuracy}`} unit="%" color="#00FF88" />
-            <MetricCard label="协作次数" value={`${metrics.calls}`} unit="calls" color="#BF00FF" />
-          </div>
-        </div>
+        {/* 真实运行指标暂无数据来源（待 agent 采集扩展后接入），不展示伪造数值 */}
 
         {/* Quick actions */}
         <div className="px-6 pb-6 mt-auto">
@@ -707,26 +689,6 @@ function SectionTitle({ label, color }: { label: string; color: string }) {
       <span style={{ fontSize: "0.62rem", color: "rgba(0,240,255,0.5)", letterSpacing: "1px" }}>
         {label}
       </span>
-    </div>
-  );
-}
-
-function MetricCard({ label, value, unit, color }: {
-  label: string; value: string; unit: string; color: string;
-}) {
-  return (
-    <div
-      className="px-3 py-2 rounded-lg"
-      style={{
-        background: "rgba(0,40,80,0.15)",
-        border: "1px solid rgba(0,180,255,0.06)",
-      }}
-    >
-      <p style={{ fontSize: "0.5rem", color: "rgba(192,220,240,0.35)" }}>{label}</p>
-      <div className="flex items-baseline gap-1 mt-0.5">
-        <span style={{ fontSize: "0.85rem", color, textShadow: `0 0 6px ${color}30` }}>{value}</span>
-        <span style={{ fontSize: "0.45rem", color: "rgba(192,220,240,0.3)" }}>{unit}</span>
-      </div>
     </div>
   );
 }

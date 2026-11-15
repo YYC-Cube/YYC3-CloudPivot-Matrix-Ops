@@ -10,9 +10,8 @@
  */
 
 import React, { useState, useCallback } from "react";
-import { Lock, Mail, Eye, EyeOff, AlertCircle, Zap, Ghost } from "lucide-react";
+import { Lock, Mail, Eye, EyeOff, Zap, Ghost } from "lucide-react";
 import { APP_BRAND } from "../../config/app-brand";
-import { supabase } from "../../lib/supabaseClient";
 import { YYC3Logo } from "./YYC3Logo";
 
 interface LoginProps {
@@ -24,42 +23,25 @@ export function Login({ onLoginSuccess, onGhostLogin }: LoginProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPwd, setShowPwd] = useState(false);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
   const [ghostHover, setGhostHover] = useState(false);
   const [ghostActivating, setGhostActivating] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  /**
+   * 本地闭环系统 · 无后端鉴权
+   * 主登录按钮点击即进入（幽灵语义），账密输入框仅为视觉引导，不做校验。
+   */
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    setLoading(true);
-
-    try {
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (authError) {
-        setError(authError.message);
-        setLoading(false);
-        return;
-      }
-
-      if (data) {
-        onLoginSuccess();
-      }
-    } catch {
-      setError("登录失败，请检查网络连接");
-    } finally {
-      setLoading(false);
+    if (onGhostLogin) {
+      onGhostLogin();
+    } else {
+      onLoginSuccess();
     }
   };
 
   const handleGhostLogin = useCallback(() => {
     if (!onGhostLogin || ghostActivating) {return;}
     setGhostActivating(true);
-    setError("");
     // Brief visual delay for the activation effect
     setTimeout(() => {
       onGhostLogin();
@@ -137,8 +119,7 @@ export function Login({ onLoginSuccess, onGhostLogin }: LoginProps) {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="admin@cloudpivot.local"
-                  required
+                  placeholder="输入邮箱（可选）"
                   data-testid="login-email-input"
                   className="w-full pl-10 pr-4 py-3 rounded-xl bg-[rgba(0,40,80,0.4)] border border-[rgba(0,180,255,0.15)] text-[#e0f0ff] placeholder-[rgba(0,212,255,0.25)] focus:outline-none focus:border-[rgba(0,212,255,0.5)] focus:shadow-[0_0_15px_rgba(0,180,255,0.1)] transition-all"
                   style={{ fontSize: "0.85rem" }}
@@ -157,8 +138,7 @@ export function Login({ onLoginSuccess, onGhostLogin }: LoginProps) {
                   type={showPwd ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="输入密码"
-                  required
+                  placeholder="输入密码（可选）"
                   data-testid="login-password-input"
                   className="w-full pl-10 pr-12 py-3 rounded-xl bg-[rgba(0,40,80,0.4)] border border-[rgba(0,180,255,0.15)] text-[#e0f0ff] placeholder-[rgba(0,212,255,0.25)] focus:outline-none focus:border-[rgba(0,212,255,0.5)] focus:shadow-[0_0_15px_rgba(0,180,255,0.1)] transition-all"
                   style={{ fontSize: "0.85rem" }}
@@ -176,30 +156,14 @@ export function Login({ onLoginSuccess, onGhostLogin }: LoginProps) {
               </div>
             </div>
 
-            {/* Error */}
-            {error && (
-              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[rgba(255,51,102,0.08)] border border-[rgba(255,51,102,0.2)]">
-                <AlertCircle className="w-4 h-4 text-[#ff3366] shrink-0" />
-                <span className="text-[#ff3366]" style={{ fontSize: "0.75rem" }}>{error}</span>
-              </div>
-            )}
-
-            {/* Submit */}
+            {/* Submit · 点击即进入 */}
             <button
               type="submit"
-              disabled={loading}
               data-testid="login-submit-button"
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-[#00d4ff] to-[#0066ff] text-white transition-all hover:shadow-[0_0_25px_rgba(0,180,255,0.4)] disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden min-h-[48px]"
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-[#00d4ff] to-[#0066ff] text-white transition-all hover:shadow-[0_0_25px_rgba(0,180,255,0.4)] relative overflow-hidden min-h-[48px]"
               style={{ fontSize: "0.9rem", letterSpacing: "0.1em" }}
             >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  验证中...
-                </span>
-              ) : (
-                "登 录"
-              )}
+              进入系统
             </button>
           </form>
 
@@ -290,11 +254,6 @@ export function Login({ onLoginSuccess, onGhostLogin }: LoginProps) {
             <div className="flex items-center gap-2 text-[rgba(0,212,255,0.3)]" style={{ fontSize: "0.65rem" }}>
               <Zap className="w-3 h-3" />
               <span>本地闭环系统 · YYC³ Family 内部专用</span>
-            </div>
-            <div className="mt-2 px-3 py-2 rounded-lg bg-[rgba(0,40,80,0.15)] border border-[rgba(0,180,255,0.06)]">
-              <p className="text-[rgba(0,212,255,0.3)]" style={{ fontSize: "0.62rem" }}>
-                Demo 账号: admin@cloudpivot.local / admin123
-              </p>
             </div>
           </div>
         </div>

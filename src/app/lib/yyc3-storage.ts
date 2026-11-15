@@ -494,7 +494,6 @@ export const LOCALSTORAGE_KEYS = {
   followUpSlice: "yyc3-follow-up-slice",
   metricsSlice: "yyc3-metrics-slice",
   logSlice: "yyc3-log-slice",
-  modelSlice: "yyc3-model-slice",
   networkSlice: "yyc3-network-slice",
   userMgmtSlice: "yyc3-user-mgmt-slice",
   familyMemberSlice: "yyc3-family-members",
