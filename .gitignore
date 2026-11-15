@@ -23,3 +23,8 @@ Thumbs.db
 # 本机个人配置 (MCP / IDE 本地环境)
 yyc3-cn-assistant.json
 .vscode/
+
+# 本机工具产物（安全扫描/视频代理/浏览器工具）
+.mimosa/
+.v2c/
+.video_agent/
