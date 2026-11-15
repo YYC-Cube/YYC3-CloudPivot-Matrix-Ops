@@ -2,9 +2,9 @@
  * @file: FamilyGrowth.tsx
  * @description: FamilyGrowth.tsx
  * @author: YanYuCloudCube Team
- * @version: v1.0.0
+ * @version: v1.1.0
  * @created: 2026-04-08
- * @updated: 2026-04-08
+ * @updated: 2026-11-16
  * @status: active
  * @tags: [component]
  */
@@ -12,20 +12,39 @@
 import React, { useMemo } from "react";
 import {
   TrendingUp, Award, Star, Target, Flame,
-  Users, CheckCircle2, ArrowUpRight,
+  Users, CheckCircle2,
 } from "lucide-react";
 import { GlassCard } from "../../shared/GlassCard";
 import { FadeIn } from "./FadeIn";
 import { FamilyPageHeader } from "./FamilyPageHeader";
-import { useFamilyMemberSlice } from "../store";
+import {
+  useFamilyMemberSlice,
+  useFamilyActivitiesSlice,
+  useFamilyMemoriesSlice,
+  useFamilyMedalsSlice,
+} from "../store";
+import type { FamilyActivity } from "../store/family-activities-slice";
 
-// ═══ 热力图 ═══
-function generateHeatmap(): number[][] {
+// ═══ 热力图：由真实活动记录按日聚合派生（无活动时全部为 0，不伪造活跃度） ═══
+function buildHeatmap(activities: FamilyActivity[]): number[][] {
   const weeks = 12;
   const days = 7;
-  return Array.from({ length: weeks }, () =>
-    Array.from({ length: days }, () => Math.floor(Math.random() * 5))
+  const grid: number[][] = Array.from({ length: weeks }, () =>
+    Array.from({ length: days }, () => 0)
   );
+  const now = new Date();
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (weeks * days - 1));
+  for (const a of activities) {
+    const d = new Date(a.createdAt);
+    if (Number.isNaN(d.getTime())) { continue; }
+    const diff = Math.floor((d.getTime() - start.getTime()) / 86400000);
+    if (diff >= 0 && diff < weeks * days) {
+      const wi = Math.floor(diff / days);
+      const di = diff % days;
+      grid[wi][di] = Math.min(grid[wi][di] + 1, 4);
+    }
+  }
+  return grid;
 }
 
 const MILESTONES = [
@@ -37,16 +56,28 @@ const MILESTONES = [
   { date: "2025-02-01", title: "项目正式启动", desc: "言语云枢·智能矩阵 创建", color: "#FF69B4", icon: Flame },
 ];
 
-const WEEKLY_STATS = [
-  { label: "总协作次数", value: "8,547", change: "+12%", color: "#00d4ff" },
-  { label: "知识产出", value: "156 篇", change: "+23%", color: "#FFD700" },
-  { label: "代码质量分", value: "94.5", change: "+2.1", color: "#00FF88" },
-  { label: "安全指数", value: "100%", change: "稳定", color: "#BF00FF" },
-];
-
 export function FamilyGrowth() {
   const { members } = useFamilyMemberSlice();
-  const heatmap = useMemo(() => generateHeatmap(), []);
+  const { activities } = useFamilyActivitiesSlice();
+  const { memories } = useFamilyMemoriesSlice();
+  const { memberMedals } = useFamilyMedalsSlice();
+  // 概览统计：全部由真实 slice 计数派生（批3 #14：删除 8,547/156 篇/94.5/100% 硬编码假统计，
+  // 不再展示无真实来源的趋势增量）
+  const overviewStats = useMemo(() => [
+    { label: "协作次数", value: String(activities.length), color: "#00d4ff" },
+    { label: "记忆条目", value: String(memories.length), color: "#FFD700" },
+    {
+      label: "获得勋章",
+      value: String(Object.values(memberMedals).reduce((sum, mids) => sum + mids.length, 0)),
+      color: "#00FF88",
+    },
+    {
+      label: "在线家人",
+      value: `${members.filter((m) => m.status !== "idle").length}/${members.length}`,
+      color: "#BF00FF",
+    },
+  ], [activities, memories, memberMedals, members]);
+  const heatmap = useMemo(() => buildHeatmap(activities), [activities]);
   const sortedMembers = useMemo(() => [...members].sort((a, b) => b.stats.contribution - a.stats.contribution), [members]);
   const heatColors = ["rgba(0,40,80,0.2)", "rgba(0,212,255,0.15)", "rgba(0,212,255,0.3)", "rgba(0,212,255,0.5)", "rgba(0,212,255,0.7)"];
 
@@ -60,18 +91,15 @@ export function FamilyGrowth() {
       />
 
       <div className="max-w-5xl mx-auto px-4 md:px-8 mt-6 space-y-8">
-        {/* ═══ 本周概览 ═══ */}
+        {/* ═══ 成长概览（真实计数） ═══ */}
         <section>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {WEEKLY_STATS.map((stat, i) => (
+            {overviewStats.map((stat, i) => (
               <FadeIn key={stat.label} delay={i * 0.06}>
                 <GlassCard className="p-4">
                   <p className="text-[rgba(224,240,255,0.4)]" style={{ fontSize: "0.68rem" }}>{stat.label}</p>
                   <div className="flex items-baseline gap-2 mt-1">
                     <span style={{ fontSize: "1.2rem", color: stat.color }}>{stat.value}</span>
-                    <span className="flex items-center gap-0.5 text-[#00FF88]" style={{ fontSize: "0.6rem" }}>
-                      <ArrowUpRight className="w-3 h-3" /> {stat.change}
-                    </span>
                   </div>
                 </GlassCard>
               </FadeIn>
@@ -122,7 +150,7 @@ export function FamilyGrowth() {
               <div className="space-y-3">
                 {sortedMembers.map((m, i) => {
                   const Icon = m.icon;
-                  const maxContrib = sortedMembers[0].stats.contribution;
+                  const maxContrib = sortedMembers[0]?.stats.contribution || 1;
                   const width = (m.stats.contribution / maxContrib) * 100;
                   const medals = ["#FFD700", "#C0C0C0", "#CD7F32"];
                   return (
