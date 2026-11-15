@@ -161,9 +161,10 @@ afterEach(() => {
       expect(screen.getAllByText("历史负载趋势")[0]).toBeInTheDocument();
     });
 
-    it("应渲染 LineChart 组件", () => {
+    it("批5真实化：无真实历史数据时渲染诚实空态（不伪造负载曲线）", () => {
       render(<NodeDetailModal node={mockActiveNode} onClose={mockOnClose} />);
-      expect(screen.getAllByTestId("line-chart")[0]).toBeInTheDocument();
+      expect(screen.getAllByTestId("history-empty")[0]).toBeInTheDocument();
+      expect(screen.getAllByText(/暂无历史负载数据/)[0]).toBeInTheDocument();
     });
   });
 

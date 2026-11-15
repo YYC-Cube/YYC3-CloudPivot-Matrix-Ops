@@ -167,6 +167,54 @@ describe('useNodeSlice', () => {
       expect(nodes.some((n) => n.id === "GPU-H100-02")).toBe(true);
     });
 
+    it('批5：权威快照不删除用户维护的全节点清单（source=user 保留为 inactive）', () => {
+      // 用户通过面板录入远端节点（真实集群清单，agent 快照不含它们）
+      useNodeSlice.getState().addNode({
+        id: "yyc3-n1", status: "active", gpu: 60, mem: 40, temp: 55,
+        model: "svl2 TP2", tasks: 3, role: "DGX · 强推理", host: "100.65.64.49", source: "user",
+      });
+      useNodeSlice.getState().addNode({
+        id: "yyc3-45", status: "active", gpu: 0, mem: 35, temp: 40,
+        model: "", tasks: 0, role: "NAS", host: "100.65.172.88", source: "user",
+      });
+      // agent 权威快照：仅本机节点
+      const authoritative: NodeData[] = [
+        { id: "yyc3-22", status: "active", gpu: 20, mem: 45, temp: 48, model: "", tasks: 1, source: "ws" },
+      ];
+
+      useNodeSlice.getState().mergeFromWS(authoritative, { authoritative: true });
+
+      const { nodes } = useNodeSlice.getState();
+      const ids = nodes.map((n) => n.id);
+      // 用户清单保留（不被快照删除）
+      expect(ids).toContain("yyc3-n1");
+      expect(ids).toContain("yyc3-45");
+      expect(ids).toContain("yyc3-22");
+      // 快照中不存在的用户节点置为下线态（如实反映不可达）
+      expect(nodes.find((n) => n.id === "yyc3-n1")?.status).toBe("inactive");
+      // 快照节点保留 agent 上报的真实状态
+      expect(nodes.find((n) => n.id === "yyc3-22")?.status).toBe("active");
+    });
+
+    it('批5：用户节点与快照节点同 id 时不重复', () => {
+      useNodeSlice.getState().addNode({
+        id: "yyc3-22", status: "inactive", gpu: 0, mem: 0, temp: 30,
+        model: "", tasks: 0, role: "主控", source: "user",
+      });
+      const authoritative: NodeData[] = [
+        { id: "yyc3-22", status: "active", gpu: 15, mem: 40, temp: 45, model: "", tasks: 0, source: "ws" },
+      ];
+
+      useNodeSlice.getState().mergeFromWS(authoritative, { authoritative: true });
+
+      const { nodes } = useNodeSlice.getState();
+      const dupes = nodes.filter((n) => n.id === "yyc3-22");
+      expect(dupes.length).toBe(1);
+      // 快照数据优先（真实指标覆盖用户占位）
+      expect(dupes[0].status).toBe("active");
+      expect(dupes[0].gpu).toBe(15);
+    });
+
     it('lastUpdateAt 应该是当前时间戳', () => {
       const before = Date.now();
 

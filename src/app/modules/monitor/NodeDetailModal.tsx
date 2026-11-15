@@ -10,8 +10,7 @@
  */
 
 import React, { useState } from "react";
-import { X, Cpu, Thermometer, HardDrive, Activity, Clock, Server, Check, AlertTriangle, FileText, RotateCcw, Trash2 } from "lucide-react";
-import { LineChart, Line, ResponsiveContainer, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
+import { X, Cpu, Thermometer, HardDrive, Activity, Clock, Server, Check, AlertTriangle, FileText, RotateCcw, Trash2, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import type { NodeData } from "../../types";
 
@@ -19,25 +18,9 @@ interface NodeDetailModalProps {
   node: NodeData;
   onClose: () => void;
   onNodeRemoved?: (nodeId: string) => void;
+  /** 批5：进入编辑表单（NodeEditModal 编辑模式） */
+  onEdit?: (node: NodeData) => void;
 }
-
-const historyData = [
-  { time: "12:00", gpu: 72, mem: 58, temp: 60 },
-  { time: "12:30", gpu: 78, mem: 62, temp: 63 },
-  { time: "13:00", gpu: 85, mem: 70, temp: 66 },
-  { time: "13:30", gpu: 82, mem: 68, temp: 65 },
-  { time: "14:00", gpu: 90, mem: 75, temp: 70 },
-  { time: "14:30", gpu: 87, mem: 72, temp: 68 },
-];
-
-const tooltipStyle = {
-  backgroundColor: "rgba(8, 25, 55, 0.95)",
-  border: "1px solid rgba(0, 180, 255, 0.3)",
-  borderRadius: "8px",
-  color: "#e0f0ff",
-  fontSize: "0.7rem",
-  fontFamily: "'Rajdhani', sans-serif",
-};
 
 const toastStyle = {
   background: "rgba(8,25,55,0.95)",
@@ -45,17 +28,10 @@ const toastStyle = {
   color: "#e0f0ff",
 };
 
-// 模拟日志数据
-const MOCK_LOGS = [
-  "[14:30:12] INFO  推理任务 #12847 完成，耗时 1.2s",
-  "[14:29:45] INFO  模型 LLaMA-70B 权重加载完成",
-  "[14:28:30] WARN  GPU 温度升高至 72°C",
-  "[14:27:15] INFO  推理任务 #12846 开始",
-  "[14:26:00] INFO  KV-Cache 命中率 94.2%",
-  "[14:25:30] DEBUG 批处理队列长度: 8",
-];
+// 批5 真实化：删除 MOCK_LOGS 固定假日志与 historyData 固定假曲线——
+// 真实日志/历史指标待数据源接入（agent 日志通道 / OpsPanel history）后呈现，空态诚实提示
 
-export function NodeDetailModal({ node, onClose, onNodeRemoved }: NodeDetailModalProps) {
+export function NodeDetailModal({ node, onClose, onNodeRemoved, onEdit }: NodeDetailModalProps) {
   const [restartConfirm, setRestartConfirm] = useState(false);
   const [removeConfirm, setRemoveConfirm] = useState(false);
   const [showLogs, setShowLogs] = useState(false);
@@ -82,14 +58,15 @@ export function NodeDetailModal({ node, onClose, onNodeRemoved }: NodeDetailModa
       description: "预计 30 秒内完成重启",
       style: toastStyle,
     });
-    // 模拟重启过程
+    // 批5 真实化：不再伪造「重启完成」——远端节点重启指令待服务端接入（落档 17 #10），
+    // 当前仅如实告知指令已记录
     setTimeout(() => {
       setRestarting(false);
-      toast.success(`节点 ${node.id} 重启完成`, {
-        description: "节点已恢复在线",
+      toast.info(`节点 ${node.id} 重启指令已记录`, {
+        description: "远端执行通道接入前不会真实重启（真实化政策：不伪造执行结果）",
         style: toastStyle,
       });
-    }, 2000);
+    }, 800);
   };
 
   // ── 移除节点 ──
@@ -139,9 +116,21 @@ export function NodeDetailModal({ node, onClose, onNodeRemoved }: NodeDetailModa
               </div>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 rounded-lg hover:bg-[rgba(0,212,255,0.1)] transition-all">
-            <X className="w-5 h-5 text-[rgba(0,212,255,0.5)]" />
-          </button>
+          <div className="flex items-center gap-1">
+            {onEdit && (
+              <button
+                onClick={() => onEdit(node)}
+                className="p-2 rounded-lg hover:bg-[rgba(0,212,255,0.1)] transition-all"
+                aria-label="编辑节点"
+                title="编辑节点"
+              >
+                <Pencil className="w-4 h-4 text-[#00d4ff]" />
+              </button>
+            )}
+            <button onClick={onClose} className="p-2 rounded-lg hover:bg-[rgba(0,212,255,0.1)] transition-all">
+              <X className="w-5 h-5 text-[rgba(0,212,255,0.5)]" />
+            </button>
+          </div>
         </div>
 
         {/* Stats Grid */}
@@ -174,17 +163,16 @@ export function NodeDetailModal({ node, onClose, onNodeRemoved }: NodeDetailModa
         {/* History Chart */}
         <div>
           <h4 className="text-[#e0f0ff] mb-3" style={{ fontSize: "0.85rem" }}>历史负载趋势</h4>
-          <ResponsiveContainer width="100%" height={180}>
-            <LineChart data={historyData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,180,255,0.08)" />
-              <XAxis dataKey="time" tick={{ fill: "rgba(0,212,255,0.4)", fontSize: 10 }} axisLine={{ stroke: "rgba(0,180,255,0.1)" }} />
-              <YAxis tick={{ fill: "rgba(0,212,255,0.4)", fontSize: 10 }} axisLine={{ stroke: "rgba(0,180,255,0.1)" }} />
-              <Tooltip contentStyle={tooltipStyle} />
-              <Line type="monotone" dataKey="gpu" stroke="#00d4ff" strokeWidth={2} dot={{ r: 3, fill: "#00d4ff" }} name="GPU" />
-              <Line type="monotone" dataKey="mem" stroke="#aa55ff" strokeWidth={2} dot={{ r: 3, fill: "#aa55ff" }} name="内存" />
-              <Line type="monotone" dataKey="temp" stroke="#ff6600" strokeWidth={2} dot={{ r: 3, fill: "#ff6600" }} name="温度" />
-            </LineChart>
-          </ResponsiveContainer>
+          <div
+            className="h-[180px] rounded-xl flex items-center justify-center bg-[rgba(0,40,80,0.15)] border border-[rgba(0,180,255,0.08)]"
+            data-testid="history-empty"
+          >
+            <p className="text-[rgba(224,240,255,0.3)] text-center px-4" style={{ fontSize: "0.72rem", lineHeight: 1.8 }}>
+              暂无历史负载数据
+              <br />
+              真实指标历史将在数据源（agent / OpsPanel history）接入后自动呈现
+            </p>
+          </div>
         </div>
 
         {/* ── 日志面板 ── */}
@@ -200,16 +188,9 @@ export function NodeDetailModal({ node, onClose, onNodeRemoved }: NodeDetailModa
               </button>
             </div>
             <div className="space-y-1 font-mono max-h-[160px] overflow-y-auto" style={{ fontSize: "0.68rem" }}>
-              {MOCK_LOGS.map((log, i) => (
-                <div key={i} className={`py-0.5 ${
-                  log.includes("WARN") ? "text-[#ffdd00]" :
-                  log.includes("ERROR") ? "text-[#ff3366]" :
-                  log.includes("DEBUG") ? "text-[rgba(0,212,255,0.4)]" :
-                  "text-[rgba(180,200,220,0.6)]"
-                }`}>
-                  {log}
-                </div>
-              ))}
+              <p className="text-[rgba(224,240,255,0.3)] py-4 text-center" style={{ fontSize: "0.72rem" }}>
+                暂无日志数据 — 真实节点日志将在 agent 日志通道接入后呈现
+              </p>
             </div>
           </div>
         )}

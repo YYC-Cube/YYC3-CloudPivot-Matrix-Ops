@@ -67,6 +67,7 @@ import type { NodeData } from "../../types";
 import { AlertBanner } from "./AlertBanner";
 import { GlassCard } from "../shared/GlassCard";
 import { NodeDetailModal } from "./NodeDetailModal";
+import { NodeEditModal } from "./NodeEditModal";
 
 // ============================================================
 // Static reference data → 从 localStorage 读取 (可编辑)
@@ -227,9 +228,11 @@ export function Dashboard() {
     useShallow((s) => ({ modelPerf: s.modelPerf, modelDist: s.modelDist, radarData: s.radarData }))
   );
   const { recentOps } = useAppSlice(useShallow((s) => ({ recentOps: s.recentOps })));
-  const { nodes, derived, addNode } = useNodeSlice(
-    useShallow((s) => ({ nodes: s.nodes, derived: s.derived, addNode: s.addNode }))
+  const { nodes, derived, addNode, updateNode, removeNode } = useNodeSlice(
+    useShallow((s) => ({ nodes: s.nodes, derived: s.derived, addNode: s.addNode, updateNode: s.updateNode, removeNode: s.removeNode }))
   );
+  // 批5：节点添加/编辑表单状态（替换硬编码占位添加）
+  const [nodeEdit, setNodeEdit] = useState<{ mode: "add" } | { mode: "edit"; node: NodeData } | null>(null);
 
   // Swipe handlers for chart tabs
   const swipeHandlers = useSwipeable({
@@ -679,11 +682,7 @@ export function Dashboard() {
               <NodeCard key={node.id} node={node} onClick={setSelectedNode} />
             ))}
             <button
-              onClick={() => {
-                const id = `GPU-${Date.now().toString(36).toUpperCase()}`;
-                addNode({ id, status: "inactive", gpu: 0, mem: 0, temp: 30, model: "", tasks: 0 });
-                toast.success(`节点 ${id} 已添加`, { style: { background: "rgba(8,25,55,0.95)", border: "1px solid rgba(0,255,136,0.3)", color: "#e0f0ff" } });
-              }}
+              onClick={() => setNodeEdit({ mode: "add" })}
               className="flex items-center justify-center gap-1.5 p-3 rounded-xl border-2 border-dashed border-[rgba(0,180,255,0.15)] hover:border-[rgba(0,180,255,0.4)] bg-[rgba(0,40,80,0.05)] hover:bg-[rgba(0,40,80,0.15)] transition-all cursor-pointer min-h-[72px]"
               style={{ fontSize: "0.75rem" }}
             >
@@ -758,7 +757,37 @@ export function Dashboard() {
 
       {/* Node Detail Modal */}
       {selectedNode && (
-        <NodeDetailModal node={selectedNode} onClose={() => setSelectedNode(null)} />
+        <NodeDetailModal
+          node={selectedNode}
+          onClose={() => setSelectedNode(null)}
+          onNodeRemoved={(id) => {
+            removeNode(id);
+            setSelectedNode(null);
+          }}
+          onEdit={(node) => {
+            setSelectedNode(null);
+            setNodeEdit({ mode: "edit", node });
+          }}
+        />
+      )}
+      {nodeEdit && (
+        <NodeEditModal
+          initial={nodeEdit.mode === "edit" ? nodeEdit.node : null}
+          onClose={() => setNodeEdit(null)}
+          onSubmit={(node) => {
+            if (nodeEdit.mode === "edit") {
+              updateNode(node.id, node);
+              toast.success(`节点 ${node.id} 已更新`, { style: { background: "rgba(8,25,55,0.95)", border: "1px solid rgba(0,255,136,0.3)", color: "#e0f0ff" } });
+            } else {
+              addNode(node);
+              toast.success(`节点 ${node.id} 已添加（用户清单，WS 快照不覆盖）`, { style: { background: "rgba(8,25,55,0.95)", border: "1px solid rgba(0,255,136,0.3)", color: "#e0f0ff" } });
+            }
+          }}
+          onRemove={(id) => {
+            removeNode(id);
+            toast.success(`节点 ${id} 已移除`, { style: { background: "rgba(8,25,55,0.95)", border: "1px solid rgba(0,255,136,0.3)", color: "#e0f0ff" } });
+          }}
+        />
       )}
     </div>
   );

@@ -24,6 +24,12 @@ export interface NodeData {
   temp: number;      // 温度 °C
   model: string;     // 当前部署模型
   tasks: number;     // 活跃任务数
+  /** 节点角色描述（用户维护，如「NAS · PG 双库+API 网关」）——批5 全节点清单 */
+  role?: string;
+  /** 主机地址（Tailscale IP / 主机名）——批5 全节点清单 */
+  host?: string;
+  /** 数据来源：user=用户在面板维护的全节点清单（WS 权威快照不删除）；ws=agent 快照上报 */
+  source?: "user" | "ws";
 }
 
 /**

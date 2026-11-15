@@ -121,6 +121,11 @@ export const useNodeSlice = create<NodeSlice>()(
 
           mergeFromWS: (incoming, options) => {
             set((state) => {
+              // 批5 全节点清单：用户在面板维护的节点（source==="user"）不随 WS 权威快照
+              // 删除——快照只覆盖 agent 上报节点，远端全节点清单是用户配置的真实数据
+              const userNodes = options?.authoritative
+                ? state.nodes.filter((n) => n.source === "user")
+                : [];
               const merged = dataBus.mergeNodeData(
                 state.nodes,
                 incoming,
@@ -128,10 +133,14 @@ export const useNodeSlice = create<NodeSlice>()(
                 "ws_priority",
                 options?.authoritative ? { dropAbsent: true } : undefined
               );
-              state.nodes = merged;
+              const restored = userNodes
+                .filter((u) => !merged.some((m) => m.id === u.id))
+                .map((u) => ({ ...u, status: "inactive" as const }));
+              const nodes = [...merged, ...restored];
+              state.nodes = nodes;
               state.lastSource = "websocket";
               state.lastUpdateAt = new Date().toISOString();
-              state.derived = computeDerived(merged);
+              state.derived = computeDerived(nodes);
             });
           },
 
