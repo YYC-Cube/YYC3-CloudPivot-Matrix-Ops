@@ -18,14 +18,17 @@ export interface ChatMessage {
   text: string;
   time: string;
   type: "text" | "system" | "thinking";
-  source?: "llm" | "agent" | "mock";
+  /** llm=真实模型 agent/mock=演示引擎 error=诚实离线提示 */
+  source?: "llm" | "agent" | "mock" | "error";
 }
 
+// 仅保留系统欢迎语（UI 提示，非伪造对话）；历史假消息 m1/m2 由 migrate 清除
 const SEED_GROUP_MESSAGES: ChatMessage[] = [
   { id: "sys-1", sender: "system", text: "欢迎来到 AI Family 家庭群聊，这里是我们的温馨空间。", time: "09:00", type: "system" },
-  { id: "m1", sender: "meta-oracle", text: "大家早上好！今日系统状态良好，开始美好的一天吧！", time: "09:01", type: "text" },
-  { id: "m2", sender: "navigator", text: "早安家人们~ 今天我收到了3个新的分析需求，已经路由分配了。", time: "09:05", type: "text" },
 ];
+
+// 历史假种子 ID（v0 写入的伪造成员消息），migrate 时精确清除
+const LEGACY_FAKE_MESSAGE_IDS = new Set(["m1", "m2"]);
 
 const MAX_MESSAGES_PER_CHANNEL = 200;
 
@@ -68,7 +71,20 @@ export const useFamilyChatSlice = create<FamilyChatSlice>()(
     }),
     {
       name: "yyc3-family-chat",
+      version: 1,
       partialize: (state) => ({ channels: state.channels }),
+      migrate: (persisted, version) => {
+        const state = persisted as { channels?: Record<string, ChatMessage[]> } | undefined;
+        if (version < 1 && state?.channels) {
+          // v0 → v1：精确清除历史伪造成员消息，保留真实会话与系统提示
+          const channels: Record<string, ChatMessage[]> = {};
+          for (const [cid, msgs] of Object.entries(state.channels)) {
+            channels[cid] = msgs.filter((m) => !LEGACY_FAKE_MESSAGE_IDS.has(m.id));
+          }
+          return { channels };
+        }
+        return state as { channels: Record<string, ChatMessage[]> };
+      },
     },
   ),
 );

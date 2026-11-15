@@ -20,7 +20,51 @@ import { GlassCard } from "../../shared/GlassCard";
 import { useNavigate } from "react-router";
 import { getHourlyCare } from "./shared";
 import { useFamilyMemberSlice } from "../store";
+import { FAMILY_SYSTEM_PROMPTS } from "../lib/family-personas";
 import type { UnifiedFamilyMember } from "../../../types";
+
+// ═══ 人格编辑器（曌·中枢三件套 · 本地可编辑 · 数据不出本地） ═══
+function PersonaEditor({ member }: { member: UnifiedFamilyMember }) {
+  const updateMember = useFamilyMemberSlice((s) => s.updateMember);
+  const defaultPrompt = FAMILY_SYSTEM_PROMPTS[member.id] ?? "";
+  const [draft, setDraft] = useState(member.systemPrompt ?? defaultPrompt);
+  const [dirty, setDirty] = useState(false);
+
+  return (
+    <div onClick={(e) => e.stopPropagation()}>
+      <div className="flex items-center justify-between">
+        <p className="text-[rgba(224,240,255,0.3)]" style={{ fontSize: "0.62rem" }}>
+          人格设定（SYSTEM Prompt · 对话链路实时生效）
+        </p>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => { setDraft(defaultPrompt); setDirty(true); }}
+            className="text-[rgba(224,240,255,0.3)] hover:text-[rgba(224,240,255,0.6)] transition-colors"
+            style={{ fontSize: "0.6rem" }}
+          >
+            恢复默认
+          </button>
+          <button
+            onClick={() => { updateMember(member.id, { systemPrompt: draft }); setDirty(false); }}
+            disabled={!dirty}
+            className="px-2 py-0.5 rounded transition-all disabled:opacity-30"
+            style={{ fontSize: "0.6rem", background: `${member.color}15`, border: `1px solid ${member.color}30`, color: member.color }}
+          >
+            保存
+          </button>
+        </div>
+      </div>
+      <textarea
+        value={draft}
+        onChange={(e) => { setDraft(e.target.value); setDirty(true); }}
+        rows={5}
+        spellCheck={false}
+        className="w-full mt-1 px-3 py-2 rounded-lg bg-[rgba(0,40,80,0.25)] border border-[rgba(0,180,255,0.08)] text-[rgba(224,240,255,0.65)] outline-none focus:border-[rgba(0,212,255,0.25)] resize-y font-mono"
+        style={{ fontSize: "0.65rem", lineHeight: 1.7 }}
+      />
+    </div>
+  );
+}
 
 // ═══ FadeIn (沙箱安全) ═══
 function FadeIn({ children, delay = 0, className = "", style }: {
@@ -123,6 +167,9 @@ function FamilyMemberCard({ member, index, onCall, onChat }: {
                 ))}
               </div>
             </div>
+
+            {/* 人格（可编辑） */}
+            <PersonaEditor member={member} />
 
             {/* 快速操作 */}
             <div className="flex items-center gap-2 pt-2">

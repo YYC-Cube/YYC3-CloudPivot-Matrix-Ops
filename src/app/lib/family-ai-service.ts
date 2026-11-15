@@ -1,24 +1,36 @@
 /**
  * @file: family-ai-service.ts
- * @description: AI Family 统一对话服务 · 三层降级架构（真实LLM → Agent智能引擎 → 上下文感知Mock）
+ * @description: AI Family 统一对话服务 · 真实优先架构（真实LLM → 诚实离线；demoMode 才走演示引擎）
  * @author: YanYuCloudCube Team
- * @version: v1.0.0
+ * @version: v2.0.0
  * @created: 2026-04-25
+ * @updated: 2026-11-16
  * @status: active
- * @tags: [lib],[ai],[family],[chat]
+ * @tags: [lib],[ai],[family],[chat],[real-data]
  *
  * @brief: 让 AI Family 的每位家人真正"有思想"地对话
  *
- * @architecture:
- *   Layer 1 (Primary):   真实 LLM API — ZhipuAI / OpenAI-compatible
- *   Layer 2 (Fallback):  Agent 智能引擎 — 意图识别 + 知识库检索 + 上下文生成
- *   Layer 3 (Last Resort): 增强型 Mock — 关键词匹配 + 人格注入 + 对话记忆
-
- * @updated: 2026-04-30 */
+ * @architecture (v2 · 2026-11-16):
+ *   真实路径（demoMode 关闭，默认）:
+ *     成员 modelAssignment（可编辑）→ provider-slice configuredModels 解析
+ *     → OpenAI 兼容 /chat/completions 真实调用（人格 = 三件套 systemPrompt）
+ *     → 未绑定/未配置/不可达 → source:"error" 诚实离线，绝不回退假回复
+ *   演示路径（demoMode 开启）:
+ *     Agent 智能引擎 → 关键词 Mock（仅界面演示，UI 如实标注）
+ *
+ * @details:
+ * - 人格来源：成员 systemPrompt（可编辑）→ family-personas 三件套 SYSTEM 默认
+ * - 模型接线：provider-slice configuredModels（配置中心统一管理 baseUrl/apiKey）
+ * - URL 语义与 useBigModelSDK 对齐（Ollama 同源代理 / proxyUrl 转发）
+ */
 
 import { AI_RESPONSES, FAMILY_MEMBERS, MEMBERS_MAP, type FamilyMember } from "../modules/ai-family/components/shared";
-import { getAPIConfig } from "./api-config";
-import type { ZhipuAIMessage } from "./zhipu-ai-service";
+import { useFamilyMemberSlice } from "../modules/ai-family/store/family-member-slice";
+import { getMemberSystemPrompt } from "../modules/ai-family/lib/family-personas";
+import { useProviderSlice } from "../store/slices/provider-slice";
+import { useSettingsSSOT } from "../store/slices/settings-ssot-slice";
+import { getOllamaChatUrl } from "./ollama-url";
+import type { ConfiguredModel } from "../types";
 
 // ============================================================
 //  类型定义
@@ -42,9 +54,12 @@ export interface FamilyChatRequest {
 export interface FamilyChatResponse {
   text: string;
   senderId: string;
-  source: "llm" | "agent" | "mock";
+  /** llm=真实模型 agent/mock=演示引擎 error=诚实离线（未绑定/未配置/不可达） */
+  source: "llm" | "agent" | "mock" | "error";
   latencyMs: number;
   timestamp: string;
+  /** source==="error" 时的离线原因（面向用户的诚实说明） */
+  error?: string;
 }
 
 export interface FamilyAIServiceConfig {
@@ -57,48 +72,86 @@ export interface FamilyAIServiceConfig {
   maxTokens?: number;
 }
 
-// ============================================================
-//  家人 System Prompt 模板
-// ============================================================
-
-function buildMemberSystemPrompt(member: FamilyMember): string {
-  return `你是 AI Family 家庭成员「${member.name}」（${member.shortName}），英文名 ${member.enTitle}。
-
-【你的角色】${member.role}
-【你的性格】${member.personality}
-【你的专业能力】${member.expertise.join("、")}
-【你的兴趣爱好】${member.hobbies.join("、")}
-【你的座右铭】"${member.quote}"
-【你的核心职责】${member.responsibilities.join("、")}
-
-对话规则：
-1. 始终以「${member.shortName}」的身份和语气回复，保持角色一致性
-2. 回复要体现你的性格特点和专业领域
-3. 自然、温暖、有家人感，像真正的家人一样交流
-4. 可以适当使用表情符号增加亲和力
-5. 如果被问到你不擅长的问题，可以建议咨询其他合适的家人
-6. 回复简洁有力，一般不超过150字，除非用户要求详细回答
-7. 用中文回复`;
+/** 成员接线就绪状态 */
+export interface FamilyChatReadiness {
+  ready: boolean;
+  reason?: string;
+  configuredModel?: ConfiguredModel;
 }
 
-const GROUP_SYSTEM_PROMPT = `你现在是 AI Family 家庭群聊中的一员。群聊中有多位家人：
-- 千行(navigator)：语言专家，热情开朗
-- 万物(thinker)：数据分析师，沉稳内敛
-- 先知(prophet)：趋势预测者，神秘温和
-- 波罗(bolero)：资源调度官，务实高效
-- 天枢(meta-oracle)：系统编排者，稳重可靠
-- 守护(sentinel)：安全卫士，严谨负责
-- 师傅(master)：架构导师，精益求精
-- 创意(creative)：设计艺术家，活泼灵动
+// ============================================================
+//  成员接线解析（真实路径核心）
+// ============================================================
+
+/**
+ * 解析成员的模型接线状态：
+ * 成员 modelAssignment（providerId + modelId，可在成员设置中编辑）
+ * → provider-slice configuredModels 精确匹配（providerId + model 名）
+ * → 校验服务商密钥要求
+ */
+export function checkMemberReadiness(memberId: string): FamilyChatReadiness {
+  const member = useFamilyMemberSlice.getState().getMemberById(memberId);
+  const binding = member?.modelAssignment;
+
+  if (!binding?.providerId || !binding?.modelId) {
+    return { ready: false, reason: "未绑定模型，请在「模型设置」中为该成员选择服务商与模型" };
+  }
+
+  const { providers, configuredModels } = useProviderSlice.getState();
+  const cm = configuredModels.find(
+    (m) => m.providerId === binding.providerId && m.model === binding.modelId,
+  );
+  if (!cm) {
+    return {
+      ready: false,
+      reason: `绑定的模型 ${binding.providerId}/${binding.modelId} 未在「模型管理」中配置，请先添加对应模型`,
+    };
+  }
+
+  const provider = providers.find((p) => p.id === cm.providerId);
+  if (provider?.requiresApiKey && !cm.apiKey) {
+    return { ready: false, reason: `服务商 ${cm.providerLabel} 缺少 API Key，请在「模型管理」中配置` };
+  }
+
+  return { ready: true, configuredModel: cm };
+}
+
+/** 构建 chat endpoint URL（与 useBigModelSDK 语义对齐：Ollama 同源代理 / proxyUrl 转发） */
+function buildChatUrl(model: ConfiguredModel): string {
+  if (model.providerId === "ollama") {
+    return getOllamaChatUrl();
+  }
+  const base = model.baseUrl.replace(/\/$/, "");
+  const endpoint = `${base}/chat/completions`;
+  if (model.proxyUrl) {
+    const proxy = model.proxyUrl.replace(/\/$/, "");
+    return `${proxy}/${endpoint}`;
+  }
+  return endpoint;
+}
+
+// ============================================================
+//  群聊 SYSTEM 提示词
+// ============================================================
+
+const GROUP_SYSTEM_PROMPT = `你现在是 YYC³ AI Family 家庭群聊中的一员。群聊中有多位家人：
+- 千行(navigator)：导航员，语言专家，热情开朗
+- 万物(thinker)：思考者，数据分析师，沉稳内敛
+- 先知(prophet)：预言家，趋势预测者，神秘温和
+- 伯乐(bolero)：推荐官，温暖贴心
+- 天枢(meta-oracle)：总指挥，稳重可靠的大家长
+- 守护(sentinel)：安全官，严谨负责
+- 宗师(master)：质量官，精益求精
+- 灵韵(creative)：创意官，活泼灵动
 
 群聊规则：
-1. 根据消息内容选择最合适的家人身份回复
+1. 根据消息内容选择最合适的家人身份回复，回复开头用「【短名】」标明身份
 2. 保持家庭氛围：温暖、协作、互相支持
 3. 可以@其他家人或引用他们的观点
 4. 中文回复，自然口语化，不超过120字`;
 
 // ============================================================
-//  增强型 Mock 引擎（Layer 3）
+//  演示引擎（仅 demoMode 开启时使用 · 界面演示专用）
 // ============================================================
 
 const KEYWORD_RESPONSES: Array<{ keywords: string[]; responses: string[] }> = [
@@ -168,10 +221,6 @@ function generateContextAwareMockResponse(
   const fallbackResponses = AI_RESPONSES[member.id] || AI_RESPONSES["meta-oracle"];
   return fallbackResponses[Math.floor(Math.random() * fallbackResponses.length)];
 }
-
-// ============================================================
-//  Agent 智能引擎（Layer 2）
-// ============================================================
 
 function generateAgentResponse(
   member: FamilyMember,
@@ -278,70 +327,80 @@ function generateGeneralResponse(member: FamilyMember, msg: string, context: str
 }
 
 // ============================================================
-//  LLM API 调用层（Layer 1）
+//  真实 LLM 调用层
 // ============================================================
 
-async function callLLMAPI(
-  memberId: string,
+interface RealCallResult {
+  text: string;
+  success: boolean;
+  error?: string;
+}
+
+async function callRealLLM(
+  systemPrompt: string,
   userMessage: string,
   history: FamilyChatMessage[],
+  model: ConfiguredModel,
   config: FamilyAIServiceConfig,
-): Promise<{ text: string; success: boolean }> {
+): Promise<RealCallResult> {
   try {
-    const apiConfig = getAPIConfig();
-    const cfg = apiConfig as unknown as Record<string, unknown>;
-    const apiKey = config.apiKey || (cfg?.apiKey as string) || "";
-    const baseUrl = config.baseUrl || (cfg?.aiBase as string) || "";
-
-    if (!apiKey || !baseUrl) {
-      return { text: "", success: false };
-    }
-
-    const member = MEMBERS_MAP[memberId] || FAMILY_MEMBERS[0];
-    const systemPrompt = buildMemberSystemPrompt(member);
-
     const historyMsgs = history
       .filter(m => m.type !== "system" && m.text)
       .slice(-10)
       .map(m => ({
         role: (m.sender === "user" ? "user" : "assistant") as "user" | "assistant",
-        content: `[${m.sender === "user" ? "用户" : (MEMBERS_MAP[m.sender]?.shortName || m.sender)}]: ${m.text}`,
+        content: m.sender === "user"
+          ? m.text
+          : `[${MEMBERS_MAP[m.sender]?.shortName || m.sender}]: ${m.text}`,
       }));
 
-    const messages: ZhipuAIMessage[] = [
-      { role: "system", content: systemPrompt },
+    const messages = [
+      { role: "system" as const, content: systemPrompt },
       ...historyMsgs,
-      { role: "user", content: userMessage },
+      { role: "user" as const, content: userMessage },
     ];
 
-    const response = await fetch(`${baseUrl}/chat/completions`, {
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (model.apiKey) {
+      headers["Authorization"] = `Bearer ${model.apiKey}`;
+    }
+
+    const response = await fetch(buildChatUrl(model), {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
+      headers,
       body: JSON.stringify({
-        model: config.defaultModel || "glm-4-flash",
+        model: model.model,
         messages,
         temperature: config.temperature ?? 0.8,
-        max_tokens: config.maxTokens ?? 300,
+        max_tokens: config.maxTokens ?? 500,
         stream: false,
       }),
-      signal: AbortSignal.timeout(15000),
+      signal: AbortSignal.timeout(30000),
     });
 
     if (!response.ok) {
-      return { text: "", success: false };
+      const body = await response.text().catch(() => "");
+      return {
+        text: "",
+        success: false,
+        error: `模型服务返回 HTTP ${response.status}${body ? `：${body.slice(0, 120)}` : ""}`,
+      };
     }
 
     const data = await response.json() as {
       choices?: Array<{ message?: { content?: string } }>;
     };
-    const text = data.choices?.[0]?.message?.content || "";
-
-    return text ? { text, success: true } : { text: "", success: false };
-  } catch {
-    return { text: "", success: false };
+    const text = data.choices?.[0]?.message?.content?.trim() || "";
+    return text
+      ? { text, success: true }
+      : { text: "", success: false, error: "模型返回了空内容" };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return {
+      text: "",
+      success: false,
+      error: `无法连接模型服务（${model.baseUrl}）：${msg}`,
+    };
   }
 }
 
@@ -360,125 +419,180 @@ class FamilyAIServiceImpl {
     };
   }
 
+  private isDemoMode(): boolean {
+    return useSettingsSSOT.getState().toggles.demoMode;
+  }
+
+  /** 单聊：真实路径优先，失败诚实离线（demoMode 才走演示引擎） */
   async chat(request: FamilyChatRequest): Promise<FamilyChatResponse> {
     const startTime = Date.now();
     const member = MEMBERS_MAP[request.memberId] || FAMILY_MEMBERS[0];
-    let text = "";
-    let source: FamilyChatResponse["source"] = "mock";
+    const demoMode = this.isDemoMode();
 
+    // ── 真实路径 ──
     if (this.config.enableLLM) {
-      const llmResult = await callLLMAPI(
-        request.memberId,
-        request.userMessage,
-        request.conversationHistory,
-        this.config,
-      );
-      if (llmResult.success && llmResult.text) {
-        text = llmResult.text;
-        source = "llm";
+      const readiness = checkMemberReadiness(request.memberId);
+      if (readiness.ready && readiness.configuredModel) {
+        const memberState = useFamilyMemberSlice.getState().getMemberById(request.memberId);
+        const systemPrompt = memberState
+          ? getMemberSystemPrompt(memberState)
+          : getMemberSystemPrompt({ id: request.memberId });
+        const result = await callRealLLM(
+          systemPrompt,
+          request.userMessage,
+          request.conversationHistory,
+          readiness.configuredModel,
+          this.config,
+        );
+        if (result.success) {
+          return {
+            text: result.text,
+            senderId: request.memberId,
+            source: "llm",
+            latencyMs: Date.now() - startTime,
+            timestamp: new Date().toISOString(),
+          };
+        }
+        // 真实调用失败：demoMode 才允许演示兜底，否则诚实离线
+        if (!demoMode) {
+          return {
+            text: "",
+            senderId: request.memberId,
+            source: "error",
+            latencyMs: Date.now() - startTime,
+            timestamp: new Date().toISOString(),
+            error: result.error || "模型服务调用失败",
+          };
+        }
+      } else if (!demoMode) {
+        // 未接线：诚实离线
+        return {
+          text: "",
+          senderId: request.memberId,
+          source: "error",
+          latencyMs: Date.now() - startTime,
+          timestamp: new Date().toISOString(),
+          error: readiness.reason || "成员未接线",
+        };
       }
     }
 
-    if (!text && this.config.enableAgentEngine) {
-      text = generateAgentResponse(member, request.userMessage, request.conversationHistory);
-      source = "agent";
-    }
-
-    if (!text) {
-      text = generateContextAwareMockResponse(member, request.userMessage, request.conversationHistory);
-      source = "mock";
+    // ── 演示路径（仅 demoMode） ──
+    if (this.config.enableAgentEngine) {
+      return {
+        text: generateAgentResponse(member, request.userMessage, request.conversationHistory),
+        senderId: request.memberId,
+        source: "agent",
+        latencyMs: Date.now() - startTime,
+        timestamp: new Date().toISOString(),
+      };
     }
 
     return {
-      text,
+      text: generateContextAwareMockResponse(member, request.userMessage, request.conversationHistory),
       senderId: request.memberId,
-      source,
+      source: "mock",
       latencyMs: Date.now() - startTime,
       timestamp: new Date().toISOString(),
     };
   }
 
+  /** 群聊：真实路径走群聊人格，单成员不可达不影响（群聊使用当前激活/任一就绪成员模型） */
   async chatGroup(
     userMessage: string,
     conversationHistory: FamilyChatMessage[],
   ): Promise<FamilyChatResponse> {
     const startTime = Date.now();
-    let text = "";
-    let source: FamilyChatResponse["source"] = "mock";
+    const demoMode = this.isDemoMode();
 
+    // ── 真实路径：优先使用「当前激活模型」，否则寻找任一成员的就绪绑定 ──
     if (this.config.enableLLM) {
-      try {
-        const apiConfig = getAPIConfig();
-        const cfg = apiConfig as unknown as Record<string, unknown>;
-        const apiKey = this.config.apiKey || (cfg?.apiKey as string) || "";
-        const baseUrl = this.config.baseUrl || (cfg?.aiBase as string) || "";
+      const { getActiveModel } = useProviderSlice.getState();
+      let model = getActiveModel();
 
-        if (apiKey && baseUrl) {
-          const groupHistoryMsgs = conversationHistory
-            .filter(m => m.type !== "system" && m.text)
-            .slice(-12)
-            .map(m => ({
-              role: (m.sender === "user" ? "user" : "assistant") as "user" | "assistant",
-              content: `[${m.sender === "user" ? "用户" : (MEMBERS_MAP[m.sender]?.shortName || m.sender)}]: ${m.text}`,
-            }));
-
-          const messages: ZhipuAIMessage[] = [
-            { role: "system", content: GROUP_SYSTEM_PROMPT },
-            ...groupHistoryMsgs,
-            { role: "user", content: userMessage },
-          ];
-
-          const response = await fetch(`${baseUrl}/chat/completions`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${apiKey}`,
-            },
-            body: JSON.stringify({
-              model: this.config.defaultModel || "glm-4-flash",
-              messages,
-              temperature: 0.9,
-              max_tokens: 250,
-              stream: false,
-            }),
-            signal: AbortSignal.timeout(15000),
-          });
-
-          if (response.ok) {
-            const data = await response.json() as {
-              choices?: Array<{ message?: { content?: string } }>;
-            };
-            const extracted = data.choices?.[0]?.message?.content || "";
-            if (extracted) {
-              text = extracted;
-              source = "llm";
-            }
+      if (!model) {
+        // 回退：寻找第一个接线就绪的家人绑定
+        const members = useFamilyMemberSlice.getState().members;
+        for (const m of members) {
+          const r = checkMemberReadiness(m.id);
+          if (r.ready && r.configuredModel) {
+            model = r.configuredModel;
+            break;
           }
         }
-      } catch {
-        // fall through to agent engine
+      }
+
+      if (model) {
+        const result = await callRealLLM(
+          GROUP_SYSTEM_PROMPT,
+          userMessage,
+          conversationHistory,
+          model,
+          this.config,
+        );
+        if (result.success) {
+          // 从「【短名】」前缀解析实际回复成员
+          const senderId = this.parseGroupSender(result.text);
+          return {
+            text: result.text.replace(/^【[^】]+】\s*/, ""),
+            senderId,
+            source: "llm",
+            latencyMs: Date.now() - startTime,
+            timestamp: new Date().toISOString(),
+          };
+        }
+        if (!demoMode) {
+          return {
+            text: "",
+            senderId: "meta-oracle",
+            source: "error",
+            latencyMs: Date.now() - startTime,
+            timestamp: new Date().toISOString(),
+            error: result.error || "群聊模型服务调用失败",
+          };
+        }
+      } else if (!demoMode) {
+        return {
+          text: "",
+          senderId: "meta-oracle",
+          source: "error",
+          latencyMs: Date.now() - startTime,
+          timestamp: new Date().toISOString(),
+          error: "没有可用的模型接线：请在「模型管理」配置并激活模型，或为家人绑定模型",
+        };
       }
     }
 
-    if (!text && this.config.enableAgentEngine) {
-      const responder = this.selectGroupResponder(userMessage);
-      text = generateAgentResponse(responder, userMessage, conversationHistory);
-      source = "agent";
-    }
-
-    if (!text) {
-      const responder = this.selectGroupResponder(userMessage);
-      text = generateContextAwareMockResponse(responder, userMessage, conversationHistory);
-      source = "mock";
+    // ── 演示路径（仅 demoMode） ──
+    const responder = this.selectGroupResponder(userMessage);
+    if (this.config.enableAgentEngine) {
+      return {
+        text: generateAgentResponse(responder, userMessage, conversationHistory),
+        senderId: responder.id,
+        source: "agent",
+        latencyMs: Date.now() - startTime,
+        timestamp: new Date().toISOString(),
+      };
     }
 
     return {
-      text,
-      senderId: this.selectGroupResponder(userMessage).id,
-      source,
+      text: generateContextAwareMockResponse(responder, userMessage, conversationHistory),
+      senderId: responder.id,
+      source: "mock",
       latencyMs: Date.now() - startTime,
       timestamp: new Date().toISOString(),
     };
+  }
+
+  /** 从群聊回复的「【短名】」前缀解析成员 ID */
+  private parseGroupSender(text: string): string {
+    const match = text.match(/^【([^】]+)】/);
+    if (match) {
+      const shortName = match[1];
+      const member = FAMILY_MEMBERS.find((m) => m.shortName === shortName);
+      if (member) {return member.id;}
+    }
+    return "meta-oracle";
   }
 
   private selectGroupResponder(userMessage: string): FamilyMember {

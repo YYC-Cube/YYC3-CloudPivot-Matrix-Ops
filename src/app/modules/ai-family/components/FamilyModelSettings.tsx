@@ -68,56 +68,6 @@ interface DiagResult {
   timestamp?: string;
 }
 
-// ═══ 诊断步骤模拟 ═══
-
-interface DiagStep {
-  label: string;
-  check: (assignment: MemberModelAssignment, apiKeys: Record<string, string>, providersMap?: Record<string, ProviderDef>) => { ok: boolean; detail: string };
-}
-
-const DIAG_STEPS: DiagStep[] = [
-  {
-    label: "API Key 检查",
-    check: (a, keys) => {
-      const isLocal = a.providerId === "ollama";
-      if (isLocal) { return { ok: true, detail: "本地模型无需 API Key" }; }
-      const hasKey = !!keys[a.providerId];
-      return hasKey
-        ? { ok: true, detail: `${a.providerId} API Key 已配置 (${keys[a.providerId].slice(0, 6)}...)` }
-        : { ok: false, detail: `缺少 ${a.providerId} API Key` };
-    },
-  },
-  {
-    label: "Endpoint 可达性",
-    check: (a, _keys, pMap) => {
-      const ok = Math.random() > 0.1;
-      const provider = pMap?.[a.providerId];
-      return ok
-        ? { ok: true, detail: `${provider?.baseURL || "endpoint"} 可达` }
-        : { ok: false, detail: `${provider?.baseURL || "endpoint"} 无法连接` };
-    },
-  },
-  {
-    label: "模型可用性",
-    check: (a) => {
-      const ok = Math.random() > 0.08;
-      return ok
-        ? { ok: true, detail: `模型 ${a.modelId} 可用` }
-        : { ok: false, detail: `模型 ${a.modelId} 不可用或已下线` };
-    },
-  },
-  {
-    label: "推理响应测试",
-    check: () => {
-      const ok = Math.random() > 0.12;
-      const latency = Math.round(80 + Math.random() * 300);
-      return ok
-        ? { ok: true, detail: `响应正常 (${latency}ms)` }
-        : { ok: false, detail: "推理超时或返回异常" };
-    },
-  },
-];
-
 // ═══ 子组件：家人模型卡片 ═══
 
 function MemberModelCard({
@@ -448,6 +398,8 @@ export function FamilyModelSettings() {
 
   const handleChangeModel = useCallback((memberId: string, providerId: string, modelId: string) => {
     useFamilySettingsSlice.getState().updateModelAssignment(memberId, { providerId, modelId });
+    // 双写成员 Slice（对话链路的真实化解析以 member slice 为 SSOT）
+    useFamilyMemberSlice.getState().updateModelAssignment(memberId, { providerId, modelId });
   }, []);
 
   const handleTestConnection = useCallback(async (memberId: string) => {
@@ -459,55 +411,64 @@ export function FamilyModelSettings() {
     }));
 
     const details: string[] = [];
-    let allOk = true;
-    let repairHint: string | undefined;
-    let totalLatency = 0;
-
-    for (const step of DIAG_STEPS) {
-      // Show current step
+    const push = (ok: boolean, label: string, detail: string) =>
+      details.push(`${ok ? "✅" : "❌"} ${label}: ${detail}`);
+    const finish = (ok: boolean, repairHint?: string, latency?: number) =>
       setDiagnostics(prev => ({
         ...prev,
-        [memberId]: { ...prev[memberId], message: `${step.label}...`, details: [...details] },
+        [memberId]: {
+          memberId,
+          status: ok ? "success" : "error",
+          latency,
+          message: ok ? "全部通过" : "诊断失败",
+          details,
+          repairHint,
+          timestamp: new Date().toISOString(),
+        },
       }));
 
-      await new Promise(r => setTimeout(r, 300 + Math.random() * 400));
-
-      const result = step.check(assignment, apiKeys, PROVIDERS_MAP);
-      details.push(`${result.ok ? "✅" : "❌"} ${step.label}: ${result.detail}`);
-
-      if (!result.ok) {
-        allOk = false;
-        if (step.label === "API Key 检查") {
-          repairHint = "请在「密钥管理」标签页配置对应 API Key";
-        } else if (step.label === "Endpoint 可达性") {
-          repairHint = "请检查网络连接或代理配置";
-        } else if (step.label === "模型可用性") {
-          repairHint = "尝试切换到同提供商的其他模型";
-        } else {
-          repairHint = "建议重启后重试或降级模型";
-        }
-        break; // 遇到失败停止后续检查
-      }
-
-      if (result.detail.includes("ms")) {
-        const match = result.detail.match(/\((\d+)ms\)/);
-        if (match) { totalLatency = parseInt(match[1]); }
-      }
+    // Step 1 · 模型配置解析（真实：provider-slice configuredModels 精确匹配）
+    const { providers, configuredModels } = useProviderSlice.getState();
+    const cm = configuredModels.find(
+      m => m.providerId === assignment.providerId && m.model === assignment.modelId,
+    );
+    if (!cm) {
+      push(false, "模型配置", `绑定的模型 ${assignment.providerId}/${assignment.modelId} 未在「模型管理」中配置`);
+      finish(false, "请先在「模型管理」中添加对应模型，或切换为已配置的模型");
+      return;
     }
+    push(true, "模型配置", `已配置 ${cm.providerLabel} / ${cm.model}`);
 
+    // Step 2 · API Key 校验（真实：按服务商密钥要求检查）
+    const provider = providers.find(p => p.id === cm.providerId);
+    if (provider?.requiresApiKey && !cm.apiKey) {
+      push(false, "API Key 检查", `服务商 ${cm.providerLabel} 缺少 API Key`);
+      finish(false, "请在「密钥管理」标签页配置对应 API Key");
+      return;
+    }
+    push(true, "API Key 检查", provider?.requiresApiKey ? `${cm.providerLabel} API Key 已配置` : "本地/免密钥服务商，无需 API Key");
+
+    // Step 3 · 真实连接测试（connection-test-engine：Endpoint 可达 → 模型可用 → 推理响应）
     setDiagnostics(prev => ({
       ...prev,
-      [memberId]: {
-        memberId,
-        status: allOk ? "success" : "error",
-        latency: allOk ? totalLatency || Math.round(100 + Math.random() * 200) : undefined,
-        message: allOk ? "全部通过" : "诊断失败",
-        details,
-        repairHint,
-        timestamp: new Date().toISOString(),
-      },
+      [memberId]: { ...prev[memberId], message: "真实连接测试中...", details: [...details] },
     }));
-  }, [assignments, apiKeys, PROVIDERS_MAP]);
+    await providerSlice.testConnection(cm.id);
+
+    const tested = useProviderSlice.getState().configuredModels.find(m => m.id === cm.id);
+    const tr = tested?.lastTestResult;
+    if (!tr) {
+      push(false, "连接测试", "测试引擎未返回结果");
+      finish(false, "请检查网络后重试");
+      return;
+    }
+    for (const st of tr.steps) {
+      const mark = st.status === "pass" ? "✅" : st.status === "warn" ? "⚠️" : "❌";
+      details.push(`${mark} ${st.label}: ${st.detail}${st.latencyMs != null ? ` (${st.latencyMs}ms)` : ""}`);
+    }
+    const ok = tested?.status === "active";
+    finish(ok, ok ? undefined : tr.suggestion, ok ? tr.totalLatencyMs : undefined);
+  }, [assignments, providerSlice]);
 
   const handleSpeak = useCallback((member: UnifiedFamilyMember, profile: VoiceProfile) => {
     if (!("speechSynthesis" in window)) { return; }

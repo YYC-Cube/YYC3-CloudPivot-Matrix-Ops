@@ -108,6 +108,9 @@ export interface UnifiedFamilyMember {
   greeting: string;                  // 接听电话问候语
   careMessage: string;               // 整点关爱播报
 
+  // ── 人格（可编辑） ──
+  systemPrompt?: string;             // SYSTEM 人格提示词，缺省回退 family-personas 三件套
+
   // ── 状态 ──
   status: MemberPresenceStatus;
 

@@ -355,6 +355,18 @@ export const useFamilySettingsSlice = create<FamilySettingsSlice>()(
     {
       name: 'yyc3-family-settings',
       storage: createJSONStorage(() => localStorage),
+      version: 1,
+      migrate: (persisted, version) => {
+        // v0 → v1：精确清除通讯中心历史假种子站内信（msg-001 ~ msg-010），保留真实消息
+        const state = persisted as { commMessages?: Array<{ id: string }> } | undefined;
+        if (version < 1 && Array.isArray(state?.commMessages)) {
+          const LEGACY_SAMPLE_IDS = new Set(
+            Array.from({ length: 10 }, (_, i) => `msg-${String(i + 1).padStart(3, "0")}`),
+          );
+          state.commMessages = state.commMessages.filter((m) => !LEGACY_SAMPLE_IDS.has(m.id));
+        }
+        return state;
+      },
     }
   )
 );

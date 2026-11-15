@@ -34,7 +34,8 @@ import { useFamilySettingsSlice } from "../store/family-settings-slice";
 import type { UnifiedFamilyMember } from "../../../types";
 import { GlassCard } from "../../shared/GlassCard";
 import { FadeIn } from "./FadeIn";
-import { AI_RESPONSES, SAMPLE_MESSAGES, hexToRgb, type FamilyMessage } from "./shared";
+import { hexToRgb, type FamilyMessage } from "./shared";
+import { FamilyAIService } from "../../../lib/family-ai-service";
 
 // ═══ 消息类型配置 ═══
 
@@ -146,6 +147,19 @@ function MessageBubble({
   onDelete?: (id: string) => void;
   members: UnifiedFamilyMember[];
 }) {
+  // 系统提示（如成员离线说明）：居中胶囊渲染
+  if (msg.system) {
+    return (
+      <div className="flex justify-center my-1">
+        <span
+          className="px-3 py-1 rounded-full bg-white/[0.03] border border-white/[0.06] text-white/30"
+          style={{ fontSize: "0.6rem" }}
+        >
+          {msg.content}
+        </span>
+      </div>
+    );
+  }
   const from = members.find((m) => m.id === msg.from);
   const to = msg.to === "all" ? null : members.find((m) => m.id === msg.to);
   if (!from) {
@@ -255,13 +269,6 @@ export function FamilyCommCenter() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Seed sample messages on first load
-  useEffect(() => {
-    if (useFamilySettingsSlice.getState().commMessages.length === 0) {
-      useFamilySettingsSlice.getState().setCommMessages([...SAMPLE_MESSAGES]);
-    }
-  }, []);
-
   // Filter & search messages
   const filteredMessages = useMemo(() => {
     const result = messages.filter((msg) => {
@@ -334,32 +341,45 @@ export function FamilyCommCenter() {
     useFamilySettingsSlice.getState().addCommMessage(newMsg);
     setInputText("");
 
-    // Auto-reply after delay
-    setTimeout(() => {
-      const responders =
-        sendTo === "all"
-          ? members.filter((m) => m.id !== sendAs).slice(0, 2)
-          : ([members.find((m) => m.id === sendTo)].filter(Boolean) as typeof members);
+    // 真实回复链路：成员绑定模型 → OpenAI 兼容调用；未接线时诚实标注离线，绝不伪造回复
+    const responders =
+      sendTo === "all"
+        ? members.filter((m) => m.id !== sendAs).slice(0, 2)
+        : ([members.find((m) => m.id === sendTo)].filter(Boolean) as typeof members);
 
-      responders.forEach((responder, i) => {
-        setTimeout(
-          () => {
-            const responses = AI_RESPONSES[responder.id] || ["收到！"];
-            const response: FamilyMessage = {
-              id: `msg-${Date.now()}-reply-${i}`,
-              from: responder.id,
-              to: sendAs,
-              content: responses[Math.floor(Math.random() * responses.length)],
-              timestamp: new Date().toISOString(),
-              type: "text",
-              read: false,
-            };
-            useFamilySettingsSlice.getState().addCommMessage(response);
-          },
-          800 + i * 600,
-        );
+    responders.forEach((responder) => {
+      void FamilyAIService.chat({
+        memberId: responder.id,
+        userMessage: newMsg.content,
+        conversationHistory: [],
+        channelType: "private",
+      }).then((res) => {
+        if (res.source === "error") {
+          const note: FamilyMessage = {
+            id: `msg-${Date.now()}-offline-${responder.id}`,
+            from: "system",
+            to: sendAs,
+            content: `「${responder.shortName}」当前离线：${res.error}`,
+            timestamp: new Date().toISOString(),
+            type: "text",
+            read: true,
+            system: true,
+          };
+          useFamilySettingsSlice.getState().addCommMessage(note);
+          return;
+        }
+        const response: FamilyMessage = {
+          id: `msg-${Date.now()}-reply-${responder.id}`,
+          from: responder.id,
+          to: sendAs,
+          content: res.text,
+          timestamp: new Date().toISOString(),
+          type: "text",
+          read: false,
+        };
+        useFamilySettingsSlice.getState().addCommMessage(response);
       });
-    }, 500);
+    });
   }, [inputText, sendAs, sendTo, members]);
 
   // Delete message

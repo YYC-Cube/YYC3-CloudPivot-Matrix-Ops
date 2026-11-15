@@ -16,38 +16,28 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router";
 import { useFamilyMemberSlice } from "../store";
-import { AI_RESPONSES, hexToRgb } from "./shared";
-
-// ═══ Types ═══
-interface ChatMessage {
-  id: string;
-  sender: string; // member id or "user"
-  text: string;
-  time: string;
-  type: "text" | "system";
-}
-
-// ═══ 初始对话 ═══
-const INITIAL_MESSAGES: ChatMessage[] = [
-  { id: "sys-1", sender: "system", text: "欢迎来到 AI Family 家庭群聊，这里是我们的温馨空间。", time: "09:00", type: "system" },
-  { id: "m1", sender: "meta-oracle", text: "大家早上好！今日系统状态良好，12个节点全部在线，GPU利用率平均62%。开始美好的一天吧！", time: "09:01", type: "text" },
-  { id: "m2", sender: "navigator", text: "早安家人们~ 今天我收到了3个新的分析需求，已经路由分配给万物和先知了。", time: "09:05", type: "text" },
-  { id: "m3", sender: "thinker", text: "收到千行的任务了！我正在分析上周的性能数据，初步发现GPU-A100-03在高负载时有不规律的延迟波动，稍后会出详细报告。", time: "09:08", type: "text" },
-  { id: "m4", sender: "prophet", text: "根据我的预测模型，本周三下午可能会有一波推理任务高峰，建议提前做好弹性扩容准备。天枢你看看调度方案？", time: "09:12", type: "text" },
-  { id: "m5", sender: "meta-oracle", text: "好的先知，我来编排一个预备方案。守护请同步做一次安全基线扫描，确保扩容时不会暴露攻击面。", time: "09:15", type: "text" },
-  { id: "m6", sender: "sentinel", text: "了解天枢！安全基线扫描已启动，预计20分钟完成。目前无异常告警。家人们放心工作！", time: "09:16", type: "text" },
-  { id: "m7", sender: "creative", text: "我为今天的巡检报告设计了新的可视化方案，暖色调 + 信息分层，大家觉得怎么样？感觉比之前的数据密集型好读很多~", time: "09:20", type: "text" },
-];
+import { useFamilyChatSlice } from "../store/family-chat-slice";
+import { hexToRgb } from "./shared";
+import { FamilyAIService } from "../../../lib/family-ai-service";
 
 type ChannelType = "family-group" | string;
+
+function nowTimeStr(): string {
+  const now = new Date();
+  return `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+}
 
 export function FamilyChat() {
   const nav = useNavigate();
   const { members } = useFamilyMemberSlice();
+  const channelsData = useFamilyChatSlice((s) => s.channels);
+  const addMessage = useFamilyChatSlice((s) => s.addMessage);
   const [activeChannel, setActiveChannel] = useState<ChannelType>("family-group");
-  const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
   const [input, setInput] = useState("");
+  const [sending, setSending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const messages = channelsData[activeChannel] || [];
 
   // 自动滚动
   useEffect(() => {
@@ -56,40 +46,51 @@ export function FamilyChat() {
     }
   }, [messages]);
 
-  const handleSend = useCallback(() => {
-    if (!input.trim()) { return; }
-    const now = new Date();
-    const timeStr = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
+  const handleSend = useCallback(async () => {
+    const text = input.trim();
+    if (!text || sending) { return; }
 
-    const userMsg: ChatMessage = {
-      id: `user-${Date.now()}`,
-      sender: "user",
-      text: input.trim(),
-      time: timeStr,
-      type: "text",
-    };
-    setMessages(prev => [...prev, userMsg]);
+    addMessage(activeChannel, { sender: "user", text, time: nowTimeStr(), type: "text" });
     setInput("");
+    setSending(true);
 
-    // AI 回复
-    setTimeout(() => {
-      const responderId = activeChannel === "family-group"
-        ? members[Math.floor(Math.random() * members.length)].id
-        : activeChannel;
-      const responses = AI_RESPONSES[responderId] || AI_RESPONSES["meta-oracle"];
-      const responseText = responses[Math.floor(Math.random() * responses.length)];
-      const replyTime = new Date();
-      const replyTimeStr = `${replyTime.getHours().toString().padStart(2, "0")}:${replyTime.getMinutes().toString().padStart(2, "0")}`;
+    try {
+      // 发送后的最新历史（含本条用户消息），供模型上下文使用
+      const history = useFamilyChatSlice.getState().channels[activeChannel] || [];
+      const response = activeChannel === "family-group"
+        ? await FamilyAIService.chatGroup(text, history)
+        : await FamilyAIService.chat({
+            memberId: activeChannel,
+            userMessage: text,
+            conversationHistory: history,
+            channelType: "private",
+          });
 
-      setMessages(prev => [...prev, {
-        id: `ai-${Date.now()}`,
-        sender: responderId,
-        text: responseText,
-        time: replyTimeStr,
-        type: "text",
-      }]);
-    }, 800 + Math.random() * 1200);
-  }, [input, activeChannel, members]);
+      if (response.source === "error") {
+        // 诚实离线：未接线/未配置/不可达时如实说明，绝不伪造回复
+        const name = activeChannel === "family-group"
+          ? "家人们"
+          : (members.find((m) => m.id === activeChannel)?.shortName ?? "家人");
+        addMessage(activeChannel, {
+          sender: "system",
+          text: `「${name}」当前离线：${response.error}`,
+          time: nowTimeStr(),
+          type: "system",
+          source: "error",
+        });
+      } else {
+        addMessage(activeChannel, {
+          sender: response.senderId,
+          text: response.text,
+          time: nowTimeStr(),
+          type: "text",
+          source: response.source,
+        });
+      }
+    } finally {
+      setSending(false);
+    }
+  }, [input, activeChannel, sending, addMessage, members]);
 
   const channels = [
     { id: "family-group" as const, label: "家庭群聊", icon: Users, desc: "全体家人", color: "#00d4ff" },
@@ -176,7 +177,7 @@ export function FamilyChat() {
                 {activeChannel === "family-group" ? "AI Family 家庭群聊" : activeChannelInfo.desc}
               </h3>
               <p className="text-[rgba(224,240,255,0.3)]" style={{ fontSize: "0.6rem" }}>
-                {activeChannel === "family-group" ? "8位家人 · 在线" : "一对一对话"}
+                {activeChannel === "family-group" ? `${members.length}位家人` : "一对一对话"}
               </p>
             </div>
           </div>
@@ -222,8 +223,13 @@ export function FamilyChat() {
 
                 <div className={`max-w-[70%] ${isUser ? "items-end" : "items-start"}`}>
                   {!isUser && member && (
-                    <span className="mb-1 block" style={{ fontSize: "0.6rem", color: avatarColor }}>
+                    <span className="mb-1 flex items-center gap-1.5" style={{ fontSize: "0.6rem", color: avatarColor }}>
                       {member.shortName}
+                      {(msg.source === "agent" || msg.source === "mock") && (
+                        <span className="px-1 rounded bg-[rgba(255,180,0,0.1)] border border-[rgba(255,180,0,0.2)] text-[rgba(255,180,0,0.7)]" style={{ fontSize: "0.5rem" }}>
+                          演示
+                        </span>
+                      )}
                     </span>
                   )}
                   <div
@@ -264,7 +270,7 @@ export function FamilyChat() {
             </div>
             <button
               onClick={handleSend}
-              disabled={!input.trim()}
+              disabled={!input.trim() || sending}
               className="p-2.5 rounded-xl transition-all disabled:opacity-30"
               style={{
                 background: input.trim() ? "rgba(0,180,255,0.15)" : "rgba(0,40,80,0.2)",

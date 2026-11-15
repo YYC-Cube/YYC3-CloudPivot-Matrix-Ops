@@ -572,12 +572,14 @@ export const DEFAULT_MODEL_ASSIGNMENTS: MemberModelAssignment[] = [
 // ═══ 内部通信消息 ═══
 export interface FamilyMessage {
   id: string;
-  from: string;        // member id
+  from: string;        // member id（system 消息时为 "system"）
   to: string | "all";  // member id or "all"
   content: string;
   timestamp: string;
   type: "text" | "announcement" | "alert" | "heartbeat";
   read: boolean;
+  /** true = 系统提示（如成员离线说明），居中胶囊渲染，不计入成员发言 */
+  system?: boolean;
 }
 
 export const SAMPLE_MESSAGES: FamilyMessage[] = [

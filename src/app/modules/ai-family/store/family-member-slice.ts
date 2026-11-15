@@ -24,12 +24,13 @@ import type {
 import {
   Ear, Brain, Eye, Star, Network, Shield, Scale, Lightbulb,
 } from 'lucide-react';
+import { FAMILY_SYSTEM_PROMPTS } from '../lib/family-personas';
 
 // ============================================================
-//  默认数据（从 shared.ts 迁移）
+//  默认数据（从 shared.ts 迁移；人格三件套于 2026-11-16 接入）
 // ============================================================
 
-const DEFAULT_MEMBERS: UnifiedFamilyMember[] = [
+const DEFAULT_MEMBER_LIST: UnifiedFamilyMember[] = [
   {
     id: "navigator", name: "言启·千行", shortName: "千行", enTitle: "Navigator",
     quote: "我聆听万千言语，为您指引航向。",
@@ -168,6 +169,12 @@ const DEFAULT_MEMBERS: UnifiedFamilyMember[] = [
   },
 ];
 
+// 为每位成员挂载三件套 SYSTEM 人格（可编辑，持久化后不再被默认值覆盖）
+const DEFAULT_MEMBERS: UnifiedFamilyMember[] = DEFAULT_MEMBER_LIST.map((m) => ({
+  ...m,
+  systemPrompt: FAMILY_SYSTEM_PROMPTS[m.id],
+}));
+
 // ============================================================
 //  Slice 接口
 // ============================================================
@@ -256,8 +263,22 @@ export const useFamilyMemberSlice = create<FamilyMemberSlice>()(
     }),
     {
       name: 'yyc3-family-members',
-      // 持久化成员数据（模型分配、语音、勋章等用户可编辑字段）
+      version: 1,
+      // 持久化成员数据（模型分配、语音、勋章、人格等用户可编辑字段）
       partialize: (state) => ({ members: state.members }),
+      migrate: (persisted, version) => {
+        const state = persisted as { members?: UnifiedFamilyMember[] } | undefined;
+        if (version < 1 && state?.members) {
+          // v0 → v1：为历史成员回填三件套人格，用户已编辑的 systemPrompt 保留
+          return {
+            members: state.members.map((m) => ({
+              ...m,
+              systemPrompt: m.systemPrompt ?? FAMILY_SYSTEM_PROMPTS[m.id],
+            })),
+          };
+        }
+        return state as { members: UnifiedFamilyMember[] };
+      },
     }
   )
 );

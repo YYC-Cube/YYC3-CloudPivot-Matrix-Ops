@@ -20,9 +20,10 @@ import { GlassCard } from "../../shared/GlassCard";
 import { FadeIn } from "./FadeIn";
 import {
   hexToRgb, getHourlyCare,
-  DEFAULT_VOICE_PROFILES, AI_RESPONSES,
+  DEFAULT_VOICE_PROFILES,
   type VoiceProfile,
 } from "./shared";
+import { FamilyAIService } from "../../../lib/family-ai-service";
 import { useFamilyMemberSlice } from "../store";
 import { useFamilySettingsSlice } from "../store/family-settings-slice";
 import type { VoiceConversation } from "../store/family-settings-slice";
@@ -171,13 +172,13 @@ function VoiceCard({
           </div>
           {/* Quick preview texts */}
           <div className="flex flex-wrap gap-1.5">
-            {["问候语", "关爱播报", "随机回复"].map(label => (
+            {["问候语", "关爱播报", "座右铭"].map(label => (
               <button
                 key={label}
                 onClick={() => {
                   const text = label === "问候语" ? member.greeting
                     : label === "关爱播报" ? member.careMessage
-                    : (AI_RESPONSES[member.id]?.[Math.floor(Math.random() * AI_RESPONSES[member.id].length)] || member.quote);
+                    : member.quote;
                   speak(text, profile);
                 }}
                 className="px-2 py-1 rounded bg-white/[0.04] border border-white/[0.06] text-white/40 hover:text-white/60 hover:bg-white/[0.08] transition-all"
@@ -314,15 +315,19 @@ function VoiceConversationPanel({
   }, []);
 
   const handleRespond = useCallback((userText: string) => {
-    if (!userText.trim()) {return;}
+    if (!userText.trim() || isResponding) {return;}
     setIsResponding(true);
 
-    // Pick a random AI response
-    const responses = AI_RESPONSES[member.id] || [member.greeting];
-    const aiText = responses[Math.floor(Math.random() * responses.length)];
-
-    // Simulate thinking delay
-    setTimeout(() => {
+    // 真实回复链路：成员绑定模型 → OpenAI 兼容调用；离线时如实播报原因
+    void FamilyAIService.chat({
+      memberId: member.id,
+      userMessage: userText,
+      conversationHistory: [],
+      channelType: "private",
+    }).then((res) => {
+      const aiText = res.source === "error"
+        ? `我当前处于离线状态：${res.error}`
+        : res.text;
       speak(aiText, profile, () => setIsResponding(false));
 
       const conv: VoiceConversation = {
@@ -335,8 +340,8 @@ function VoiceConversationPanel({
       onNewConversation(conv);
       setTranscript("");
       setTextInput("");
-    }, 400 + Math.random() * 600);
-  }, [member, profile, onNewConversation]);
+    });
+  }, [member, profile, onNewConversation, isResponding]);
 
   const handleSendVoice = useCallback(() => {
     if (transcript.trim()) {
