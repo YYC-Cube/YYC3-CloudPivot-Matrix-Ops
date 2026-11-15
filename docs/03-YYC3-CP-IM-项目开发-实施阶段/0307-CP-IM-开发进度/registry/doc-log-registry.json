@@ -134,7 +134,7 @@
       "action": "create",
       "timestamp": "2026-11-16T02:50:00+08:00",
       "version": "v1.0.0",
-      "checksum": "62150098e84f6e1c",
+      "checksum": "2ad6e0152e391a14",
       "author": "YYC³ Team",
       "changes": [
         {
@@ -163,7 +163,7 @@
       "action": "create",
       "timestamp": "2026-11-16T02:50:00+08:00",
       "version": "v1.0.0",
-      "checksum": "51d66459173f7ec5",
+      "checksum": "64a2dd2366f9b716",
       "author": "YYC³ Team",
       "changes": [
         {
@@ -279,6 +279,24 @@
         {
           "field": "content",
           "summary": "批4部署：主控机生产闭环 + WS 令牌配置 + 双 LaunchAgent 常驻 + 批5追加项"
+        }
+      ],
+      "related_docs": [
+        "docs/03-YYC3-CP-IM-项目开发-实施阶段/0307-CP-IM-开发进度/logs/2026-W47/YYC3-Cloud-Matrix-glm-20261116/02-执行日志与进度跟踪.md"
+      ]
+    },
+    {
+      "trace_id": "TRC-20261116016",
+      "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/27-批5封装安装与全节点真实数据-生产测试通过-五处断点修复-20261116.md",
+      "action": "create",
+      "timestamp": "2026-11-16T07:10:00+08:00",
+      "version": "v1.1.0",
+      "checksum": "d7e0453de01e5664",
+      "author": "YYC³ Team",
+      "changes": [
+        {
+          "field": "content",
+          "summary": "批5：封装安装 + 全节点真实数据（7节点）+ 安装版生产测试全通 + 五处断点修复"
         }
       ],
       "related_docs": [
