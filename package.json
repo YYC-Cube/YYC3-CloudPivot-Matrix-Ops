@@ -31,6 +31,7 @@
     "test:lighthouse": "lhci autorun",
     "check-headers": "node scripts/check-headers.js",
     "add-header": "node scripts/add-header.js",
+    "docs:check": "node scripts/check-doc-headers.js \"docs/03-YYC3-CP-IM-项目开发-实施阶段/0307-CP-IM-开发进度/006-CP-IM-开发实施阶段-项目文档日志体系总纲.md\" \"docs/03-YYC3-CP-IM-项目开发-实施阶段/0307-CP-IM-开发进度/templates\" \"docs/03-YYC3-CP-IM-项目开发-实施阶段/0307-CP-IM-开发进度/logs\"",
     "setup-git-hooks": "bash scripts/setup-git-hooks.sh",
     "clean": "rm -rf dist dist-electron node_modules/.vite .vite",
     "check:testid": "node scripts/check-testid-naming.js",

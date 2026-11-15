@@ -1,0 +1,235 @@
+{
+  "registry": "YYC3-Cloud-Matrix 文档日志追溯注册表",
+  "standard": "依《YYC3-团队通用-文档闭环》追溯记录结构；checksum = 正文（去除 frontmatter）SHA256 前 16 位；trace_id = TRC-YYYYMMDDNNN（本地日期）",
+  "updated": "2026-11-16",
+  "records": [
+    {
+      "trace_id": "TRC-20261116001",
+      "document": "docs/03-YYC3-CP-IM-项目开发-实施阶段/0307-CP-IM-开发进度/006-CP-IM-开发实施阶段-项目文档日志体系总纲.md",
+      "action": "create",
+      "timestamp": "2026-11-16T02:50:00+08:00",
+      "version": "v1.0.0",
+      "checksum": "e6d0f882e30744ef",
+      "author": "YYC³ Team",
+      "changes": [
+        {
+          "field": "content",
+          "summary": "初始创建"
+        }
+      ],
+      "related_docs": [
+        "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-团队通用-标规文档/YYC3-团队通用-文档闭环.md"
+      ]
+    },
+    {
+      "trace_id": "TRC-20261116002",
+      "document": "docs/03-YYC3-CP-IM-项目开发-实施阶段/0307-CP-IM-开发进度/templates/00-project-audit_template.md",
+      "action": "create",
+      "timestamp": "2026-11-16T02:50:00+08:00",
+      "version": "v1.0.0",
+      "checksum": "2e2da7ca4244085b",
+      "author": "YYC³ Team",
+      "changes": [
+        {
+          "field": "content",
+          "summary": "初始创建"
+        }
+      ],
+      "related_docs": []
+    },
+    {
+      "trace_id": "TRC-20261116003",
+      "document": "docs/03-YYC3-CP-IM-项目开发-实施阶段/0307-CP-IM-开发进度/templates/01-task-plan_template.md",
+      "action": "create",
+      "timestamp": "2026-11-16T02:50:00+08:00",
+      "version": "v1.0.0",
+      "checksum": "7c89650a603b3282",
+      "author": "YYC³ Team",
+      "changes": [
+        {
+          "field": "content",
+          "summary": "初始创建"
+        }
+      ],
+      "related_docs": []
+    },
+    {
+      "trace_id": "TRC-20261116004",
+      "document": "docs/03-YYC3-CP-IM-项目开发-实施阶段/0307-CP-IM-开发进度/templates/02-execution-log_template.md",
+      "action": "create",
+      "timestamp": "2026-11-16T02:50:00+08:00",
+      "version": "v1.0.0",
+      "checksum": "f51a72d0f9083969",
+      "author": "YYC³ Team",
+      "changes": [
+        {
+          "field": "content",
+          "summary": "初始创建"
+        }
+      ],
+      "related_docs": []
+    },
+    {
+      "trace_id": "TRC-20261116005",
+      "document": "docs/03-YYC3-CP-IM-项目开发-实施阶段/0307-CP-IM-开发进度/templates/03-session-summary_template.md",
+      "action": "create",
+      "timestamp": "2026-11-16T02:50:00+08:00",
+      "version": "v1.0.0",
+      "checksum": "9ab44d10f5897d04",
+      "author": "YYC³ Team",
+      "changes": [
+        {
+          "field": "content",
+          "summary": "初始创建"
+        }
+      ],
+      "related_docs": []
+    },
+    {
+      "trace_id": "TRC-20261116006",
+      "document": "docs/03-YYC3-CP-IM-项目开发-实施阶段/0307-CP-IM-开发进度/logs/2026-W47/YYC3-Cloud-Matrix-glm-20261116/00-项目现状审核报告.md",
+      "action": "create",
+      "timestamp": "2026-11-16T02:50:00+08:00",
+      "version": "v1.0.0",
+      "checksum": "326e1feabe05d839",
+      "author": "YYC³ Team",
+      "changes": [
+        {
+          "field": "content",
+          "summary": "初始创建"
+        }
+      ],
+      "related_docs": [
+        "docs/03-YYC3-CP-IM-项目开发-实施阶段/0307-CP-IM-开发进度/logs/2026-W47/YYC3-Cloud-Matrix-glm-20261116/01-任务规划与节点目标.md",
+        "docs/03-YYC3-CP-IM-项目开发-实施阶段/0307-CP-IM-开发进度/logs/2026-W47/YYC3-Cloud-Matrix-glm-20261116/02-执行日志与进度跟踪.md",
+        "docs/03-YYC3-CP-IM-项目开发-实施阶段/0307-CP-IM-开发进度/logs/2026-W47/YYC3-Cloud-Matrix-glm-20261116/03-总结文档与状态同步.md",
+        "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/17-后续衔接文档-未执行项清单与接手指引-20261116.md",
+        "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/20-生产落地演进规划-20261116.md",
+        "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/22-落档序列全景评估与文档日志体系衔接-20261116.md"
+      ]
+    },
+    {
+      "trace_id": "TRC-20261116007",
+      "document": "docs/03-YYC3-CP-IM-项目开发-实施阶段/0307-CP-IM-开发进度/logs/2026-W47/YYC3-Cloud-Matrix-glm-20261116/01-任务规划与节点目标.md",
+      "action": "create",
+      "timestamp": "2026-11-16T02:50:00+08:00",
+      "version": "v1.0.0",
+      "checksum": "f8b378a15e186c4e",
+      "author": "YYC³ Team",
+      "changes": [
+        {
+          "field": "content",
+          "summary": "初始创建"
+        }
+      ],
+      "related_docs": [
+        "docs/03-YYC3-CP-IM-项目开发-实施阶段/0307-CP-IM-开发进度/logs/2026-W47/YYC3-Cloud-Matrix-glm-20261116/00-项目现状审核报告.md",
+        "docs/03-YYC3-CP-IM-项目开发-实施阶段/0307-CP-IM-开发进度/logs/2026-W47/YYC3-Cloud-Matrix-glm-20261116/02-执行日志与进度跟踪.md",
+        "docs/03-YYC3-CP-IM-项目开发-实施阶段/0307-CP-IM-开发进度/logs/2026-W47/YYC3-Cloud-Matrix-glm-20261116/03-总结文档与状态同步.md"
+      ]
+    },
+    {
+      "trace_id": "TRC-20261116008",
+      "document": "docs/03-YYC3-CP-IM-项目开发-实施阶段/0307-CP-IM-开发进度/logs/2026-W47/YYC3-Cloud-Matrix-glm-20261116/02-执行日志与进度跟踪.md",
+      "action": "create",
+      "timestamp": "2026-11-16T02:50:00+08:00",
+      "version": "v1.0.0",
+      "checksum": "57d45e446d850a97",
+      "author": "YYC³ Team",
+      "changes": [
+        {
+          "field": "content",
+          "summary": "初始创建"
+        },
+        {
+          "field": "content",
+          "summary": "衔接更新（落档22/批2在途结论回填）"
+        },
+        {
+          "field": "content",
+          "summary": "批2收口/T-08 执行日志与总结更新"
+        }
+      ],
+      "related_docs": [
+        "docs/03-YYC3-CP-IM-项目开发-实施阶段/0307-CP-IM-开发进度/logs/2026-W47/YYC3-Cloud-Matrix-glm-20261116/00-项目现状审核报告.md",
+        "docs/03-YYC3-CP-IM-项目开发-实施阶段/0307-CP-IM-开发进度/logs/2026-W47/YYC3-Cloud-Matrix-glm-20261116/03-总结文档与状态同步.md"
+      ],
+      "trace_note": "checksum refreshed",
+      "action_note": "update"
+    },
+    {
+      "trace_id": "TRC-20261116009",
+      "document": "docs/03-YYC3-CP-IM-项目开发-实施阶段/0307-CP-IM-开发进度/logs/2026-W47/YYC3-Cloud-Matrix-glm-20261116/03-总结文档与状态同步.md",
+      "action": "create",
+      "timestamp": "2026-11-16T02:50:00+08:00",
+      "version": "v1.0.0",
+      "checksum": "5de02cd4aab23f2f",
+      "author": "YYC³ Team",
+      "changes": [
+        {
+          "field": "content",
+          "summary": "初始创建"
+        },
+        {
+          "field": "content",
+          "summary": "衔接更新（落档22/批2在途结论回填）"
+        },
+        {
+          "field": "content",
+          "summary": "批2收口/T-08 执行日志与总结更新"
+        }
+      ],
+      "related_docs": [
+        "docs/03-YYC3-CP-IM-项目开发-实施阶段/0307-CP-IM-开发进度/logs/2026-W47/YYC3-Cloud-Matrix-glm-20261116/00-项目现状审核报告.md",
+        "docs/03-YYC3-CP-IM-项目开发-实施阶段/0307-CP-IM-开发进度/logs/2026-W47/YYC3-Cloud-Matrix-glm-20261116/01-任务规划与节点目标.md",
+        "docs/03-YYC3-CP-IM-项目开发-实施阶段/0307-CP-IM-开发进度/logs/2026-W47/YYC3-Cloud-Matrix-glm-20261116/02-执行日志与进度跟踪.md",
+        "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/17-后续衔接文档-未执行项清单与接手指引-20261116.md",
+        "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/20-生产落地演进规划-20261116.md",
+        "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/22-落档序列全景评估与文档日志体系衔接-20261116.md"
+      ],
+      "trace_note": "checksum refreshed",
+      "action_note": "update"
+    },
+    {
+      "trace_id": "TRC-20261116010",
+      "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/22-落档序列全景评估与文档日志体系衔接-20261116.md",
+      "action": "create",
+      "timestamp": "2026-11-16T03:30:00+08:00",
+      "version": "v1.0.0",
+      "checksum": "026fcf142326ce50",
+      "author": "YYC³ Team",
+      "changes": [
+        {
+          "field": "content",
+          "summary": "落档序列全景评估 + 双轨衔接规则 + 批2收口指引"
+        }
+      ],
+      "related_docs": [
+        "docs/03-YYC3-CP-IM-项目开发-实施阶段/0307-CP-IM-开发进度/logs/2026-W47/YYC3-Cloud-Matrix-glm-20261116/00-项目现状审核报告.md",
+        "docs/03-YYC3-CP-IM-项目开发-实施阶段/0307-CP-IM-开发进度/logs/2026-W47/YYC3-Cloud-Matrix-glm-20261116/03-总结文档与状态同步.md",
+        "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/17-后续衔接文档-未执行项清单与接手指引-20261116.md",
+        "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/20-生产落地演进规划-20261116.md",
+        "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/21-批1真实性清零-家园崩溃热修-假统计-伪造成就-死模型-登录引导-死代码-20261116.md"
+      ]
+    },
+    {
+      "trace_id": "TRC-20261116011",
+      "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/23-批2真实性清零收口-测试真实化同步-浏览器实证-批3候选登记-20261116.md",
+      "action": "create",
+      "timestamp": "2026-11-16T04:20:00+08:00",
+      "version": "v1.0.0",
+      "checksum": "cfcec41ef7075d8e",
+      "author": "YYC³ Team",
+      "changes": [
+        {
+          "field": "content",
+          "summary": "批2收口报告：641502a + 5066 全绿 + 浏览器实证 + 批3候选 #14/#15 + M4 改期裁决"
+        }
+      ],
+      "related_docs": [
+        "docs/03-YYC3-CP-IM-项目开发-实施阶段/0307-CP-IM-开发进度/logs/2026-W47/YYC3-Cloud-Matrix-glm-20261116/02-执行日志与进度跟踪.md",
+        "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/22-批2真实性清零收口-测试真实化同步-浏览器实证-批3候选登记-20261116.md/22-落档序列全景评估与文档日志体系衔接-20261116.md"
+      ]
+    }
+  ]
+}
