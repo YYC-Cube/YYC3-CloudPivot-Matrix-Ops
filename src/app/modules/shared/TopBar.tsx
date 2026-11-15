@@ -289,7 +289,7 @@ export function TopBar({
     <div className="w-full shrink-0">
       {/* ═══ 顶栏主体 ═══ */}
       <div
-        className="flex items-center justify-between bg-[rgba(4,10,22,0.95)] backdrop-blur-xl border-b border-[rgba(0,180,255,0.08)]"
+        className="yyc3-app-drag flex items-center justify-between bg-[rgba(4,10,22,0.95)] backdrop-blur-xl border-b border-[rgba(0,180,255,0.08)]"
         style={{ height: 48, padding: isMobile ? "0 12px" : "0 20px" }}
       >
         {/* Left */}

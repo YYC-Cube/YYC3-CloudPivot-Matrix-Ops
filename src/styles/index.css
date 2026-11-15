@@ -24,3 +24,24 @@
 @import './fonts.css';
 @import './tailwind.css';
 @import './theme.css';
+
+/* ============================================================
+ * Electron 桌面端窗口拖拽区（titleBarStyle: hiddenInset）
+ * - TopBar 根元素挂 .yyc3-app-drag：整条顶栏可作为拖拽区
+ * - 交互元素（按钮/输入/下拉/链接/弹层）一律 no-drag，保证可点击
+ * - Web 浏览器环境忽略 -webkit-app-region，不影响 Web/PWA
+ * ============================================================ */
+.yyc3-app-drag {
+  -webkit-app-region: drag;
+}
+.yyc3-app-drag button,
+.yyc3-app-drag input,
+.yyc3-app-drag select,
+.yyc3-app-drag textarea,
+.yyc3-app-drag a,
+.yyc3-app-drag [role='button'],
+.yyc3-app-drag [role='menuitem'],
+.yyc3-app-drag [data-radix-popper-content-wrapper],
+.yyc3-app-no-drag {
+  -webkit-app-region: no-drag;
+}
