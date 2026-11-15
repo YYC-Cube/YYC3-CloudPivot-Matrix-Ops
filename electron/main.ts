@@ -53,7 +53,7 @@ const CSP_PROD = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
-  "connect-src 'self' wss: https://*.supabase.co",
+  "connect-src 'self' wss: ws://localhost:* ws://127.0.0.1:* https://*.supabase.co",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
