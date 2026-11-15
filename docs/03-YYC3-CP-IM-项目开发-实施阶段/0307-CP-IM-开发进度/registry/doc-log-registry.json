@@ -134,7 +134,7 @@
       "action": "create",
       "timestamp": "2026-11-16T02:50:00+08:00",
       "version": "v1.0.0",
-      "checksum": "a88892e90f79ab54",
+      "checksum": "aaa2fba834278faa",
       "author": "YYC³ Team",
       "changes": [
         {
@@ -163,7 +163,7 @@
       "action": "create",
       "timestamp": "2026-11-16T02:50:00+08:00",
       "version": "v1.0.0",
-      "checksum": "74bb9a1bc53b6956",
+      "checksum": "f0473af0d2635731",
       "author": "YYC³ Team",
       "changes": [
         {
@@ -243,6 +243,24 @@
         {
           "field": "content",
           "summary": "批3销项：14 清零 + F-05 加固 + F-12 纠正 + NAS 可达 + 批4入口"
+        }
+      ],
+      "related_docs": [
+        "docs/03-YYC3-CP-IM-项目开发-实施阶段/0307-CP-IM-开发进度/logs/2026-W47/YYC3-Cloud-Matrix-glm-20261116/02-执行日志与进度跟踪.md"
+      ]
+    },
+    {
+      "trace_id": "TRC-20261116014",
+      "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/25-批4生产闭环封装-真机冒烟通过-双架构dmg落盘-20261116.md",
+      "action": "create",
+      "timestamp": "2026-11-16T06:05:00+08:00",
+      "version": "v1.0.0",
+      "checksum": "08dcad9f78b1c578",
+      "author": "YYC³ Team",
+      "changes": [
+        {
+          "field": "content",
+          "summary": "批4生产闭环：三断点修复 4f31e8d + 双架构 dmg 验证 + 批5入口"
         }
       ],
       "related_docs": [
