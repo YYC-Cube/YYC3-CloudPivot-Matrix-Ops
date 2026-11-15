@@ -23,13 +23,11 @@ export interface NewsItem {
   createdAt: number;
 }
 
-const SEED_NEWS: NewsItem[] = [
-  { id: "n1", title: "OpenAI 发布 GPT-5 技术报告，推理能力大幅跃升", source: "AI前沿", time: "30分钟前", category: "AI", color: "#00d4ff", createdAt: Date.now() - 1800000 },
-  { id: "n2", title: "DeepSeek V3 开源模型性能超越 Claude 3.5", source: "开源社区", time: "1小时前", category: "开源", color: "#00FF88", createdAt: Date.now() - 3600000 },
-  { id: "n3", title: "英伟达发布 Blackwell Ultra 芯片，推理性能翻倍", source: "硬件资讯", time: "2小时前", category: "硬件", color: "#FFD700", createdAt: Date.now() - 7200000 },
-  { id: "n4", title: "React 20 正式发布：Server Components 全面稳定", source: "前端周刊", time: "3小时前", category: "前端", color: "#00BFFF", createdAt: Date.now() - 10800000 },
-  { id: "n5", title: "智谱 AI 推出 GLM-5 系列模型，支持超长上下文", source: "国内AI", time: "4小时前", category: "AI", color: "#BF00FF", createdAt: Date.now() - 14400000 },
-];
+// 新闻资讯默认空 — 真实资讯由用户添加或真实订阅源写入
+const SEED_NEWS: NewsItem[] = [];
+
+// 历史假种子 ID（v0 写入的虚构新闻），migrate 时精确清除
+const LEGACY_FAKE_NEWS_IDS = new Set(["n1", "n2", "n3", "n4", "n5"]);
 
 interface FamilyNewsSlice {
   news: NewsItem[];
@@ -63,6 +61,17 @@ export const useFamilyNewsSlice = create<FamilyNewsSlice>()(
           news: s.news.filter((n) => n.id !== id),
         })),
     }),
-    { name: "yyc3-family-news" },
+    {
+      name: "yyc3-family-news",
+      version: 1,
+      migrate: (persisted, version) => {
+        const state = persisted as { news?: NewsItem[] } | undefined;
+        if (version < 1 && state?.news) {
+          // v0 → v1：精确清除历史虚构新闻，保留用户真实条目
+          return { news: state.news.filter((n) => !LEGACY_FAKE_NEWS_IDS.has(n.id)) };
+        }
+        return state as { news: NewsItem[] };
+      },
+    },
   ),
 );

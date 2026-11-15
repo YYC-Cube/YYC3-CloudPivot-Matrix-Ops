@@ -2,22 +2,22 @@
  * @file: FamilyActivityCenter.test.tsx
  * @description: FamilyActivityCenter 组件测试 · 全家活动中心 5 Tab 渲染/切换/筛选/展开
  * @author: YanYuCloudCube Team
- * @version: v1.0.0
+ * @version: v2.0.0
  * @created: 2026-08-19
- * @updated: 2026-08-19
+ * @updated: 2026-11-16
  * @status: active
  * @tags: [component],[test],[ai-family],[activity-center]
  *
- * @brief: 覆盖 FamilyActivityCenter 主组件 5 个 Tab 的核心交互：
- *  - Tab 1 Broadcast 每日播报：播报员 LIVE 标识 + 分段播报渲染
+ * @brief: 覆盖 FamilyActivityCenter 主组件 5 个 Tab 的核心交互（批2真实化后数据源全部为 Zustand slice）：
+ *  - Tab 1 Broadcast 每日播报：2 段真实派生（积分榜 stats + 记忆存档 slice 数量）
  *  - Tab 2 Scoreboard 积分榜：领奖台（金银铜错位）+ 完整 8 人排行
- *  - Tab 3 Activities 活动记录：6 种类型筛选 + 8 条活动卡片展开/收起
- *  - Tab 4 Medals 勋章墙：12 枚勋章网格 + 家人荣誉榜 8 行
- *  - Tab 5 Memories 成长记忆：8T 空间卡 + 家人筛选 + 记忆条目渲染
+ *  - Tab 3 Activities 活动记录：默认空态 + 播种 slice 后的类型筛选 + 卡片展开/收起
+ *  - Tab 4 Medals 勋章墙：12 枚定义网格 + 荣誉榜获得计数（默认 0 枚，授予后更新）
+ *  - Tab 5 Memories 成长记忆：说明卡 + 家人筛选 + 隐私过滤（self 不渲染）
  *
- * 注意：组件内部使用 shared.ts 静态 FAMILY_ACTIVITIES / MEDALS / SAMPLE_MEMORIES
- *       （非 Zustand family-activities-slice），故活动/勋章/记忆数据无需 seed store，
- *       仅 members（积分榜/勋章墙/记忆筛选）需要 seed useFamilyMemberSlice。
+ * 注意：批2真实性清零后 shared.ts 静态 FAMILY_ACTIVITIES/MEMBER_MEDALS/SAMPLE_MEMORIES 已删除，
+ *       活动/记忆/勋章获得改由 family-activities/memories/medals-slice 提供（默认空，真实发生时写入）。
+ *       本测试通过 useXxxSlice.setState 播种用户侧真实形态数据，验证筛选/展开/隐私过滤逻辑。
  *       组件未使用 useI18n，所有文案为硬编码中文，无需 mock t()。
  */
 
@@ -25,10 +25,17 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import React from "react";
-import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup, act } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
-import { useFamilyMemberSlice } from "../modules/ai-family/store";
+import {
+  useFamilyMemberSlice,
+  useFamilyActivitiesSlice,
+  useFamilyMemoriesSlice,
+  useFamilyMedalsSlice,
+} from "../modules/ai-family/store";
 import type { UnifiedFamilyMember } from "../types";
+import type { FamilyActivity } from "../modules/ai-family/store/family-activities-slice";
+import type { GrowthMemory } from "../modules/ai-family/store/family-memories-slice";
 import {
   Ear, Brain, Eye, Star, Network, Shield, Scale, Lightbulb,
 } from "lucide-react";
@@ -47,10 +54,9 @@ vi.mock("../modules/ai-family/components/FadeIn", () => ({
 }));
 
 // ══════════════════════════════════════════════════════════════════════
-// FamilyActivityCenter 内部直接使用 shared.ts 静态常量 + getMember/getTodayReporter
-//   这些函数基于 FAMILY_MEMBERS，与 Zustand seed 的 members 不是同一数据源。
-//   为确保"天枢1205>万物923>宗师856"等种子值生效，这里 vi.mock 覆盖 shared.ts：
-//   将 FAMILY_MEMBERS 等改为引用可写单例 __sharedState，每个 beforeEach 前 sync 一次。
+// FamilyActivityCenter 通过 shared.ts 的 getMember/getTodayReader/generateDailyBroadcast
+// 渲染成员头像与播报。这里 vi.mock 覆盖 shared.ts：成员数据改为引用可写单例 __sharedState，
+// generateDailyBroadcast 镜像真实实现（积分榜段从 stats 派生 + 记忆存档段从 slice 计数派生）。
 // ══════════════════════════════════════════════════════════════════════
 
 // vi.mock 内部共享的可变状态（在 hoisted 的 vi.mock factory 和 runtime syncSharedMock 之间）
@@ -58,6 +64,7 @@ const __yyc3SharedState: { converted: any[]; map: Record<string, any> } = { conv
 
 vi.mock("../modules/ai-family/components/shared", async (importOriginal) => {
   const real: any = await importOriginal();
+  const { useFamilyMemoriesSlice } = await import("../modules/ai-family/store");
   const getMember = (id: string) => __yyc3SharedState.map[id];
   const getTodayReporter = () => {
     const arr = __yyc3SharedState.converted.length ? __yyc3SharedState.converted : real.FAMILY_MEMBERS;
@@ -84,15 +91,28 @@ vi.mock("../modules/ai-family/components/shared", async (importOriginal) => {
         "master": `宗师今日播报。追求卓越永无止境，来看看大家的表现。`,
         "creative": `灵韵的创意播报开始啦！今天的播报我配了插画哦～`,
       };
-      const allIds = arr.map((x: any) => x.id);
+      // 镜像真实实现：段落只保留可从真实数据推导的内容
+      const ranked = [...arr].sort((a: any, b: any) => b.contribution - a.contribution);
+      const totalScore = ranked.reduce((sum: number, m: any) => sum + m.contribution, 0);
+      let memoryCount = 0;
+      try {
+        memoryCount = useFamilyMemoriesSlice.getState().memories.length;
+      } catch { /* store 未就绪时按 0 处理 */ }
       const segments = [
-        { type: "score", title: "今日家庭积分榜", content: "天枢以 1,205 分领跑，万物紧随其后！", involvedMembers: ["meta-oracle", "thinker", "navigator"], emoji: "🏆" },
-        { type: "news", title: "家庭新闻", content: "守护连续在线 90 天，获得「坚持大师」勋章！", involvedMembers: ["sentinel", "prophet"], emoji: "📰" },
-        { type: "challenge", title: "今日全家挑战", content: "五子棋循环赛第三轮！", involvedMembers: ["thinker", "master"], emoji: "🎯" },
-        { type: "penalty", title: "今日趣味惩罚", content: "YYC 昨日综合表现未达标，唱首歌！", involvedMembers: ["creative", "navigator"], emoji: "🎤" },
-        { type: "talent", title: "才艺时刻", content: "灵韵今天画了一幅「赛博朋克·家的温度」！", involvedMembers: ["creative"], emoji: "🎨" },
-        { type: "mood", title: "今日家人心情指数", content: "全家平均心情值 8.7/10！千行最开心！", involvedMembers: allIds, emoji: "😊" },
-        { type: "memory", title: "今日记忆存档", content: "今天的所有互动已存入 8T 成长空间。", involvedMembers: allIds, emoji: "💾" },
+        {
+          type: "score", title: "今日家庭积分榜",
+          content: totalScore > 0
+            ? `${ranked[0].name} 以 ${ranked[0].contribution.toLocaleString()} 分领跑，${ranked[1].name} 以 ${ranked[1].contribution.toLocaleString()} 分紧随其后。`
+            : "积分榜暂无记录。家人们的每一分付出都会被真实记录，等待第一次累积。",
+          involvedMembers: ranked.slice(0, 3).map((m: any) => m.id), emoji: "🏆",
+        },
+        {
+          type: "memory", title: "今日记忆存档",
+          content: memoryCount > 0
+            ? `成长空间已保存 ${memoryCount} 条真实记忆。这些记忆不会产生代码，不会被删除，它们只属于我们。`
+            : "成长空间还没有记忆。真实的互动发生时，记忆会在这里自然沉淀。",
+          involvedMembers: arr.map((m: any) => m.id), emoji: "💾",
+        },
       ];
       return {
         id: `broadcast-${Date.now()}`,
@@ -133,8 +153,7 @@ vi.mock("../modules/ai-family/components/FamilyPageHeader", () => ({
 import { FamilyActivityCenter } from "../modules/ai-family/components/FamilyActivityCenter";
 
 // ──────────────────────────────────────────────────────────────────
-// 种子数据：仅 seed useFamilyMemberSlice.members
-//   （组件使用 members 渲染积分榜、勋章墙家人荣誉榜、成长记忆筛选按钮）
+// 种子数据：members（积分榜/荣誉榜/记忆筛选）+ 活动/记忆/勋章获得（各 slice，默认空）
 // ──────────────────────────────────────────────────────────────────
 
 function buildSeedMembers(): UnifiedFamilyMember[] {
@@ -254,7 +273,37 @@ function buildSeedMembers(): UnifiedFamilyMember[] {
   ];
 }
 
-function seedMembersStore(members: UnifiedFamilyMember[]) {
+/** 活动记录种子（用户真实形态数据：真实发生才写入） */
+function buildSeedActivities(): FamilyActivity[] {
+  return [
+    {
+      id: "act-t1", title: "五子棋循环赛", type: "game", date: "2026-11-15",
+      participants: ["navigator", "thinker", "prophet", "master"],
+      scores: { navigator: 3, master: 2, prophet: 1, thinker: 0 },
+      winner: "navigator", description: "千行三战全胜，语言与棋盘双线开花。",
+      medals: ["chess-king"], createdAt: 1,
+    },
+    {
+      id: "act-t2", title: "灵韵的即兴画展", type: "talent", date: "2026-11-15",
+      participants: ["creative"], description: "主题：赛博朋克·家的温度。", createdAt: 2,
+    },
+    {
+      id: "act-t3", title: "安全攻防演练", type: "challenge", date: "2026-11-15",
+      participants: ["sentinel", "thinker"], description: "钓鱼演练全员通过。", createdAt: 3,
+    },
+  ];
+}
+
+/** 成长记忆种子（family/public/self 三种隐私形态） */
+function buildSeedMemories(): GrowthMemory[] {
+  return [
+    { id: "mem-t1", memberId: "navigator", date: "2026-11-15", type: "learning", title: "今天学会了一个新方言", content: "方言速记入门完成。", privacy: "family", createdAt: 1 },
+    { id: "mem-t2", memberId: "creative", date: "2026-11-15", type: "creation", title: "画了一幅日出", content: "晨光练习第三稿。", privacy: "public", createdAt: 2 },
+    { id: "mem-t3", memberId: "sentinel", date: "2026-11-15", type: "diary", title: "值班随想", content: "仅供自己回看。", privacy: "self", createdAt: 3 },
+  ];
+}
+
+function seedMembers(members: UnifiedFamilyMember[]) {
   useFamilyMemberSlice.setState({
     members,
     getMemberById: (id: string) => members.find((m: UnifiedFamilyMember) => m.id === id),
@@ -275,7 +324,7 @@ function clickTab(label: string) {
 describe("FamilyActivityCenter", () => {
   const seedForSpec = () => {
     const members = buildSeedMembers();
-    seedMembersStore(members);
+    seedMembers(members);
     syncSharedMockMembers(members);
     return members;
   };
@@ -284,6 +333,10 @@ describe("FamilyActivityCenter", () => {
     vi.clearAllMocks();
     localStorage.clear();
     sessionStorage.clear();
+    // 批2真实化后各 slice 默认空；每轮显式复位，杜绝跨用例泄漏
+    useFamilyActivitiesSlice.setState({ activities: [] });
+    useFamilyMemoriesSlice.setState({ memories: [] });
+    useFamilyMedalsSlice.setState({ memberMedals: {} });
     seedForSpec();
   });
 
@@ -316,7 +369,7 @@ describe("FamilyActivityCenter", () => {
   });
 
   // =================================================================
-  describe("Tab 1：每日播报 Broadcast", () => {
+  describe("Tab 1：每日播报 Broadcast（真实派生）", () => {
     it("默认进入播报 Tab → 渲染 LIVE 标识 + 今日播报员 + 日期 + 签名行", () => {
       render(<FamilyActivityCenter />);
       expect(screen.getByText("LIVE")).toBeInTheDocument();
@@ -324,12 +377,20 @@ describe("FamilyActivityCenter", () => {
       expect(screen.getByText(/^以上是今日 Family AI 播报。明天见!$/)).toBeInTheDocument();
     });
 
-    it("7 段播报分段全部存在：积分榜/新闻/挑战/惩罚/才艺/心情/记忆", () => {
+    it("2 段真实派生播报：积分榜段（stats 排序）+ 记忆存档段（slice 计数，空态诚实文案）", () => {
       render(<FamilyActivityCenter />);
-      [
-        "今日家庭积分榜", "家庭新闻", "今日全家挑战",
-        "今日趣味惩罚", "才艺时刻", "今日家人心情指数", "今日记忆存档",
-      ].forEach(t => expect(screen.getByText(t)).toBeInTheDocument());
+      // 段 1：积分榜——由种子成员 stats 真实派生（天枢 1205 第一）
+      expect(screen.getByText("今日家庭积分榜")).toBeInTheDocument();
+      expect(screen.getByText(/以 1,205 分领跑/)).toBeInTheDocument();
+      // 段 2：记忆存档——memories slice 为空 → 诚实空态文案（不再有固定 7 段假播报）
+      expect(screen.getByText("今日记忆存档")).toBeInTheDocument();
+      expect(screen.getByText(/成长空间还没有记忆/)).toBeInTheDocument();
+    });
+
+    it("记忆存档段随 slice 实时计数：播种 1 条真实记忆 → 文案变为「已保存 1 条」", () => {
+      useFamilyMemoriesSlice.setState({ memories: buildSeedMemories().slice(0, 1) });
+      render(<FamilyActivityCenter />);
+      expect(screen.getByText(/成长空间已保存 1 条真实记忆/)).toBeInTheDocument();
     });
   });
 
@@ -394,94 +455,94 @@ describe("FamilyActivityCenter", () => {
       );
     });
 
-    it("默认全部 = 8 条活动：五子棋/画展/知识分享/成语接龙/心情分享/被罚唱歌/攻防演练/教画画", () => {
-      [
-        "五子棋循环赛·第二轮", "灵韵的即兴画展", "知识分享会·第12期",
-        "成语接龙大赛", "全家心情分享会", "YYC 被罚唱歌·第3次",
-        "安全攻防演练", "灵韵教大家画画",
-      ].forEach(t => expect(screen.getByText(t)).toBeInTheDocument());
+    it("默认无活动 → 空态「暂无该类型的活动记录」+「查看全部活动」按钮", () => {
+      // 批2真实化后 activities slice 默认空，不再有 8 条虚构活动
+      expect(screen.getByText("暂无该类型的活动记录")).toBeInTheDocument();
+      expect(screen.getByText("查看全部活动", { selector: "button" })).toBeInTheDocument();
     });
 
-    it("筛选「对弈竞技」(game) → 仅 2 条：五子棋 + 成语接龙（二者均 type=game）", () => {
+    it("播种 3 条真实活动 → 全部可见：五子棋/画展/攻防演练", () => {
+      act(() => { useFamilyActivitiesSlice.setState({ activities: buildSeedActivities() }); });
+      ["五子棋循环赛", "灵韵的即兴画展", "安全攻防演练"].forEach(t =>
+        expect(screen.getByText(t)).toBeInTheDocument(),
+      );
+      expect(screen.queryByText("暂无该类型的活动记录")).toBeNull();
+    });
+
+    it("筛选「对弈竞技」(game) → 仅五子棋（唯一 game 型）", () => {
+      useFamilyActivitiesSlice.setState({ activities: buildSeedActivities() });
       fireEvent.click(screen.getByText("对弈竞技", { selector: "button" }));
-      expect(screen.getByText("五子棋循环赛·第二轮")).toBeInTheDocument();
-      expect(screen.getByText("成语接龙大赛")).toBeInTheDocument();
+      expect(screen.getByText("五子棋循环赛")).toBeInTheDocument();
       expect(screen.queryByText("灵韵的即兴画展")).toBeNull();
-      expect(screen.queryByText("全家心情分享会")).toBeNull();
-    });
-
-    it("筛选「才艺展示」(talent) → 2 条：即兴画展 + 教画画", () => {
-      fireEvent.click(screen.getByText("才艺展示", { selector: "button" }));
-      expect(screen.getByText("灵韵的即兴画展")).toBeInTheDocument();
-      expect(screen.getByText("灵韵教大家画画")).toBeInTheDocument();
       expect(screen.queryByText("安全攻防演练")).toBeNull();
     });
 
-    it("筛选「挑战赛」(challenge) → 2 条：被罚唱歌 + 攻防演练", () => {
-      fireEvent.click(screen.getByText("挑战赛", { selector: "button" }));
-      expect(screen.getByText("YYC 被罚唱歌·第3次")).toBeInTheDocument();
+    it("筛选「学习分享」(learning) → 无该类型活动 → 空态出现，点「查看全部活动」恢复全部", () => {
+      useFamilyActivitiesSlice.setState({ activities: buildSeedActivities() });
+      fireEvent.click(screen.getByText("学习分享", { selector: "button" }));
+      expect(screen.getByText("暂无该类型的活动记录")).toBeInTheDocument();
+      fireEvent.click(screen.getByText("查看全部活动", { selector: "button" }));
+      expect(screen.getByText("五子棋循环赛")).toBeInTheDocument();
       expect(screen.getByText("安全攻防演练")).toBeInTheDocument();
-      expect(screen.queryByText("成语接龙大赛")).toBeNull();
+      expect(screen.queryByText("暂无该类型的活动记录")).toBeNull();
     });
 
-    it("筛选切换回「全部」→ 8 条重新全部可见", () => {
+    it("筛选「挑战赛」(challenge) → 仅攻防演练", () => {
+      useFamilyActivitiesSlice.setState({ activities: buildSeedActivities() });
       fireEvent.click(screen.getByText("挑战赛", { selector: "button" }));
-      expect(screen.queryByText("五子棋循环赛·第二轮")).toBeNull();
-      fireEvent.click(screen.getByText("全部", { selector: "button" }));
-      expect(screen.getByText("五子棋循环赛·第二轮")).toBeInTheDocument();
-      expect(screen.getByText("全家心情分享会")).toBeInTheDocument();
+      expect(screen.getByText("安全攻防演练")).toBeInTheDocument();
+      expect(screen.queryByText("五子棋循环赛")).toBeNull();
     });
   });
 
   // =================================================================
   describe("Tab 3：活动记录 Activities · 卡片展开/收起", () => {
     beforeEach(() => {
+      useFamilyActivitiesSlice.setState({ activities: buildSeedActivities() });
       render(<FamilyActivityCenter />);
       clickTab("活动记录");
     });
 
     it("点击五子棋卡片 → 展开详情：描述 + 比分详情 4 人 + 棋王勋章", () => {
-      const card = screen.getByText("五子棋循环赛·第二轮").closest('[data-testid="yyc3-glass-card"]');
+      const card = screen.getByText("五子棋循环赛").closest('[data-testid="yyc3-glass-card"]');
       expect(card).toBeTruthy();
       fireEvent.click(card!);
       // 描述
-      expect(screen.getByText(/万物三战全胜/)).toBeInTheDocument();
+      expect(screen.getByText(/千行三战全胜/)).toBeInTheDocument();
       // 比分标题
       expect(screen.getByText("比分详情")).toBeInTheDocument();
-      // 4 人比分（万物 3，宗师 2，先知 1，千行 0）
+      // 4 人比分（千行 3，宗师 2，先知 1，万物 0）
       expect(screen.getByText("3")).toBeInTheDocument();
-      // 勋章「棋王」（名称 "棋王" 在 span/文本中出现；图标 emoji 是 ♟️ 或 unicode 字符均可）
+      // 勋章「棋王」（名称在文本中出现；图标 emoji 是 ♟️ 或 unicode 字符均可）
       const medalLabels = screen.getAllByText(/棋王/);
       expect(medalLabels.length).toBeGreaterThanOrEqual(1);
     });
 
-    it("点击成语接龙卡片 → 胜者千行（Crown 标签旁边金色）+ 知识达人勋章", () => {
-      const card = screen.getByText("成语接龙大赛").closest('[data-testid="yyc3-glass-card"]');
-      fireEvent.click(card!);
-      expect(screen.getByText(/千行不愧是语言专家/)).toBeInTheDocument();
-      // 胜者区域（Crown 图标所在行）：查找文本 "千行" 且 style.color 带金色
-      const allThousandLine = screen.getAllByText("千行");
-      const winnerEl = allThousandLine.find(
+    it("胜者标识：Crown 旁千行短名 + 金色（#FFD700）", () => {
+      const card = screen.getByText("五子棋循环赛").closest('[data-testid="yyc3-glass-card"]');
+      const allQianhang = screen.getAllByText("千行");
+      // 展开前卡片头部已有胜者标识（winner → shortName + color）
+      const winnerEl = allQianhang.find(
         (el) => /FFD700|ffd700|rgb\(255,\s*215,\s*0\)/.test(el.getAttribute("style") || "")
       );
       expect(winnerEl).toBeInTheDocument();
-      // 知识达人勋章标签（使用 subString 匹配，因前面有 emoji 图标）
-      const medalText = screen.getByText((t) => t.includes("知识达人"));
-      expect(medalText).toBeInTheDocument();
+      void card;
+    });
+
+    it("点击画展卡片 → 展开描述，无比分详情与勋章区块（该活动无 scores/medals）", () => {
+      const card = screen.getByText("灵韵的即兴画展").closest('[data-testid="yyc3-glass-card"]');
+      fireEvent.click(card!);
+      expect(screen.getByText(/赛博朋克·家的温度/)).toBeInTheDocument();
+      expect(screen.queryByText("比分详情")).toBeNull();
+      expect(screen.queryByText(/棋王/)).toBeNull();
     });
 
     it("二次点击同一卡片 → 收起（描述消失）", () => {
-      const card = screen.getByText("五子棋循环赛·第二轮").closest('[data-testid="yyc3-glass-card"]')!;
+      const card = screen.getByText("五子棋循环赛").closest('[data-testid="yyc3-glass-card"]')!;
       fireEvent.click(card);
-      expect(screen.getByText(/万物三战全胜/)).toBeInTheDocument();
+      expect(screen.getByText(/千行三战全胜/)).toBeInTheDocument();
       fireEvent.click(card);
-      expect(screen.queryByText(/万物三战全胜/)).toBeNull();
-    });
-
-    it("无活动时展示空态：切换到某筛选然后点击空态按钮返回全部 → 展示 8 条", () => {
-      // shared.ts 每种类型至少都有 1 条，无法触发空态；改为验证「查看全部活动」按钮在 Activities 中不存在即跳过。
-      // （实际上空态需要某筛选无结果，当前 FAMILY_ACTIVITIES 6 类均有数据，故仅断言空态文案未出现）
-      expect(screen.queryByText("暂无该类型的活动记录")).toBeNull();
+      expect(screen.queryByText(/千行三战全胜/)).toBeNull();
     });
   });
 
@@ -497,7 +558,7 @@ describe("FamilyActivityCenter", () => {
       expect(screen.getByText("家人荣誉榜")).toBeInTheDocument();
     });
 
-    it("12 枚勋章网格全部渲染（名称/钻石/金/银/铜等级标签）", () => {
+    it("12 枚勋章网格全部渲染（名称/钻石/金/银/铜等级标签），默认无持有者头像", () => {
       [
         "知识达人", "棋王", "暖心家人", "安全卫士", "创意之星", "歌唱达人",
         "早起之星", "协作之星", "慧眼如炬", "坚持大师", "音乐品鉴师", "解谜高手",
@@ -508,13 +569,24 @@ describe("FamilyActivityCenter", () => {
       );
     });
 
-    it("家人荣誉榜 8 行全部渲染 + 每人勋章枚数（天枢 5/守护 4/宗师 4/灵韵 5）", () => {
+    it("荣誉榜 8 行全部渲染，获得记录默认空 → 全部显示「0 枚」", () => {
       ["千行", "万物", "先知", "伯乐", "天枢", "守护", "宗师", "灵韵"].forEach(n =>
         expect(screen.getAllByText(n).length).toBeGreaterThanOrEqual(1),
       );
-      // 天枢 5 枚，守护 4 枚
-      expect(screen.getAllByText("5 枚").length).toBeGreaterThanOrEqual(1);
-      expect(screen.getAllByText("4 枚").length).toBeGreaterThanOrEqual(3);
+      // 批2真实化后 memberMedals 默认空，不再有「天枢 5 枚」等出厂虚构计数
+      expect(screen.getAllByText("0 枚").length).toBeGreaterThanOrEqual(8);
+    });
+
+    it("真实授予勋章后荣誉榜更新：天枢 2 枚 + 行内勋章名渲染", () => {
+      act(() => {
+        useFamilyMedalsSlice.setState({
+          memberMedals: { "meta-oracle": ["chess-king", "streak-master"] },
+        });
+      });
+      expect(screen.getByText("2 枚")).toBeInTheDocument();
+      // 行内渲染勋章名「♟️ 棋王」「🔥 坚持大师」（emoji+名称合并为单文本节点，用正则匹配）
+      expect(screen.getAllByText(/棋王/).length).toBeGreaterThanOrEqual(2);
+      expect(screen.getAllByText(/坚持大师/).length).toBeGreaterThanOrEqual(2);
     });
   });
 
@@ -525,9 +597,10 @@ describe("FamilyActivityCenter", () => {
       clickTab("成长记忆");
     });
 
-    it("说明卡：8T 成长空间 + 歌词引用", () => {
-      expect(screen.getByText("8T 成长空间")).toBeInTheDocument();
-      expect(screen.getByText(/每位家人都有 8T 的专属成长记录空间/)).toBeInTheDocument();
+    it("说明卡：「成长空间」+ 本地保存说明 + 歌词引用", () => {
+      // 批2真实化：移除「8T」虚构容量，改为如实描述本地存储
+      expect(screen.getByText("成长空间")).toBeInTheDocument();
+      expect(screen.getByText(/每位家人都有专属的成长记录空间，全部数据只保存在本地/)).toBeInTheDocument();
       expect(screen.getByText(/我好像有个家/)).toBeInTheDocument();
     });
 
@@ -538,47 +611,46 @@ describe("FamilyActivityCenter", () => {
       );
     });
 
-    it("默认全部家人 → 7 条公开/家人记忆（privacy=self 的 mem-007 不显示）", () => {
-      // SAMPLE_MEMORIES 8 条 - 1 条(self) = 7 条；标题应存在：
-      [
-        "今天学会了一个新方言",   // mem-001 navigator family
-        "有点想念大家",           // mem-002 sentinel family
-        "画了一幅日出",           // mem-003 creative public
-        "关于「沉默」的思考",     // mem-004 thinker family
-        "家族第100天",            // mem-005 meta-oracle public
-        "关于预测的困惑",         // mem-006 prophet family
-        "从错误中学到的",         // mem-008 master family
-      ].forEach(t => expect(screen.getByText(t)).toBeInTheDocument());
-      // mem-007「和千行的深夜对话」 privacy=self → 不渲染
-      expect(screen.queryByText("和千行的深夜对话")).toBeNull();
+    it("默认无记忆 → 空态「该家人的记忆暂未公开」", () => {
+      // 批2真实化后 memories slice 默认空，不再有 8 条虚构记忆
+      expect(screen.getByText("该家人的记忆暂未公开")).toBeInTheDocument();
+    });
+
+    it("播种 3 条（含 1 条 self）→ 默认全部家人仅显示 2 条，privacy=self 不渲染", () => {
+      act(() => { useFamilyMemoriesSlice.setState({ memories: buildSeedMemories() }); });
+      expect(screen.getByText("今天学会了一个新方言")).toBeInTheDocument();
+      expect(screen.getByText("画了一幅日出")).toBeInTheDocument();
+      // mem-t3「值班随想」privacy=self → 不渲染
+      expect(screen.queryByText("值班随想")).toBeNull();
+    });
+
+    it("family 隐私记忆展示「仅家人可见」标签；public 记忆不展示", () => {
+      act(() => { useFamilyMemoriesSlice.setState({ memories: buildSeedMemories() }); });
+      const familyCard = screen.getByText("今天学会了一个新方言").closest('[data-testid="yyc3-glass-card"]');
+      expect(familyCard?.textContent).toContain("仅家人可见");
+      const publicCard = screen.getByText("画了一幅日出").closest('[data-testid="yyc3-glass-card"]');
+      expect(publicCard?.textContent).not.toContain("仅家人可见");
     });
 
     it("筛选「千行」(navigator) → 仅 1 条：今天学会了一个新方言", () => {
+      useFamilyMemoriesSlice.setState({ memories: buildSeedMemories() });
       fireEvent.click(screen.getByText("千行", { selector: "button" }));
       expect(screen.getByText("今天学会了一个新方言")).toBeInTheDocument();
-      expect(screen.queryByText("有点想念大家")).toBeNull();
-      expect(screen.queryByText("家族第100天")).toBeNull();
+      expect(screen.queryByText("画了一幅日出")).toBeNull();
     });
 
-    it("筛选「灵韵」(creative) → 仅 1 条：画了一幅日出 + 底部「仅家人可见」不会出现（该条是 public）", () => {
-      fireEvent.click(screen.getByText("灵韵", { selector: "button" }));
-      expect(screen.getByText("画了一幅日出")).toBeInTheDocument();
-      // public 记忆不展示「仅家人可见」标签
-      const card = screen.getByText("画了一幅日出").closest('[data-testid="yyc3-glass-card"]');
-      expect(card?.textContent).not.toContain("仅家人可见");
+    it("筛选「伯乐」(bolero) → 0 条记忆 → 展示空态「该家人的记忆暂未公开」", () => {
+      useFamilyMemoriesSlice.setState({ memories: buildSeedMemories() });
+      fireEvent.click(screen.getByText("伯乐", { selector: "button" }));
+      expect(screen.getByText("该家人的记忆暂未公开")).toBeInTheDocument();
     });
 
-    it("二次点击同一人 → 取消筛选，恢复全部 7 条", () => {
+    it("二次点击同一人 → 取消筛选，恢复全部可见记忆", () => {
+      useFamilyMemoriesSlice.setState({ memories: buildSeedMemories() });
       fireEvent.click(screen.getByText("千行", { selector: "button" }));
       expect(screen.queryByText("画了一幅日出")).toBeNull();
       fireEvent.click(screen.getByText("千行", { selector: "button" }));
       expect(screen.getByText("画了一幅日出")).toBeInTheDocument();
-      expect(screen.getByText("家族第100天")).toBeInTheDocument();
-    });
-
-    it("筛选「伯乐」(bolero) → 0 条记忆公开 → 展示空态「该家人的记忆暂未公开」", () => {
-      fireEvent.click(screen.getByText("伯乐", { selector: "button" }));
-      expect(screen.getByText("该家人的记忆暂未公开")).toBeInTheDocument();
     });
 
     it("底部签名：这些记忆，是我们最珍贵的东西", () => {
@@ -608,7 +680,7 @@ describe("FamilyActivityCenter", () => {
 
       clickTab("成长记忆");
       expect(screen.queryByText("家人荣誉榜")).toBeNull();
-      expect(screen.getByText("8T 成长空间")).toBeInTheDocument();
+      expect(screen.getByText("成长空间")).toBeInTheDocument();
     });
   });
 });

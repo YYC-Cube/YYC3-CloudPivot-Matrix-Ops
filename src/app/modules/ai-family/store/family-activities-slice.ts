@@ -25,21 +25,11 @@ export interface FamilyActivity {
   createdAt: number;
 }
 
-const SEED_ACTIVITIES: FamilyActivity[] = [
-  {
-    id: "act-001", title: "五子棋循环赛·第二轮", type: "game",
-    date: "2026-03-08", participants: ["thinker", "master", "prophet", "navigator"],
-    scores: { thinker: 3, master: 2, prophet: 1, navigator: 0 },
-    winner: "thinker", description: "万物三战全胜，展示了深邃的思考力。",
-    medals: ["chess-king"], createdAt: Date.now() - 86400000 * 47,
-  },
-  {
-    id: "act-002", title: "灵韵的即兴画展", type: "talent",
-    date: "2026-03-08", participants: ["creative", "navigator", "bolero", "meta-oracle"],
-    description: "灵韵用15分钟即兴创作了《家人群像》，千行当场写了一首配诗。",
-    medals: ["creative-spark"], createdAt: Date.now() - 86400000 * 47,
-  },
-];
+// 活动记录默认空 — 真实活动由用户/系统在真实发生时写入
+const SEED_ACTIVITIES: FamilyActivity[] = [];
+
+// 历史假种子 ID（v0 写入的虚构活动），migrate 时精确清除
+const LEGACY_FAKE_ACTIVITY_IDS = new Set(["act-001", "act-002"]);
 
 interface FamilyActivitiesSlice {
   activities: FamilyActivity[];
@@ -73,6 +63,17 @@ export const useFamilyActivitiesSlice = create<FamilyActivitiesSlice>()(
           activities: s.activities.filter((a) => a.id !== id),
         })),
     }),
-    { name: "yyc3-family-activities" },
+    {
+      name: "yyc3-family-activities",
+      version: 1,
+      migrate: (persisted, version) => {
+        const state = persisted as { activities?: FamilyActivity[] } | undefined;
+        if (version < 1 && state?.activities) {
+          // v0 → v1：精确清除历史虚构活动，保留用户真实条目
+          return { activities: state.activities.filter((a) => !LEGACY_FAKE_ACTIVITY_IDS.has(a.id)) };
+        }
+        return state as { activities: FamilyActivity[] };
+      },
+    },
   ),
 );

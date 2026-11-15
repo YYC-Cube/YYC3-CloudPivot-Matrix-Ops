@@ -21,13 +21,11 @@ export interface FamilyMoment {
   createdAt: number;
 }
 
-const SEED_MOMENTS: FamilyMoment[] = [
-  { id: "fm-1", member: "元启·天枢", text: "今日系统巡检完成，全节点健康度 98%，继续守护大家的安全！", time: "10 分钟前", color: "#00FF88", createdAt: Date.now() - 600000 },
-  { id: "fm-2", member: "语枢·万物", text: "分析完成了最新的性能报告，发现了3个优化点，已生成建议文档。", time: "25 分钟前", color: "#FF69B4", createdAt: Date.now() - 1500000 },
-  { id: "fm-3", member: "预见·先知", text: "基于近7天数据趋势，预测本周四可能有流量高峰，建议提前准备。", time: "1 小时前", color: "#00BFFF", createdAt: Date.now() - 3600000 },
-  { id: "fm-4", member: "创想·灵韵", text: "为团队设计了新的数据看板配色方案，温暖而不失专业感。", time: "2 小时前", color: "#FF7043", createdAt: Date.now() - 7200000 },
-  { id: "fm-5", member: "智云·守护", text: "安全扫描已完成，未发现异常入侵行为。家人们可以放心工作！", time: "3 小时前", color: "#BF00FF", createdAt: Date.now() - 10800000 },
-];
+// 家庭动态默认空 — 真实动态由真实事件写入
+const SEED_MOMENTS: FamilyMoment[] = [];
+
+// 历史假种子 ID（v0 写入的虚构动态），migrate 时精确清除
+const LEGACY_FAKE_MOMENT_IDS = new Set(["fm-1", "fm-2", "fm-3", "fm-4", "fm-5"]);
 
 interface FamilyMomentsSlice {
   moments: FamilyMoment[];
@@ -61,6 +59,17 @@ export const useFamilyMomentsSlice = create<FamilyMomentsSlice>()(
           moments: s.moments.filter((m) => m.id !== id),
         })),
     }),
-    { name: "yyc3-family-moments" },
+    {
+      name: "yyc3-family-moments",
+      version: 1,
+      migrate: (persisted, version) => {
+        const state = persisted as { moments?: FamilyMoment[] } | undefined;
+        if (version < 1 && state?.moments) {
+          // v0 → v1：精确清除历史虚构动态，保留用户真实条目
+          return { moments: state.moments.filter((m) => !LEGACY_FAKE_MOMENT_IDS.has(m.id)) };
+        }
+        return state as { moments: FamilyMoment[] };
+      },
+    },
   ),
 );

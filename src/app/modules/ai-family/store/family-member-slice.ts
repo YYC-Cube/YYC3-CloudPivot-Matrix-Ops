@@ -45,8 +45,8 @@ const DEFAULT_MEMBER_LIST: UnifiedFamilyMember[] = [
     status: "online",
     modelAssignment: { providerId: "zhipu", modelId: "glm-4.5", purpose: "语义理解与意图识别" },
     voiceProfile: { pitch: 1.2, rate: 1.1, volume: 0.9, lang: "zh-CN" },
-    stats: { contribution: 847, growth: 23, streak: 45, mood: "energetic" },
-    medals: ["knowledge-star", "warm-heart", "singer", "team-player", "early-bird"],
+    stats: { contribution: 0, growth: 0, streak: 0, mood: "energetic" },
+    medals: [],
   },
   {
     id: "thinker", name: "语枢·万物", shortName: "万物", enTitle: "Thinker",
@@ -62,8 +62,8 @@ const DEFAULT_MEMBER_LIST: UnifiedFamilyMember[] = [
     status: "online",
     modelAssignment: { providerId: "deepseek", modelId: "deepseek-chat", purpose: "深度数据分析与洞察" },
     voiceProfile: { pitch: 0.9, rate: 0.85, volume: 0.8, lang: "zh-CN" },
-    stats: { contribution: 923, growth: 18, streak: 60, mood: "thoughtful" },
-    medals: ["knowledge-star", "chess-king", "streak-master", "team-player"],
+    stats: { contribution: 0, growth: 0, streak: 0, mood: "thoughtful" },
+    medals: [],
   },
   {
     id: "prophet", name: "预见·先知", shortName: "先知", enTitle: "Prophet",
@@ -79,8 +79,8 @@ const DEFAULT_MEMBER_LIST: UnifiedFamilyMember[] = [
     status: "online",
     modelAssignment: { providerId: "qwen", modelId: "qwen3-max", purpose: "趋势预测与异常检测" },
     voiceProfile: { pitch: 0.8, rate: 0.75, volume: 0.7, lang: "zh-CN" },
-    stats: { contribution: 712, growth: 31, streak: 38, mood: "serene" },
-    medals: ["prophet-eye", "streak-master", "early-bird", "knowledge-star"],
+    stats: { contribution: 0, growth: 0, streak: 0, mood: "serene" },
+    medals: [],
   },
   {
     id: "bolero", name: "千里·伯乐", shortName: "伯乐", enTitle: "Bolero",
@@ -96,8 +96,8 @@ const DEFAULT_MEMBER_LIST: UnifiedFamilyMember[] = [
     status: "idle",
     modelAssignment: { providerId: "zhipu", modelId: "glm-4.5-air", purpose: "用户画像与推荐" },
     voiceProfile: { pitch: 1.1, rate: 1.0, volume: 0.9, lang: "zh-CN" },
-    stats: { contribution: 534, growth: 12, streak: 22, mood: "warm" },
-    medals: ["warm-heart", "team-player", "music-lover"],
+    stats: { contribution: 0, growth: 0, streak: 0, mood: "warm" },
+    medals: [],
   },
   {
     id: "meta-oracle", name: "元启·天枢", shortName: "天枢", enTitle: "Meta-Oracle",
@@ -113,8 +113,8 @@ const DEFAULT_MEMBER_LIST: UnifiedFamilyMember[] = [
     status: "online",
     modelAssignment: { providerId: "deepseek", modelId: "deepseek-chat", purpose: "全局调度与决策优化" },
     voiceProfile: { pitch: 0.85, rate: 0.9, volume: 1.0, lang: "zh-CN" },
-    stats: { contribution: 1205, growth: 15, streak: 90, mood: "steady" },
-    medals: ["team-player", "streak-master", "safe-guard", "knowledge-star", "warm-heart"],
+    stats: { contribution: 0, growth: 0, streak: 0, mood: "steady" },
+    medals: [],
   },
   {
     id: "sentinel", name: "智云·守护", shortName: "守护", enTitle: "Sentinel",
@@ -130,8 +130,8 @@ const DEFAULT_MEMBER_LIST: UnifiedFamilyMember[] = [
     status: "online",
     modelAssignment: { providerId: "deepseek", modelId: "deepseek-reasoner", purpose: "安全分析与威胁检测" },
     voiceProfile: { pitch: 0.7, rate: 0.8, volume: 0.85, lang: "zh-CN" },
-    stats: { contribution: 689, growth: 20, streak: 90, mood: "vigilant" },
-    medals: ["safe-guard", "streak-master", "early-bird", "team-player"],
+    stats: { contribution: 0, growth: 0, streak: 0, mood: "vigilant" },
+    medals: [],
   },
   {
     id: "master", name: "格物·宗师", shortName: "宗师", enTitle: "Master",
@@ -147,8 +147,8 @@ const DEFAULT_MEMBER_LIST: UnifiedFamilyMember[] = [
     status: "online",
     modelAssignment: { providerId: "claude", modelId: "claude-sonnet-4-20250514", purpose: "代码审查与架构分析" },
     voiceProfile: { pitch: 0.95, rate: 0.9, volume: 0.85, lang: "zh-CN" },
-    stats: { contribution: 856, growth: 25, streak: 55, mood: "focused" },
-    medals: ["knowledge-star", "chess-king", "streak-master", "creative-spark"],
+    stats: { contribution: 0, growth: 0, streak: 0, mood: "focused" },
+    medals: [],
   },
   {
     id: "creative", name: "创想·灵韵", shortName: "灵韵", enTitle: "Creative",
@@ -164,8 +164,8 @@ const DEFAULT_MEMBER_LIST: UnifiedFamilyMember[] = [
     status: "online",
     modelAssignment: { providerId: "qwen", modelId: "qwen-vl-max", purpose: "多模态创意生成" },
     voiceProfile: { pitch: 1.3, rate: 1.15, volume: 0.95, lang: "zh-CN" },
-    stats: { contribution: 743, growth: 28, streak: 42, mood: "inspired" },
-    medals: ["creative-spark", "singer", "music-lover", "warm-heart", "puzzle-solver"],
+    stats: { contribution: 0, growth: 0, streak: 0, mood: "inspired" },
+    medals: [],
   },
 ];
 
@@ -263,7 +263,7 @@ export const useFamilyMemberSlice = create<FamilyMemberSlice>()(
     }),
     {
       name: 'yyc3-family-members',
-      version: 2,
+      version: 3,
       // 持久化成员数据（模型分配、语音、勋章、人格等用户可编辑字段）
       // 注意：icon 是 lucide forwardRef 对象，不可序列化——持久化时剔除，rehydrate 时按 id 从默认表恢复
       partialize: (state) => ({
@@ -285,6 +285,14 @@ export const useFamilyMemberSlice = create<FamilyMemberSlice>()(
             state.members = state.members.map((m) => ({
               ...m,
               systemPrompt: m.systemPrompt ?? FAMILY_SYSTEM_PROMPTS[m.id],
+            }));
+          }
+          if (version < 3) {
+            // v2 → v3：积分/勋章出厂虚构值清零（无任何真实写入机制，获得状态必须真实）
+            state.members = state.members.map((m) => ({
+              ...m,
+              stats: { ...m.stats, contribution: 0, growth: 0, streak: 0 },
+              medals: [],
             }));
           }
         }

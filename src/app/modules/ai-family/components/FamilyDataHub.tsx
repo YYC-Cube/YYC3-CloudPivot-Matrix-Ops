@@ -13,16 +13,19 @@ import React, { useState, useMemo } from "react";
 import {
   Database, Users, Trophy, Heart, MessageCircle,
   TrendingUp, Award,
-  Download, Shield,
+  Download,
   BookOpen, Gamepad2, Sparkles, CalendarDays,
 } from "lucide-react";
 import { GlassCard } from "../../shared/GlassCard";
 import { FadeIn } from "./FadeIn";
+import { getFamilyDataSummary, hexToRgb } from "./shared";
 import {
-  FAMILY_ACTIVITIES, SAMPLE_MEMORIES, SAMPLE_MESSAGES,
-  MEMBER_MEDALS, getFamilyDataSummary, hexToRgb,
-} from "./shared";
-import { useFamilyMemberSlice } from "../store";
+  useFamilyMemberSlice,
+  useFamilyActivitiesSlice,
+  useFamilyMemoriesSlice,
+  useFamilyMedalsSlice,
+  useFamilyMessageSlice,
+} from "../store";
 import type { UnifiedFamilyMember } from "../../../types";
 
 // ═══ Activity type config ═══
@@ -72,7 +75,7 @@ function MemberRanking({ members }: { members: UnifiedFamilyMember[] }) {
         {sorted.map((m, i) => {
           const rgb = hexToRgb(m.color);
           const maxContrib = sorted[0].stats.contribution;
-          const barWidth = (m.stats.contribution / maxContrib) * 100;
+          const barWidth = maxContrib > 0 ? (m.stats.contribution / maxContrib) * 100 : 0;
           return (
             <div key={m.id} className="flex items-center gap-2">
               <span className="w-5 text-center" style={{
@@ -107,16 +110,22 @@ function MemberRanking({ members }: { members: UnifiedFamilyMember[] }) {
 
 function ActivityTimeline() {
   const { members } = useFamilyMemberSlice();
+  const { activities: allActivities } = useFamilyActivitiesSlice();
   const [limit, setLimit] = useState(5);
-  const activities = FAMILY_ACTIVITIES.slice(0, limit);
+  const activities = allActivities.slice(0, limit);
 
   return (
     <GlassCard className="p-4">
       <div className="flex items-center gap-2 mb-4">
         <CalendarDays className="w-4 h-4 text-cyan-400" />
         <span className="text-white/70" style={{ fontSize: "0.8rem" }}>活动时间线</span>
-        <span className="text-white/30 ml-auto" style={{ fontSize: "0.6rem" }}>共 {FAMILY_ACTIVITIES.length} 项</span>
+        <span className="text-white/30 ml-auto" style={{ fontSize: "0.6rem" }}>共 {allActivities.length} 项</span>
       </div>
+      {allActivities.length === 0 && (
+        <p className="text-white/30 py-6 text-center" style={{ fontSize: "0.7rem" }}>
+          暂无活动记录，真实活动发生时会在这里呈现
+        </p>
+      )}
       <div className="relative">
         <div className="absolute left-3 top-0 bottom-0 w-px bg-white/[0.06]" />
         <div className="space-y-4">
@@ -173,7 +182,7 @@ function ActivityTimeline() {
           })}
         </div>
       </div>
-      {limit < FAMILY_ACTIVITIES.length && (
+      {limit < allActivities.length && (
         <button
           onClick={() => setLimit(prev => prev + 5)}
           className="mt-3 w-full py-2 text-center text-white/30 hover:text-white/50 bg-white/[0.02] rounded-lg hover:bg-white/[0.04] transition-all"
@@ -190,19 +199,10 @@ function ActivityTimeline() {
 
 function RecentMessages() {
   const { members } = useFamilyMemberSlice();
-  const msgs = SAMPLE_MESSAGES.slice(0, 6);
-  const typeIcons: Record<string, React.ElementType> = {
-    announcement: Sparkles,
-    alert: Shield,
-    text: MessageCircle,
-    heartbeat: Heart,
-  };
-  const typeColors: Record<string, string> = {
-    announcement: "#f59e0b",
-    alert: "#ef4444",
-    text: "#3b82f6",
-    heartbeat: "#ec4899",
-  };
+  const { messages } = useFamilyMessageSlice();
+  const msgs = useMemo(() =>
+    [...messages].sort((a, b) => b.timestamp - a.timestamp).slice(0, 6),
+  [messages]);
 
   return (
     <GlassCard className="p-4">
@@ -210,30 +210,35 @@ function RecentMessages() {
         <MessageCircle className="w-4 h-4 text-blue-400" />
         <span className="text-white/70" style={{ fontSize: "0.8rem" }}>最近通信</span>
       </div>
+      {msgs.length === 0 && (
+        <p className="text-white/30 py-4 text-center" style={{ fontSize: "0.7rem" }}>
+          暂无通信记录
+        </p>
+      )}
       <div className="space-y-2">
         {msgs.map(msg => {
-          const from = members.find(m => m.id === msg.from);
-          if (!from) { return null; }
-          const Icon = typeIcons[msg.type] || MessageCircle;
-          const color = typeColors[msg.type] || "#3b82f6";
-          const rgb = hexToRgb(from.color);
+          const from = members.find(m => m.id === msg.senderId);
+          const fromName = from?.shortName ?? msg.senderName;
+          const rgb = hexToRgb(from?.color ?? "#3b82f6");
+          const FromIcon = from?.icon;
           return (
             <div key={msg.id} className="flex items-start gap-2 p-2 rounded-lg bg-white/[0.02]">
               <div
                 className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-0.5"
                 style={{ background: `rgba(${rgb},0.15)` }}
               >
-                <from.icon className="w-3 h-3" style={{ color: from.color }} />
+                {FromIcon
+                  ? <FromIcon className="w-3 h-3" style={{ color: from?.color }} />
+                  : <MessageCircle className="w-3 h-3" style={{ color: "#3b82f6" }} />}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-white/60" style={{ fontSize: "0.7rem" }}>{from.shortName}</span>
-                  <Icon className="w-2.5 h-2.5" style={{ color }} />
+                  <span className="text-white/60" style={{ fontSize: "0.7rem" }}>{fromName}</span>
                   <span className="text-white/20 ml-auto" style={{ fontSize: "0.55rem" }}>
-                    {msg.timestamp.split("T")[1]?.slice(0, 5)}
+                    {new Date(msg.timestamp).toTimeString().slice(0, 5)}
                   </span>
                 </div>
-                <div className="text-white/40 mt-0.5 truncate" style={{ fontSize: "0.65rem" }}>{msg.content}</div>
+                <div className="text-white/40 mt-0.5 truncate" style={{ fontSize: "0.65rem" }}>{msg.content.text}</div>
               </div>
             </div>
           );
@@ -247,7 +252,11 @@ function RecentMessages() {
 
 export function FamilyDataHub() {
   const { members } = useFamilyMemberSlice();
-  const summary = useMemo(() => getFamilyDataSummary(), []);
+  const { activities } = useFamilyActivitiesSlice();
+  const { memories } = useFamilyMemoriesSlice();
+  const { memberMedals } = useFamilyMedalsSlice();
+  const { messages } = useFamilyMessageSlice();
+  const summary = useMemo(() => getFamilyDataSummary(), [activities, memories, memberMedals, messages, members]);
 
   const handleExportAll = () => {
     const data = {
@@ -256,11 +265,11 @@ export function FamilyDataHub() {
       members: members.map(m => ({
         id: m.id, name: m.name, shortName: m.shortName, enTitle: m.enTitle,
         contribution: m.stats.contribution, growth: m.stats.growth, streak: m.stats.streak, mood: m.stats.mood,
-        medals: MEMBER_MEDALS[m.id] || [],
+        medals: memberMedals[m.id] || [],
       })),
-      activities: FAMILY_ACTIVITIES,
-      memories: SAMPLE_MEMORIES,
-      messages: SAMPLE_MESSAGES,
+      activities,
+      memories,
+      messages,
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -283,7 +292,7 @@ export function FamilyDataHub() {
               <div>
                 <h1 className="text-white/90" style={{ fontSize: "1.25rem" }}>AI Family 数据中心</h1>
                 <p className="text-white/40" style={{ fontSize: "0.7rem" }}>
-                  统一数据来源 · 家庭第 {summary.familyAge} 天 · 系统运行 {summary.systemUptime} 天
+                  统一数据来源 · 全部数据本地存储 · 编辑即生效
                 </p>
               </div>
             </div>
@@ -334,7 +343,7 @@ export function FamilyDataHub() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {members.map(m => {
                 const rgb = hexToRgb(m.color);
-                const medals = MEMBER_MEDALS[m.id] || [];
+                const medals = memberMedals[m.id] || [];
                 return (
                   <div
                     key={m.id}

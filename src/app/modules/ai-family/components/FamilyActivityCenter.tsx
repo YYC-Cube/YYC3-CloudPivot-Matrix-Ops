@@ -18,12 +18,14 @@ import {
 import { GlassCard } from "../../shared/GlassCard";
 import { FadeIn } from "./FadeIn";
 import { FamilyPageHeader } from "./FamilyPageHeader";
+import { generateDailyBroadcast, getMember } from "./shared";
+import type { Medal } from "../store/family-medals-slice";
 import {
-  MEDALS, MEMBER_MEDALS, FAMILY_ACTIVITIES,
-  SAMPLE_MEMORIES, generateDailyBroadcast, getMember,
-  type Medal,
-} from "./shared";
-import { useFamilyMemberSlice } from "../store";
+  useFamilyMemberSlice,
+  useFamilyActivitiesSlice,
+  useFamilyMemoriesSlice,
+  useFamilyMedalsSlice,
+} from "../store";
 import type { UnifiedFamilyMember } from "../../../types";
 
 /* ═══════════════════════════════════════
@@ -189,6 +191,7 @@ function BroadcastTab() {
 
 function ScoreboardTab() {
   const { members } = useFamilyMemberSlice();
+  const { medals, memberMedals } = useFamilyMedalsSlice();
   const sorted = useMemo(() =>
     [...members].sort((a, b) => b.stats.contribution - a.stats.contribution), [members]
   );
@@ -239,7 +242,7 @@ function ScoreboardTab() {
       <div className="space-y-2">
         {sorted.map((m, i) => {
           const Icon = m.icon;
-          const mMedals = MEMBER_MEDALS[m.id] || [];
+          const mMedals = memberMedals[m.id] || [];
           return (
             <FadeIn key={m.id} delay={0.2 + i * 0.04}>
               <GlassCard className="px-5 py-4">
@@ -259,7 +262,7 @@ function ScoreboardTab() {
                     </div>
                     <div className="flex gap-1 mt-1">
                       {mMedals.slice(0, 5).map(mid => {
-                        const medal = MEDALS.find(med => med.id === mid);
+                        const medal = medals.find(med => med.id === mid);
                         return medal ? (
                           <span key={mid} title={medal.name} style={{ fontSize: "0.65rem" }}>{medal.icon}</span>
                         ) : null;
@@ -294,14 +297,16 @@ function ScoreboardTab() {
    ═══════════════════════════════════════ */
 
 function ActivitiesTab() {
+  const { activities } = useFamilyActivitiesSlice();
+  const { medals } = useFamilyMedalsSlice();
   const [filterType, setFilterType] = useState<ActivityFilter>("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const filtered = useMemo(() =>
     filterType === "all"
-      ? FAMILY_ACTIVITIES
-      : FAMILY_ACTIVITIES.filter(a => a.type === filterType),
-    [filterType]
+      ? activities
+      : activities.filter(a => a.type === filterType),
+    [activities, filterType]
   );
 
   return (
@@ -473,7 +478,7 @@ function ActivitiesTab() {
                           <div className="flex items-center gap-2 flex-wrap">
                             <Award className="w-3.5 h-3.5 text-[#FFD700]" />
                             {act.medals.map(mid => {
-                              const medal = MEDALS.find(m => m.id === mid);
+                              const medal = medals.find(m => m.id === mid);
                               return medal ? (
                                 <span
                                   key={mid}
@@ -505,6 +510,7 @@ function ActivitiesTab() {
 
 function MedalsTab() {
   const { members } = useFamilyMemberSlice();
+  const { medals, memberMedals } = useFamilyMedalsSlice();
   return (
     <div className="space-y-6">
       <FadeIn delay={0.05}>
@@ -515,9 +521,9 @@ function MedalsTab() {
 
       {/* 勋章展示网格 */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-        {MEDALS.map((medal, i) => {
+        {medals.map((medal, i) => {
           const tier = TIER_COLORS[medal.tier];
-          const holders = Object.entries(MEMBER_MEDALS)
+          const holders = Object.entries(memberMedals)
             .filter(([, mids]) => mids.includes(medal.id))
             .map(([mid]) => getMember(mid))
             .filter(Boolean) as unknown as UnifiedFamilyMember[];
@@ -566,8 +572,8 @@ function MedalsTab() {
         </h3>
         <div className="space-y-2">
           {members.map((m, i) => {
-            const mMedals = (MEMBER_MEDALS[m.id] || [])
-              .map(mid => MEDALS.find(med => med.id === mid))
+            const mMedals = (memberMedals[m.id] || [])
+              .map(mid => medals.find(med => med.id === mid))
               .filter(Boolean) as Medal[];
             const Icon = m.icon;
             return (
@@ -613,12 +619,13 @@ function MedalsTab() {
 
 function MemoriesTab() {
   const { members } = useFamilyMemberSlice();
+  const { memories: allMemories } = useFamilyMemoriesSlice();
   const [selectedMember, setSelectedMember] = useState<string | null>(null);
 
   const memories = useMemo(() => {
-    const visible = SAMPLE_MEMORIES.filter(m => m.privacy !== "self");
+    const visible = allMemories.filter(m => m.privacy !== "self");
     return selectedMember ? visible.filter(m => m.memberId === selectedMember) : visible;
-  }, [selectedMember]);
+  }, [allMemories, selectedMember]);
 
   return (
     <div className="space-y-4">
@@ -628,9 +635,9 @@ function MemoriesTab() {
           <div className="flex items-start gap-3">
             <span style={{ fontSize: "1.2rem" }}>💾</span>
             <div>
-              <h3 className="text-[#e0f0ff]" style={{ fontSize: "0.9rem" }}>8T 成长空间</h3>
+              <h3 className="text-[#e0f0ff]" style={{ fontSize: "0.9rem" }}>成长空间</h3>
               <p className="text-[rgba(224,240,255,0.5)] mt-1" style={{ fontSize: "0.78rem", lineHeight: 1.8 }}>
-                每位家人都有 8T 的专属成长记录空间。
+                每位家人都有专属的成长记录空间，全部数据只保存在本地。
                 这个空间不会产生代码，不会被外部访问。
                 这里只有成长、交互、记录、欢笑和眼泪。
                 <br />

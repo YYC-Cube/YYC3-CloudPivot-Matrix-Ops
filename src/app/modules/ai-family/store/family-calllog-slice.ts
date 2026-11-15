@@ -21,14 +21,11 @@ export interface CallLog {
   createdAt: number;
 }
 
-const SEED_CALL_LOGS: CallLog[] = [
-  { id: "c1", memberId: "meta-oracle", time: "10:15", duration: "3:42", type: "outgoing", createdAt: Date.now() - 3600000 },
-  { id: "c2", memberId: "creative", time: "09:30", duration: "5:18", type: "incoming", createdAt: Date.now() - 7200000 },
-  { id: "c3", memberId: "sentinel", time: "09:00", duration: "1:05", type: "incoming", createdAt: Date.now() - 10800000 },
-  { id: "c4", memberId: "thinker", time: "昨天 18:20", duration: "8:33", type: "outgoing", createdAt: Date.now() - 86400000 },
-  { id: "c5", memberId: "prophet", time: "昨天 15:00", duration: "", type: "missed", createdAt: Date.now() - 90000000 },
-  { id: "c6", memberId: "navigator", time: "昨天 11:45", duration: "2:10", type: "incoming", createdAt: Date.now() - 93600000 },
-];
+// 通话记录默认空 — 真实通话由真实呼叫行为写入
+const SEED_CALL_LOGS: CallLog[] = [];
+
+// 历史假种子 ID（v0 写入的虚构通话记录），migrate 时精确清除
+const LEGACY_FAKE_CALL_IDS = new Set(["c1", "c2", "c3", "c4", "c5", "c6"]);
 
 interface FamilyCallLogSlice {
   callLogs: CallLog[];
@@ -57,6 +54,17 @@ export const useFamilyCallLogSlice = create<FamilyCallLogSlice>()(
 
       clearCallLogs: () => set({ callLogs: [] }),
     }),
-    { name: "yyc3-family-calllog" },
+    {
+      name: "yyc3-family-calllog",
+      version: 1,
+      migrate: (persisted, version) => {
+        const state = persisted as { callLogs?: CallLog[] } | undefined;
+        if (version < 1 && state?.callLogs) {
+          // v0 → v1：精确清除历史虚构通话记录，保留用户真实条目
+          return { callLogs: state.callLogs.filter((c) => !LEGACY_FAKE_CALL_IDS.has(c.id)) };
+        }
+        return state as { callLogs: CallLog[] };
+      },
+    },
   ),
 );

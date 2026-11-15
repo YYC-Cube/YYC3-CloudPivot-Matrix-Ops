@@ -211,10 +211,10 @@ import { FamilyCluster } from "../modules/ai-family/components/FamilyCluster";
 // ============================================================
 describe("🛰️ FamilyCluster - 全球空间通信基站管理面板", () => {
 
-  // 每次测试前重置 activities slice (seed 数据已在 slice 内部)
+  // 每次测试前确认 activities slice 可用（种子已清零，活动记录来自真实写入）
   beforeEach(() => {
     const state = useFamilyActivitiesSlice.getState();
-    expect(state.activities.length).toBeGreaterThanOrEqual(2);
+    expect(Array.isArray(state.activities)).toBe(true);
   });
 
   // ----------------------------------------------------------

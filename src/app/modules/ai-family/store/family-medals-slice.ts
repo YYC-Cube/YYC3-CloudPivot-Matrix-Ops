@@ -36,16 +36,8 @@ const SEED_MEDALS: Medal[] = [
   { id: "puzzle-solver", name: "解谜高手", desc: "完成拼图挑战20次", icon: "🧩", color: "#E8E8E8", tier: "bronze" },
 ];
 
-const SEED_MEMBER_MEDALS: Record<string, string[]> = {
-  navigator: ["knowledge-star", "warm-heart", "singer", "team-player", "early-bird"],
-  thinker: ["knowledge-star", "chess-king", "streak-master", "team-player"],
-  prophet: ["prophet-eye", "streak-master", "early-bird", "knowledge-star"],
-  bolero: ["warm-heart", "team-player", "music-lover"],
-  "meta-oracle": ["team-player", "streak-master", "safe-guard", "knowledge-star", "warm-heart"],
-  sentinel: ["safe-guard", "streak-master", "early-bird", "team-player"],
-  master: ["knowledge-star", "chess-king", "streak-master", "creative-spark"],
-  creative: ["creative-spark", "singer", "music-lover", "warm-heart", "puzzle-solver"],
-};
+// 勋章获得记录默认空 — 获得状态必须来自真实授予（assignMedal）
+const SEED_MEMBER_MEDALS: Record<string, string[]> = {};
 
 interface FamilyMedalsSlice {
   medals: Medal[];
@@ -104,6 +96,18 @@ export const useFamilyMedalsSlice = create<FamilyMedalsSlice>()(
           },
         })),
     }),
-    { name: "yyc3-family-medals" },
+    {
+      name: "yyc3-family-medals",
+      version: 1,
+      migrate: (persisted, version) => {
+        const state = persisted as { medals?: Medal[]; memberMedals?: Record<string, string[]> } | undefined;
+        if (version < 1 && state) {
+          // v0 → v1：v0 的获得记录全部为出厂虚构（此前无任何 UI 写入该字段），整体归零；
+          // 勋章定义保留（定义是体系骨架，非获得状态）
+          return { medals: state.medals ?? [], memberMedals: {} };
+        }
+        return state as { medals: Medal[]; memberMedals: Record<string, string[]> };
+      },
+    },
   ),
 );
