@@ -19,6 +19,48 @@ const ALLOWED_SHELL_COMMANDS = new Set([
 
 const DANGEROUS_ARG_PATTERN = /[|;&`$>\n\r]/;
 
+/** app.getPath 合法名称白名单（批3d F-05） */
+const ALLOWED_APP_PATHS = new Set([
+  "home", "appData", "userData", "tmp", "temp",
+  "documents", "downloads", "desktop", "logs", "crashDumps",
+]);
+
+/**
+ * 路径入参守卫（批3d F-05）：必须为不含 NUL 的绝对路径字符串。
+ * 返回错误消息；null 表示通过。
+ */
+function pathGuardError(p: unknown): string | null {
+  if (typeof p !== "string" || p.length === 0) {
+    return "Invalid path: non-empty string required";
+  }
+  if (!path.isAbsolute(p)) {
+    return "Invalid path: absolute path required";
+  }
+  if (p.includes("\0")) {
+    return "Invalid path: NUL byte not allowed";
+  }
+  return null;
+}
+
+/**
+ * 桥接层路径权限检查（与 FILE_READ/FILE_WRITE 既有策略一致化）。
+ * 注：sessionId 由主进程会话机制维护，未建立会话时按拒绝处理（fail-closed）。
+ */
+function hasPathAccess(event: Electron.IpcMainInvokeEvent, p: string): boolean {
+  const sessionId = (event as any).sessionId;
+  return permissionManager.hasPathPermission(sessionId, p);
+}
+
+/**
+ * 对话框/通知 options 守卫：必须为普通对象。
+ */
+function optionsGuardError(o: unknown): string | null {
+  if (typeof o !== "object" || o === null || Array.isArray(o)) {
+    return "Invalid options: plain object required";
+  }
+  return null;
+}
+
 /**
  * 创建成功响应
  */
@@ -84,8 +126,13 @@ export function registerFileSystemHandlers(): void {
   });
 
   // 删除文件
-  ipcMain.handle(IPCChannel.FILE_DELETE, async (_, filePath: string) => {
+  ipcMain.handle(IPCChannel.FILE_DELETE, async (event, filePath: string) => {
     try {
+      const guard = pathGuardError(filePath);
+      if (guard) { return createErrorResponse(guard); }
+      if (!hasPathAccess(event, filePath)) {
+        return createErrorResponse("Permission denied: cannot delete this file");
+      }
       await fs.promises.unlink(filePath);
       return createSuccessResponse(undefined);
     } catch (error) {
@@ -94,8 +141,13 @@ export function registerFileSystemHandlers(): void {
   });
 
   // 检查文件是否存在
-  ipcMain.handle(IPCChannel.FILE_EXISTS, async (_, filePath: string) => {
+  ipcMain.handle(IPCChannel.FILE_EXISTS, async (event, filePath: string) => {
     try {
+      const guard = pathGuardError(filePath);
+      if (guard) { return createErrorResponse(guard); }
+      if (!hasPathAccess(event, filePath)) {
+        return createErrorResponse("Permission denied: cannot inspect this file");
+      }
       const exists = fs.existsSync(filePath);
       return createSuccessResponse(exists);
     } catch (error) {
@@ -104,8 +156,13 @@ export function registerFileSystemHandlers(): void {
   });
 
   // 列出目录内容
-  ipcMain.handle(IPCChannel.FILE_LIST, async (_, dirPath: string, _options?: any) => {
+  ipcMain.handle(IPCChannel.FILE_LIST, async (event, dirPath: string, _options?: any) => {
     try {
+      const guard = pathGuardError(dirPath);
+      if (guard) { return createErrorResponse(guard); }
+      if (!hasPathAccess(event, dirPath)) {
+        return createErrorResponse("Permission denied: cannot list this directory");
+      }
       const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
       const files = entries.map(entry => ({
         path: path.join(dirPath, entry.name),
@@ -124,8 +181,13 @@ export function registerFileSystemHandlers(): void {
   });
 
   // 获取文件信息
-  ipcMain.handle(IPCChannel.FILE_STAT, async (_, filePath: string) => {
+  ipcMain.handle(IPCChannel.FILE_STAT, async (event, filePath: string) => {
     try {
+      const guard = pathGuardError(filePath);
+      if (guard) { return createErrorResponse(guard); }
+      if (!hasPathAccess(event, filePath)) {
+        return createErrorResponse("Permission denied: cannot stat this file");
+      }
       const stats = await fs.promises.stat(filePath);
       return createSuccessResponse({
         path: filePath,
@@ -143,8 +205,13 @@ export function registerFileSystemHandlers(): void {
   });
 
   // 创建目录
-  ipcMain.handle(IPCChannel.FILE_MKDIR, async (_, dirPath: string) => {
+  ipcMain.handle(IPCChannel.FILE_MKDIR, async (event, dirPath: string) => {
     try {
+      const guard = pathGuardError(dirPath);
+      if (guard) { return createErrorResponse(guard); }
+      if (!hasPathAccess(event, dirPath)) {
+        return createErrorResponse("Permission denied: cannot create this directory");
+      }
       await fs.promises.mkdir(dirPath, { recursive: true });
       return createSuccessResponse(undefined);
     } catch (error) {
@@ -153,8 +220,15 @@ export function registerFileSystemHandlers(): void {
   });
 
   // 复制文件
-  ipcMain.handle(IPCChannel.FILE_COPY, async (_, source: string, destination: string) => {
+  ipcMain.handle(IPCChannel.FILE_COPY, async (event, source: string, destination: string) => {
     try {
+      const guardSrc = pathGuardError(source);
+      const guardDst = pathGuardError(destination);
+      if (guardSrc) { return createErrorResponse(guardSrc); }
+      if (guardDst) { return createErrorResponse(guardDst); }
+      if (!hasPathAccess(event, source) || !hasPathAccess(event, destination)) {
+        return createErrorResponse("Permission denied: cannot copy between these paths");
+      }
       await fs.promises.copyFile(source, destination);
       return createSuccessResponse(undefined);
     } catch (error) {
@@ -163,8 +237,15 @@ export function registerFileSystemHandlers(): void {
   });
 
   // 移动文件
-  ipcMain.handle(IPCChannel.FILE_MOVE, async (_, source: string, destination: string) => {
+  ipcMain.handle(IPCChannel.FILE_MOVE, async (event, source: string, destination: string) => {
     try {
+      const guardSrc = pathGuardError(source);
+      const guardDst = pathGuardError(destination);
+      if (guardSrc) { return createErrorResponse(guardSrc); }
+      if (guardDst) { return createErrorResponse(guardDst); }
+      if (!hasPathAccess(event, source) || !hasPathAccess(event, destination)) {
+        return createErrorResponse("Permission denied: cannot move between these paths");
+      }
       await fs.promises.rename(source, destination);
       return createSuccessResponse(undefined);
     } catch (error) {
@@ -283,9 +364,12 @@ export function registerAppControlHandlers(): void {
     }
   });
 
-  // 获取应用路径
+  // 获取应用路径（批3d F-05：白名单枚举，防任意 Electron 特殊路径探测）
   ipcMain.handle(IPCChannel.APP_PATH, async (_, name: string) => {
     try {
+      if (typeof name !== "string" || !ALLOWED_APP_PATHS.has(name)) {
+        return createErrorResponse(`App path not allowed: ${String(name)}`);
+      }
       const appPath = app.getPath(name as any);
       return createSuccessResponse(appPath);
     } catch (error) {
@@ -337,6 +421,8 @@ export function registerDialogHandlers(): void {
   // 显示打开对话框
   ipcMain.handle(IPCChannel.DIALOG_OPEN, async (_, options: any) => {
     try {
+      const guard = optionsGuardError(options);
+      if (guard) { return createErrorResponse(guard); }
       const result = await dialog.showOpenDialog(options);
       return createSuccessResponse(result.filePaths);
     } catch (error) {
@@ -347,6 +433,8 @@ export function registerDialogHandlers(): void {
   // 显示保存对话框
   ipcMain.handle(IPCChannel.DIALOG_SAVE, async (_, options: any) => {
     try {
+      const guard = optionsGuardError(options);
+      if (guard) { return createErrorResponse(guard); }
       const result = await dialog.showSaveDialog(options);
       return createSuccessResponse(result.filePath || "");
     } catch (error) {
@@ -357,6 +445,8 @@ export function registerDialogHandlers(): void {
   // 显示消息对话框
   ipcMain.handle(IPCChannel.DIALOG_MESSAGE, async (_, options: any) => {
     try {
+      const guard = optionsGuardError(options);
+      if (guard) { return createErrorResponse(guard); }
       const result = await dialog.showMessageBox(options);
       return createSuccessResponse(result.response);
     } catch (error) {
@@ -369,11 +459,21 @@ export function registerDialogHandlers(): void {
  * 注册 Shell IPC 处理器
  */
 export function registerShellHandlers(): void {
-  // 打开外部链接
-  ipcMain.handle(IPCChannel.SHELL_OPEN, async (_, url: string) => {
+  // 打开外部链接或本地路径（批3d F-05：仅放行 http(s) URL 与绝对路径，拒绝其他协议）
+  ipcMain.handle(IPCChannel.SHELL_OPEN, async (_, target: string) => {
     try {
-      await shell.openExternal(url);
-      return createSuccessResponse(undefined);
+      if (typeof target !== "string" || target.length === 0 || target.includes("\0")) {
+        return createErrorResponse("Invalid target: non-empty string without NUL required");
+      }
+      if (/^https?:\/\//i.test(target)) {
+        await shell.openExternal(target);
+        return createSuccessResponse(undefined);
+      }
+      if (path.isAbsolute(target)) {
+        await shell.openPath(target);
+        return createSuccessResponse(undefined);
+      }
+      return createErrorResponse("Only http(s) URLs or absolute paths are allowed");
     } catch (error) {
       return createErrorResponse(error instanceof Error ? error.message : String(error));
     }

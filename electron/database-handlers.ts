@@ -49,6 +49,20 @@ function createErrorResponse(error: string): IPCResponse {
 }
 
 /**
+ * SQL 入参守卫（批3d F-05）：SQL 必须为非空字符串；参数（如提供）必须为数组。
+ * 接入真实驱动后，一律走参数绑定（?/$n 占位 + params），禁止字符串拼接 SQL。
+ */
+function sqlGuardError(sql: unknown, params: unknown): string | null {
+  if (typeof sql !== "string" || sql.trim().length === 0) {
+    return "Invalid SQL: non-empty string required";
+  }
+  if (params !== undefined && !Array.isArray(params)) {
+    return "Invalid params: array required (parameter binding)";
+  }
+  return null;
+}
+
+/**
  * 执行 SQL 查询（模拟实现）
  */
 async function executeQuery(sql: string, _params?: any[]): Promise<any[]> {
@@ -88,6 +102,8 @@ export function registerDatabaseHandlers(): void {
   // 执行 SQL 语句
   ipcMain.handle(IPCChannel.DB_EXECUTE, async (_, sql: string, params?: any[]) => {
     try {
+      const guard = sqlGuardError(sql, params);
+      if (guard) { return createErrorResponse(guard); }
       const startTime = Date.now();
       const result = await executeStatement(sql, params);
       const duration = Date.now() - startTime;
@@ -107,6 +123,8 @@ export function registerDatabaseHandlers(): void {
   // 查询数据
   ipcMain.handle(IPCChannel.DB_QUERY, async (_, sql: string, params?: any[]) => {
     try {
+      const guard = sqlGuardError(sql, params);
+      if (guard) { return createErrorResponse(guard); }
       const startTime = Date.now();
       const rows = await executeQuery(sql, params);
       const duration = Date.now() - startTime;
