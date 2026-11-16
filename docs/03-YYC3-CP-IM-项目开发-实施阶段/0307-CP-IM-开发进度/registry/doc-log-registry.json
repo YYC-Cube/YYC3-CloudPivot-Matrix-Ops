@@ -134,7 +134,7 @@
       "action": "create",
       "timestamp": "2026-11-16T02:50:00+08:00",
       "version": "v1.0.0",
-      "checksum": "9fcf402bba6913f0",
+      "checksum": "f5df02ab12265eaa",
       "author": "YYC³ Team",
       "changes": [
         {
@@ -315,6 +315,24 @@
         {
           "field": "content",
           "summary": "封装体验修复：窗口拖动区（TopBar app-region）+ 图标解析链强化（resources/icon.icns + Dock 刷新）"
+        }
+      ],
+      "related_docs": [
+        "docs/03-YYC3-CP-IM-项目开发-实施阶段/0307-CP-IM-开发进度/logs/2026-W47/YYC3-Cloud-Matrix-glm-20261116/02-执行日志与进度跟踪.md"
+      ]
+    },
+    {
+      "trace_id": "TRC-20261116018",
+      "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/29-批6全节点真实数据接入OpsPanel-全端logo审计-生产测试-20261116.md",
+      "action": "create",
+      "timestamp": "2026-11-16T08:35:00+08:00",
+      "version": "v1.0.0",
+      "checksum": "404a3da891c4e0bd",
+      "author": "YYC³ Team",
+      "changes": [
+        {
+          "field": "content",
+          "summary": "批6：logo 全端审计 + OpsPanel 真实数据接入（ssot v3/CSP/merge 语义修复链）+ 生产测试"
         }
       ],
       "related_docs": [
