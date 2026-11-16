@@ -909,10 +909,49 @@ export function mask(text: string): string;
 
 ---
 
+## 附录 A · 本仓对齐实施登记（2026-11-17 · 落档 48）
+
+### A.1 与本文基线的差异
+
+本文基线（`src/chat/model`、三套消息模型收敛、`tokens.css`）建立于**另一代码基线**；本仓（YYC3-Cloud-Matrix）为单消息模型（`family-chat-slice.ChatMessage`）+ 统一请求层（`lib/model-request.ts`）。故本仓采用**增量对齐**而非推倒重建：
+
+| 本文规范 | 本仓实施形态 |
+| ---- | ---- |
+| §4.2 消息模型扩展 | `ChatMessage` 增加 `lifecycle / latencyMs / parts`（**可选字段，persist v1 兼容**，无需迁移） |
+| §6 状态机 | 发送链路 `addMessage(pending)` → `updateMessage(complete\|error)`；异常兜底 error + 重试 |
+| §4.4 适配器 | 未新建 `adapters.ts`：数据源已统一（`model-request.ts` 单点路由），三套模型并存问题在本仓不存在 |
+| §5 令牌与主题 | 身份色取自 `useFamilyMemberSlice.color`（SSOT）；气泡令牌以内联值表达，主题化随主题系统批次 |
+| §7 组件 API | `FamilyChat` 内部实现 `parseParts()` + 气泡渲染，未拆 `MessageList/Composer` 子组件（单文件内聚，后续按需拆分） |
+
+### A.2 接口契约（本仓现行）
+
+```ts
+interface ChatMessage {
+  id: string; sender: string; text: string; time: string;
+  type: "text" | "system" | "thinking";
+  source?: "llm" | "agent" | "mock" | "error";
+  lifecycle?: "pending" | "streaming" | "complete" | "error";
+  latencyMs?: number;
+  parts?: Array<{ type: "text" | "code"; text: string; lang?: string }>;
+}
+// slice: addMessage(...) => string; updateMessage(channelId, id, patch)
+```
+
+### A.3 验收记录
+
+| 项 | 结果 |
+| ---- | ---- |
+| 真实 LLM 回复气泡（身份色 + 延迟徽标） | ✅ 4.0s / 11.0s 实测 |
+| 代码块分段渲染（```bash） | ✅ `pre` + 语言标签实测 |
+| 发送中/完成/失败三态 | ✅ lifecycle 写入 + UI 表达（失败含重试） |
+| persist 兼容 | ✅ 可选字段，旧消息无 lifecycle 正常渲染 |
+| 全量回归 | ✅ 275 文件 / 4695 用例 0 失败 |
+
 ## 变更历史
 
 | 版本 | 日期 | 变更内容 | 作者 |
 | ---- | ---- | -------- | ---- |
+| v1.1.0 | 2026-11-17 | 追加附录 A「本仓对齐实施登记」：差异映射 + 现行接口契约 + 验收记录 | YYC3 Team |
 | v1.0.0 | 2026-11-17 | 新建落地实现规格：收敛三套消息模型、定义状态机与组件 API、复用同步引擎、给出迁移与测试矩阵 | YYC3 Team |
 
 ---

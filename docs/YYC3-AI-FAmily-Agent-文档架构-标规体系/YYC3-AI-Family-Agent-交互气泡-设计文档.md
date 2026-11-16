@@ -771,10 +771,43 @@ Chat/
 
 ---
 
+## 附录 A · 本仓对齐实施登记（2026-11-17 · 落档 48）
+
+> 本设计文档的基线路径（`src/components/FamilyChat.tsx`、`src/chat/model`、`src/styles/tokens.css` 等）与 **YYC3-Cloud-Matrix** 本仓实际结构不一致（本仓为 `src/app/modules/ai-family/**`，无 `src/chat` 与 tokens.css）。以下为按本仓结构**实测落地**的映射登记。
+
+### A.1 基线路径映射
+
+| 设计文档基线 | 本仓实际路径 | 状态 |
+| ---- | ---- | ---- |
+| `src/components/FamilyChat.tsx` | `src/app/modules/ai-family/components/FamilyChat.tsx` | ✅ 已对齐 |
+| `src/store/family-chat-slice.ts` | `src/app/modules/ai-family/store/family-chat-slice.ts` | ✅ 已对齐 |
+| `src/types/family-message.ts` / `src/lib/ai-family.types.ts` / `src/lib/ai-family-sync.ts` | 本仓无对应三套模型并存（单模型 + 适配层在 `lib/family-ai-service.ts` / `lib/model-request.ts`） | ⚠️ 差异登记（不新建平行体系） |
+| `src/chat/model`、`src/styles/tokens.css` | 无；样式以 Tailwind 原子类 + 内联令牌值实现 | ⚠️ 差异登记 |
+
+### A.2 已实施（v1.5 对齐批次）
+
+| 规范条目 | 实施内容 | 实证 |
+| ---- | ---- | ---- |
+| §4.5 消息状态机 | `ChatMessage.lifecycle = pending / streaming / complete / error`；发送中气泡降透明度 + 「发送中…」；失败红色描边 + 「重试」按钮 | 群聊实测 |
+| §4.1 富内容 | `parts: Array<{type:"text"\|"code", text, lang}>`；`\`\`\`lang` 解析为独立代码块（语言标签 + 等宽深底） | bash 代码块实测 |
+| §4.2 视觉变体 | 非用户气泡按**成员身份色**左边框条 + 描边；错误态 `#ff3366` 描边 | 截图实证 |
+| §14.1 性能目标 | 端到端延迟徽标（`latencyMs` → `x.xs`）可见于回复尾部 | 4.0s / 11.0s 实测 |
+| §6.1/6.3 身份映射 | 气泡色取成员 `color`（`useFamilyMemberSlice` SSOT），未新增硬编码色 | 代码审查 |
+
+### A.3 未实施（登记为后续演进）
+
+| 条目 | 原因 |
+| ---- | ---- |
+| 流式 SSE（streaming 逐字渲染） | 统一请求层当前 `stream:false`；需上游 SSE + 前端增量渲染，单独立项 |
+| 工具调用卡 / 产物面板 / 脑图化（§7.4/7.5/§9） | 依赖 agent 编排面（#10 八动作/工具链），与模型域解耦后实施 |
+| tokens.css 全量令牌化 | 本仓采用内联令牌值；全量迁移建议随主题系统（主题定制器）统一批次 |
+| 设计与视觉回归自动化（§14.4） | 需视觉基线体系，登记待排期 |
+
 ## 变更历史
 
 | 版本 | 日期 | 变更内容 | 作者 |
 | ---- | ---- | -------- | ---- |
+| v1.2.0 | 2026-11-17 | 追加附录 A「本仓对齐实施登记」：路径映射 + 已实施 5 项（状态机/富内容/身份色/延迟/映射）+ 未实施 4 项 | YYC3 Team |
 | v1.1.0 | 2026-11-17 | 对标审核与闭环补全：新增覆盖度评估、设计令牌、8 成员身份映射、群聊协作、消息状态机、沉浸场景融合、多端与无障碍、安全审计、性能工程、五维闭环与验收清单；统一标头标尾与章节编号 | YYC3 Team |
 | v1.0.0 | 2026-11-08 | 初版：气泡选型、七层结构、代码渲染、图标体系、脑图化与行业实践 | YYC3 Team |
 
