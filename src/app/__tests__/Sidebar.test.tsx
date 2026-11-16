@@ -144,7 +144,7 @@ describe("Sidebar Component", () => {
     renderWithRouter(<Sidebar collapsed={false} onToggle={mockOnToggle} />);
 
     expect(screen.getAllByText(/nav.aiDecision/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/modelProvider.title/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/nav.gatewayDeploy/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/nav.aiDiagnostics/i).length).toBeGreaterThan(0);
   });
 

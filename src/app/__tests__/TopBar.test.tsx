@@ -347,7 +347,7 @@ describe("TopBar Component", () => {
     const aiCategory = screen.getByText("nav.catAI");
     fireEvent.click(aiCategory);
     expect(screen.getByText("nav.aiDecision")).toBeInTheDocument();
-    expect(screen.getByText("modelProvider.title")).toBeInTheDocument();
+    expect(screen.getByText("nav.gatewayDeploy")).toBeInTheDocument();
     expect(screen.getByText("nav.aiDiagnostics")).toBeInTheDocument();
   });
 

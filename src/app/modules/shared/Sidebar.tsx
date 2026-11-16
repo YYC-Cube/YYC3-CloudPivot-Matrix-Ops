@@ -15,6 +15,13 @@ import {
   BarChart3,
   BellRing,
   BookOpen,
+  Film,
+  GraduationCap,
+  Megaphone,
+  Mic,
+  ShoppingCart,
+  Stethoscope,
+  UtensilsCrossed,
   Brain,
   BrainCircuit,
   Building2,
@@ -64,6 +71,8 @@ interface NavChild {
   key: string;
   path: string;
   icon: React.ElementType;
+  /** 规划中页面：条目显示「规划中」徽标（落档 49） */
+  planned?: boolean;
 }
 
 interface NavCategory {
@@ -109,7 +118,7 @@ const NAV_CATEGORIES: NavCategory[] = [
     icon: Brain,
     children: [
       { key: "nav.aiDecision", path: "/ai", icon: Sparkles },
-      { key: "modelProvider.title", path: "/models", icon: Cpu },
+      { key: "nav.gatewayDeploy", path: "/models", icon: Cpu },
       { key: "nav.aiDiagnostics", path: "/ai-diagnosis", icon: BrainCircuit },
       { key: "nav.sdkChat", path: "/sdk-chat", icon: MessageCircle },
     ],
@@ -132,6 +141,14 @@ const NAV_CATEGORIES: NavCategory[] = [
     icon: Building2,
     children: [
       { key: "nav.hotelDashboard", path: "/hotel", icon: Building2 },
+      { key: "nav.knowledgeHub", path: "/knowledge-hub", icon: BookOpen, planned: true },
+      { key: "nav.smartEducation", path: "/smart-education", icon: GraduationCap, planned: true },
+      { key: "nav.restaurantMgmt", path: "/restaurant", icon: UtensilsCrossed, planned: true },
+      { key: "nav.ecommerce", path: "/ecommerce", icon: ShoppingCart, planned: true },
+      { key: "nav.medicalCompliance", path: "/medical", icon: Stethoscope, planned: true },
+      { key: "nav.contentMarketing", path: "/content-marketing", icon: Megaphone, planned: true },
+      { key: "nav.videoDrama", path: "/video-drama", icon: Film, planned: true },
+      { key: "nav.voiceOfYanyu", path: "/voice", icon: Mic, planned: true },
       { key: "nav.commStation", path: "/comm-station", icon: Radio },
     ],
   },
@@ -346,6 +363,12 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                         >
                           <ChildIcon className="w-3.5 h-3.5 shrink-0" style={{ opacity: isActive ? 0.9 : 0.5 }} />
                           <span className="whitespace-nowrap overflow-hidden text-ellipsis">{t(child.key)}</span>
+                          {child.planned && (
+                            <span className="shrink-0 px-1 rounded bg-[rgba(255,221,0,0.1)] border border-[rgba(255,221,0,0.2)] text-[rgba(255,221,0,0.65)]"
+                              style={{ fontSize: "0.5rem" }} title={t("nav.planning")}>
+                              {t("nav.planning")}
+                            </span>
+                          )}
                         </button>
                       );
                     })}
@@ -404,6 +427,11 @@ export function Sidebar({ collapsed, onToggle }: SidebarProps) {
                               )}
                               <ChildIcon className="w-3.5 h-3.5 shrink-0" style={{ opacity: isActive ? 1 : 0.5 }} />
                               <span>{t(child.key)}</span>
+                              {child.planned && (
+                                <span className="ml-1 px-1 rounded bg-[rgba(255,221,0,0.1)] text-[rgba(255,221,0,0.65)]" style={{ fontSize: "0.45rem" }}>
+                                  {t("nav.planning")}
+                                </span>
+                              )}
                             </button>
                           );
                         })}

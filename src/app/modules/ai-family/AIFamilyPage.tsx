@@ -448,12 +448,13 @@ export function AIFamilyPage() {
       <div className="absolute top-4 left-5 z-10">
         <div className="flex items-center gap-2">
           <Users className="w-4 h-4 text-[#00F0FF]" />
+          {/* 落档 49：标题随导航改名（AI Family → Family中枢），副标题走 i18n */}
           <span style={{ fontSize: "0.8rem", color: "#00F0FF", letterSpacing: "2px" }}>
-            AI Family
+            {t("nav.aiFamily")}
           </span>
         </div>
         <p className="mt-1" style={{ fontSize: "0.55rem", color: "rgba(0,240,255,0.3)", letterSpacing: "1px" }}>
-          八魂归一，云枢乃成
+          {t("aiFamily.subtitle")}
         </p>
       </div>
 

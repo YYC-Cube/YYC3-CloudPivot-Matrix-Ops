@@ -103,7 +103,7 @@ const MOBILE_NAV: MobileNavCategory[] = [
     id: "ai", labelKey: "nav.catAI", icon: Brain,
     children: [
       { key: "nav.aiDecision", path: "/ai", icon: Sparkles },
-      { key: "modelProvider.title", path: "/models", icon: Cpu },
+      { key: "nav.gatewayDeploy", path: "/models", icon: Cpu },
       { key: "nav.aiDiagnostics", path: "/ai-diagnosis", icon: BrainCircuit },
     ],
   },

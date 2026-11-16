@@ -37,6 +37,9 @@ vi.mock("../hooks/useI18n", () => ({
         "aiFamily.online": "在线",
         "aiFamily.activeTasks": "活跃任务",
         "aiFamily.uptime": "运行时间",
+        // 落档 49 改名
+        "nav.aiFamily": "Family中枢",
+        "aiFamily.subtitle": "八魂归一，云枢乃成",
       };
       return map[key] ?? key;
     },
@@ -222,10 +225,10 @@ describe("AIFamilyPage", () => {
   // ──────────────────────────────────────────────────────────
   //  Test 2: 头部导航标题存在（AI Family + 副标题）
   // ──────────────────────────────────────────────────────────
-  it("2. should render top-left header title 'AI Family' and subtitle", () => {
+  it("2. should render top-left header title 'Family中枢' and subtitle", () => {
+    // 落档 49：导航改名后页面标题同步为「Family中枢」，副标题走 i18n
     render(<AIFamilyPage />);
-    const headers = screen.getAllByText("AI Family");
-    expect(headers.length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText("Family中枢").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("八魂归一，云枢乃成")).toBeInTheDocument();
   });
 
@@ -250,8 +253,9 @@ describe("AIFamilyPage", () => {
   it("4. should render center brand logo 'YYC³' and sub-logo 'AI Family'", () => {
     render(<AIFamilyPage />);
     expect(screen.getByText("YYC³")).toBeInTheDocument();
+    // 中心字标保留品牌名 AI Family（导航改名不涉及品牌标识）
     const centerSubLabels = screen.getAllByText("AI Family");
-    expect(centerSubLabels.length).toBeGreaterThanOrEqual(2);
+    expect(centerSubLabels.length).toBeGreaterThanOrEqual(1);
   });
 
   // ──────────────────────────────────────────────────────────

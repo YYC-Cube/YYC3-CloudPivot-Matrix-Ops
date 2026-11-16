@@ -35,6 +35,14 @@ import {
   Users,
   Wrench,
   X,
+  BookOpen,
+  Film,
+  GraduationCap,
+  Megaphone,
+  Mic,
+  ShoppingCart,
+  Stethoscope,
+  UtensilsCrossed,
 } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
@@ -46,6 +54,9 @@ const iconMap: Record<string, React.ElementType> = {
   Code2, FileSearch, Users, Settings, Bot, BarChart3,
   Cpu, Smartphone, HardDrive, Database, GitBranch, BrainCircuit,
   Package, Gauge, ServerCog,
+  // 落档 49 业务空间规划中页面
+  BookOpen, GraduationCap, UtensilsCrossed, ShoppingCart,
+  Stethoscope, Megaphone, Film, Mic,
 };
 
 interface PaletteItem {
@@ -69,7 +80,17 @@ const PALETTE_ITEMS: PaletteItem[] = [
   { id: "nav-loop", labelKey: "nav.serviceLoop", descKey: "loop.subtitle", category: "nav", icon: "Activity", path: "/loop" },
   { id: "nav-design", labelKey: "nav.designSystem", descKey: "devGuide.architecture", category: "nav", icon: "BarChart3", path: "/design-system" },
   { id: "nav-devguide", labelKey: "nav.devGuide", descKey: "devGuide.subtitle", category: "nav", icon: "Activity", path: "/dev-guide" },
-  { id: "nav-models", labelKey: "modelProvider.title", descKey: "modelProvider.subtitle", category: "nav", icon: "Cpu", path: "/models" },
+  { id: "nav-models", labelKey: "nav.gatewayDeploy", descKey: "modelProvider.subtitle", category: "nav", icon: "Cpu", path: "/models" },
+  /* 业务空间 · 规划中（落档 49） */
+  { id: "nav-hotel", labelKey: "nav.hotelDashboard", descKey: "palette.navigate", category: "nav", icon: "Package", path: "/hotel" },
+  { id: "nav-knowledge", labelKey: "nav.knowledgeHub", descKey: "nav.planning", category: "nav", icon: "BookOpen", path: "/knowledge-hub" },
+  { id: "nav-education", labelKey: "nav.smartEducation", descKey: "nav.planning", category: "nav", icon: "GraduationCap", path: "/smart-education" },
+  { id: "nav-restaurant", labelKey: "nav.restaurantMgmt", descKey: "nav.planning", category: "nav", icon: "UtensilsCrossed", path: "/restaurant" },
+  { id: "nav-ecommerce", labelKey: "nav.ecommerce", descKey: "nav.planning", category: "nav", icon: "ShoppingCart", path: "/ecommerce" },
+  { id: "nav-medical", labelKey: "nav.medicalCompliance", descKey: "nav.planning", category: "nav", icon: "Stethoscope", path: "/medical" },
+  { id: "nav-content", labelKey: "nav.contentMarketing", descKey: "nav.planning", category: "nav", icon: "Megaphone", path: "/content-marketing" },
+  { id: "nav-video", labelKey: "nav.videoDrama", descKey: "nav.planning", category: "nav", icon: "Film", path: "/video-drama" },
+  { id: "nav-voice", labelKey: "nav.voiceOfYanyu", descKey: "nav.planning", category: "nav", icon: "Mic", path: "/voice" },
   { id: "nav-audit", labelKey: "nav.audit", descKey: "palette.navigate", category: "nav", icon: "FileSearch", path: "/audit" },
   { id: "nav-users", labelKey: "nav.userMgmt", descKey: "palette.navigate", category: "nav", icon: "Users", path: "/users" },
   { id: "nav-settings", labelKey: "nav.settings", descKey: "settings.title", category: "nav", icon: "Settings", path: "/settings" },
