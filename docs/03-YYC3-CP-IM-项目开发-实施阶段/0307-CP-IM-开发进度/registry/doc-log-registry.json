@@ -134,7 +134,7 @@
       "action": "create",
       "timestamp": "2026-11-16T02:50:00+08:00",
       "version": "v1.0.0",
-      "checksum": "f5df02ab12265eaa",
+      "checksum": "24848ec5f1217b8f",
       "author": "YYC³ Team",
       "changes": [
         {
@@ -351,6 +351,42 @@
         {
           "field": "content",
           "summary": "批6审核：落档15-20同步分析 + 104项代码实证复核 + 6处漂移/4项新发现/3处勘误"
+        }
+      ],
+      "related_docs": [
+        "docs/03-YYC3-CP-IM-项目开发-实施阶段/0307-CP-IM-开发进度/logs/2026-W47/YYC3-Cloud-Matrix-glm-20261116/02-执行日志与进度跟踪.md"
+      ]
+    },
+    {
+      "trace_id": "TRC-20261116020",
+      "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/31-后续落地推进计划-总纲-P1至P7阶段化执行-20261116.md",
+      "action": "create",
+      "timestamp": "2026-11-16T11:10:00+08:00",
+      "version": "v1.1.0",
+      "checksum": "65fc3a669ffacc30",
+      "author": "YYC³ Team",
+      "changes": [
+        {
+          "field": "content",
+          "summary": "推进总纲 P1-P7 + 状态回填（P1-P3 完成）"
+        }
+      ],
+      "related_docs": [
+        "docs/03-YYC3-CP-IM-项目开发-实施阶段/0307-CP-IM-开发进度/logs/2026-W47/YYC3-Cloud-Matrix-glm-20261116/02-执行日志与进度跟踪.md"
+      ]
+    },
+    {
+      "trace_id": "TRC-20261116021",
+      "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/32-P1至P3阶段执行报告-真实化收尾-supabase解耦-双端一致-20261116.md",
+      "action": "create",
+      "timestamp": "2026-11-16T11:10:00+08:00",
+      "version": "v1.0.0",
+      "checksum": "68afe41830bd8d36",
+      "author": "YYC³ Team",
+      "changes": [
+        {
+          "field": "content",
+          "summary": "P1-P3 执行报告：三提交全绿 + CORS 根因链 + 7/7 双端实证"
         }
       ],
       "related_docs": [
