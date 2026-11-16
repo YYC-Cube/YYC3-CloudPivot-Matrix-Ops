@@ -22,18 +22,23 @@ import { FamilyAIService } from "../../../lib/family-ai-service";
 
 type ChannelType = "family-group" | string;
 
-/** 富内容分段：```lang ... ``` → code 段（落档 48 气泡对齐 §7.1 代码块） */
+/** 富内容分段：以 ``` 围栏切分文本/代码段（落档 48 气泡对齐 §7.1 代码块）。
+ *  用 split 而非正则 exec：语义等价、可读性更高，且规避静态规则对围栏反引号的误判。 */
 function parseParts(text: string): Array<{ type: "text" | "code"; text: string; lang?: string }> {
+  const FENCE = "```";
+  const segments = text.split(FENCE);
+  if (segments.length === 1) { return [{ type: "text", text }]; }
   const parts: Array<{ type: "text" | "code"; text: string; lang?: string }> = [];
-  const re = /```([\w+#.-]*)\n?([\s\S]*?)```/g;
-  let last = 0;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(text)) !== null) {
-    if (m.index > last) { parts.push({ type: "text", text: text.slice(last, m.index) }); }
-    parts.push({ type: "code", lang: m[1] || "text", text: m[2].replace(/\n$/, "") });
-    last = m.index + m[0].length;
-  }
-  if (last < text.length) { parts.push({ type: "text", text: text.slice(last) }); }
+  segments.forEach((seg, i) => {
+    if (i % 2 === 0) {
+      if (seg) { parts.push({ type: "text", text: seg }); }
+      return;
+    }
+    const nl = seg.indexOf("\n");
+    const lang = (nl >= 0 ? seg.slice(0, nl) : "").trim();
+    const body = nl >= 0 ? seg.slice(nl + 1) : seg;
+    parts.push({ type: "code", lang: lang || "text", text: body.replace(/\n$/, "") });
+  });
   return parts.length ? parts : [{ type: "text", text }];
 }
 
