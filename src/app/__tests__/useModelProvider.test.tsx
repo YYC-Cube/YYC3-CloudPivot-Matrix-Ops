@@ -55,8 +55,15 @@ describe("useModelProvider", () => {
   });
 
   describe("MODEL_PROVIDERS registry", () => {
-    it("should have 3 providers", () => {
-      expect(MODEL_PROVIDERS.length).toBe(3);
+    it("should have 4 providers", () => {
+      expect(MODEL_PROVIDERS.length).toBe(4);
+    });
+
+    it("should contain YanYuCloudCube (YYC³) preset", () => {
+      const yyc3 = MODEL_PROVIDERS.find((p) => p.id === "yyc3");
+      expect(yyc3).toBeDefined();
+      expect(yyc3?.models).toContain("nemotron-3.5-super-vl");
+      expect(yyc3?.baseUrl).toContain("/api/v1/llm/nas");
     });
 
     it("should contain Z.ai", () => {

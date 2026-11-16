@@ -36,6 +36,19 @@ import type {
 
 export const BUILTIN_PROVIDERS: ModelProviderDef[] = [
   {
+    // YanYuCloudCube 统一网关（主控 2026-11-17 指令）：经 3118 反代 /api/v1/llm/nas
+    // （Bearer→X-API-Key 头翻译在反代层，落档 43 §二）；API Key 栏填 NAS vk 令牌。
+    // models 系列只列实证可用的 chat 位，网关目录其余模型经下拉自由输入。
+    id: "yyc3",
+    label: "YanYuCloudCube (YYC³)",
+    baseUrl: "http://localhost:3118/api/v1/llm/nas/v1",
+    authType: "api-key",
+    models: ["nemotron-3.5-super-vl", "qwen3-coder-30b"],
+    requiresApiKey: true,
+    isLocal: false,
+    isBuiltin: true,
+  },
+  {
     id: "zhipu",
     label: "Z.ai (智谱)",
     baseUrl: "https://open.bigmodel.cn/api/coding/paas/v4",

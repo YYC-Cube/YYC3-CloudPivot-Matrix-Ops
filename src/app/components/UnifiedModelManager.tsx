@@ -54,6 +54,10 @@ export function UnifiedModelManager({ compact = false, showHeader = true }: Unif
     testConnection,
     testAllConnections,
     setActiveModel,
+    addProvider,
+    updateProvider,
+    removeProvider,
+    resetProvider,
   } = useModelProvider();
 
   const [editModel, setEditModel] = useState<ConfiguredModel | null>(null);
@@ -61,6 +65,15 @@ export function UnifiedModelManager({ compact = false, showHeader = true }: Unif
   const [showForm, setShowForm] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [showApiKeys, setShowApiKeys] = useState<Record<string, boolean>>({});
+
+  // 服务商管理（主控指令：预设可删可减可编辑 + 可新增，借鉴 ZCode 模型设置）
+  const [showProviderMgr, setShowProviderMgr] = useState(false);
+  const [editingProviderId, setEditingProviderId] = useState<string | null>(null);
+  const [pLabel, setPLabel] = useState("");
+  const [pBaseUrl, setPBaseUrl] = useState("");
+  const [pModels, setPModels] = useState("");
+  const [pRequiresKey, setPRequiresKey] = useState(true);
+  const [providerDeleteConfirm, setProviderDeleteConfirm] = useState<string | null>(null);
 
   // form state
   const [fProviderId, setFProviderId] = useState<string>("");
@@ -97,6 +110,43 @@ export function UnifiedModelManager({ compact = false, showHeader = true }: Unif
     setShowForm(true);
     setFProviderId(providerOptions[0]?.id || "");
     setFModel(""); setFApiKey(""); setFBaseUrl(""); setFProxyUrl("");
+  };
+
+  // ── 服务商管理 handlers ──
+  const openNewProvider = () => {
+    setEditingProviderId(null);
+    setPLabel(""); setPBaseUrl(""); setPModels(""); setPRequiresKey(true);
+  };
+  const openEditProvider = (id: string) => {
+    const p = providers.find(x => x.id === id);
+    if (!p) { return; }
+    setEditingProviderId(id);
+    setPLabel(p.label); setPBaseUrl(p.baseUrl); setPModels(p.models.join(", ")); setPRequiresKey(p.requiresApiKey);
+  };
+  const saveProvider = () => {
+    if (!pLabel.trim()) { toast.error("服务商名称必填"); return; }
+    const models = pModels.split(/[,，\n]/).map(s => s.trim()).filter(Boolean);
+    if (editingProviderId) {
+      updateProvider(editingProviderId, { label: pLabel.trim(), baseUrl: pBaseUrl.trim(), models, requiresApiKey: pRequiresKey });
+      toast.success(`服务商已更新：${pLabel.trim()}`);
+    } else {
+      addProvider({
+        label: pLabel.trim(),
+        baseUrl: pBaseUrl.trim() || "https://",
+        authType: pRequiresKey ? "api-key" : "none",
+        models,
+        requiresApiKey: pRequiresKey,
+        isLocal: false,
+      });
+      toast.success(`服务商已新增：${pLabel.trim()}`);
+    }
+    openNewProvider();
+  };
+  const doRemoveProvider = (id: string) => {
+    const p = providers.find(x => x.id === id);
+    removeProvider(id);
+    setProviderDeleteConfirm(null);
+    toast.success(`服务商已删除：${p?.label ?? id}（关联模型配置一并清除）`);
   };
 
   const openEdit = (m: ConfiguredModel) => {
@@ -246,6 +296,123 @@ export function UnifiedModelManager({ compact = false, showHeader = true }: Unif
         </GlassCard>
       </div>
 
+      {/* 服务商管理（可新增/可编辑/可删除——预设与自定义同权） */}
+      <GlassCard className="p-3">
+        <div className="flex items-center justify-between">
+          <button onClick={() => { setShowProviderMgr(v => !v); openNewProvider(); }}
+            className="flex items-center gap-2 text-[#00d4ff] hover:text-[#e0f0ff] transition-all"
+            style={{ fontSize: "0.8rem" }}
+            title="展开服务商管理"
+          >
+            <Plug className="w-4 h-4" />
+            服务商管理
+            <span className="px-1.5 py-0.5 rounded-md bg-[rgba(0,212,255,0.12)] text-[rgba(0,212,255,0.6)]" style={{ fontSize: "0.65rem" }}>
+              {providers.length}
+            </span>
+          </button>
+          {showProviderMgr && (
+            <button onClick={openNewProvider}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[rgba(0,255,136,0.08)] border border-[rgba(0,255,136,0.2)] text-[#00ff88] hover:bg-[rgba(0,255,136,0.15)] transition-all"
+              style={{ fontSize: "0.7rem" }}
+            >
+              <Plus className="w-3.5 h-3.5" /> 新增服务商
+            </button>
+          )}
+        </div>
+
+        {showProviderMgr && (
+          <div className="mt-3 space-y-2">
+            {/* 新增/编辑表单 */}
+            <div className="p-3 rounded-xl bg-[rgba(0,40,80,0.35)] border border-[rgba(0,180,255,0.15)] space-y-2">
+              <p className="text-[rgba(0,212,255,0.5)]" style={{ fontSize: "0.68rem" }}>
+                {editingProviderId ? "编辑服务商" : "新增服务商（自定义）"}
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <input value={pLabel} onChange={e => setPLabel(e.target.value)} placeholder="名称（如 YYC³ 网关备用线）"
+                  className="px-3 py-2 rounded-lg bg-[rgba(0,40,80,0.4)] border border-[rgba(0,180,255,0.15)] text-[#e0f0ff] focus:outline-none focus:border-[rgba(0,212,255,0.4)]"
+                  style={{ fontSize: "0.78rem" }} />
+                <input value={pBaseUrl} onChange={e => setPBaseUrl(e.target.value)} placeholder="Base URL（OpenAI 兼容 …/v1）"
+                  className="px-3 py-2 rounded-lg bg-[rgba(0,40,80,0.4)] border border-[rgba(0,180,255,0.15)] text-[#e0f0ff] focus:outline-none focus:border-[rgba(0,212,255,0.4)]"
+                  style={{ fontSize: "0.78rem" }} />
+              </div>
+              <input value={pModels} onChange={e => setPModels(e.target.value)} placeholder="模型系列（逗号分隔，可留空后续手输）"
+                className="w-full px-3 py-2 rounded-lg bg-[rgba(0,40,80,0.4)] border border-[rgba(0,180,255,0.15)] text-[#e0f0ff] focus:outline-none focus:border-[rgba(0,212,255,0.4)]"
+                style={{ fontSize: "0.78rem" }} />
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <label className="flex items-center gap-1.5 text-[rgba(224,240,255,0.6)] cursor-pointer" style={{ fontSize: "0.72rem" }}>
+                  <input type="checkbox" checked={pRequiresKey} onChange={e => setPRequiresKey(e.target.checked)} className="accent-[#00d4ff]" />
+                  需要 API Key
+                </label>
+                <div className="flex items-center gap-2">
+                  {editingProviderId && (
+                    <button onClick={openNewProvider}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-[rgba(0,180,255,0.2)] text-[rgba(224,240,255,0.6)] hover:text-[#e0f0ff] transition-all"
+                      style={{ fontSize: "0.7rem" }}
+                    >
+                      <X className="w-3.5 h-3.5" /> 取消
+                    </button>
+                  )}
+                  <button onClick={saveProvider}
+                    className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[rgba(0,140,200,0.2)] border border-[rgba(0,212,255,0.4)] text-[#00d4ff] hover:bg-[rgba(0,140,200,0.3)] transition-all"
+                    style={{ fontSize: "0.72rem" }}
+                  >
+                    <Save className="w-3.5 h-3.5" /> {editingProviderId ? "保存修改" : "创建"}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* 服务商列表 */}
+            {providers.map(p => (
+              <div key={p.id} className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-[rgba(0,20,45,0.4)] border border-[rgba(0,180,255,0.08)]">
+                <div className="min-w-0">
+                  <p className="text-[#e0f0ff] truncate" style={{ fontSize: "0.78rem" }}>
+                    {p.label}
+                    {p.isBuiltin && <span className="ml-1.5 px-1 rounded bg-[rgba(0,212,255,0.12)] text-[rgba(0,212,255,0.55)]" style={{ fontSize: "0.6rem" }}>内置</span>}
+                    {p.isCustom && <span className="ml-1.5 px-1 rounded bg-[rgba(0,255,136,0.1)] text-[rgba(0,255,136,0.6)]" style={{ fontSize: "0.6rem" }}>自定义</span>}
+                    {p.requiresApiKey && <span className="ml-1" style={{ fontSize: "0.65rem" }}>🔑</span>}
+                  </p>
+                  <p className="text-[rgba(0,212,255,0.35)] truncate" style={{ fontSize: "0.65rem" }}>
+                    {p.baseUrl} · 系列 {p.models.length} 项
+                  </p>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  {p.isBuiltin && (
+                    <button onClick={() => { resetProvider(p.id); toast.success(`已重置为预设：${p.label}`); }}
+                      className="p-1.5 rounded-md hover:bg-[rgba(0,212,255,0.1)] transition-all" title="重置为预设值"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5 text-[rgba(0,212,255,0.4)]" />
+                    </button>
+                  )}
+                  <button onClick={() => openEditProvider(p.id)}
+                    className="p-1.5 rounded-md hover:bg-[rgba(0,212,255,0.1)] transition-all" title="编辑"
+                  >
+                    <Edit2 className="w-3.5 h-3.5 text-[rgba(0,212,255,0.5)]" />
+                  </button>
+                  {providerDeleteConfirm === p.id ? (
+                    <span className="flex items-center gap-1">
+                      <button onClick={() => doRemoveProvider(p.id)}
+                        className="px-2 py-1 rounded-md bg-[rgba(255,51,102,0.15)] text-[#ff3366]" style={{ fontSize: "0.65rem" }}
+                        title="确认删除（关联模型一并清除）"
+                      >确认</button>
+                      <button onClick={() => setProviderDeleteConfirm(null)}
+                        className="px-2 py-1 rounded-md text-[rgba(224,240,255,0.5)]" style={{ fontSize: "0.65rem" }}
+                      >取消</button>
+                    </span>
+                  ) : (
+                    <button onClick={() => setProviderDeleteConfirm(p.id)}
+                      className="p-1.5 rounded-md hover:bg-[rgba(255,51,102,0.1)] transition-all" title="删除"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-[rgba(255,51,102,0.5)]" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </GlassCard>
+
       {/* Add/Edit Form */}
       {showForm && (
         <GlassCard className="p-4">
@@ -274,21 +441,23 @@ export function UnifiedModelManager({ compact = false, showHeader = true }: Unif
               </select>
             </div>
             <div>
-              <label className="text-[rgba(0,212,255,0.5)] block mb-1" style={{ fontSize: "0.7rem" }}>模型 *</label>
-              {selectedProviderModels.length > 0 ? (
-                <select value={fModel} onChange={e => setFModel(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg bg-[rgba(0,40,80,0.4)] border border-[rgba(0,180,255,0.15)] text-[#00d4ff] focus:outline-none"
-                  style={{ fontSize: "0.8rem" }}
-                  title="选择模型"
-                >
-                  <option value="" style={{ background: "#0a1830" }}>选择模型...</option>
-                  {selectedProviderModels.map(m => <option key={m} value={m} style={{ background: "#0a1830" }}>{m}</option>)}
-                </select>
-              ) : (
-                <input value={fModel} onChange={e => setFModel(e.target.value)} placeholder="输入模型名称"
-                  className="w-full px-3 py-2 rounded-lg bg-[rgba(0,40,80,0.4)] border border-[rgba(0,180,255,0.15)] text-[#e0f0ff] focus:outline-none focus:border-[rgba(0,212,255,0.4)]"
-                  style={{ fontSize: "0.8rem" }} />
-              )}
+              <label className="text-[rgba(0,212,255,0.5)] block mb-1" style={{ fontSize: "0.7rem" }}>
+                模型 *<span className="text-[rgba(0,212,255,0.3)] ml-1">（自动对齐服务商系列，可自定义输入）</span>
+              </label>
+              {/* 主控指令（落档 43 §七）：datalist 双能力——选中服务商自动对齐其模型系列，
+                  同时允许自由输入任意自定义模型名（网关目录/新系列） */}
+              <input
+                value={fModel}
+                onChange={e => setFModel(e.target.value)}
+                list="umm-provider-models"
+                placeholder={selectedProviderModels.length > 0 ? `选择或输入（如 ${selectedProviderModels[0]}）` : "输入模型名称"}
+                className="w-full px-3 py-2 rounded-lg bg-[rgba(0,40,80,0.4)] border border-[rgba(0,180,255,0.15)] text-[#e0f0ff] focus:outline-none focus:border-[rgba(0,212,255,0.4)]"
+                style={{ fontSize: "0.8rem" }}
+                title="选择模型"
+              />
+              <datalist id="umm-provider-models">
+                {selectedProviderModels.map(m => <option key={m} value={m} />)}
+              </datalist>
             </div>
             <div>
               <label className="text-[rgba(0,212,255,0.5)] block mb-1" style={{ fontSize: "0.7rem" }}>API Key</label>
