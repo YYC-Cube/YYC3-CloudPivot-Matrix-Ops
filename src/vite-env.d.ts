@@ -49,8 +49,6 @@ interface ImportMetaEnv {
   readonly VITE_YYC3_STORAGE_PREFIX: string;
   readonly VITE_YYC3_ENABLE_MOCK: string;
   readonly VITE_YYC3_ENABLE_DEBUG: string;
-  readonly VITE_SUPABASE_URL: string;
-  readonly VITE_SUPABASE_ANON_KEY: string;
   readonly VITE_USE_MOCK_AUTH: string;
   readonly VITE_MOCK_ADMIN_PASSWORD: string;
   readonly VITE_MOCK_DEV_PASSWORD: string;

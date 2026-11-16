@@ -32,7 +32,7 @@
  * ============================================================
  *
  * 1. 数据库查询 API (db-queries.ts)
- * 2. 认证 API (supabaseClient.ts)
+ * 2. 认证 API (mock-auth.ts · P2 起，supabase 已退役)
  * 3. 网络工具 API (network-utils.ts)
  * 4. 错误处理 API (error-handler.ts)
  * 5. 后台同步 API (backgroundSync.ts)
@@ -44,7 +44,7 @@
  * ============================================================
  *
  * 当前状态: Mock 模式（所有函数返回模拟数据）
- * 接入方式: 配置 Supabase 后替换为 supabase.from() 调用
+ * 接入方式: 已退役——无后端红线，认证走 mock-auth 本地键控
  *
  * ---
  *

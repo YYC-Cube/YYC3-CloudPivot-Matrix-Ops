@@ -83,7 +83,7 @@ export const QUICK_START = `
 │  ═══════════════════════════════════════════════════════  │
 │                                                          │
 │  登录方式:                                               │
-│  • 正常登录: 需 Supabase 认证 (或点击 GHOST MODE)        │
+│  • 进入系统: 一键进入（GHOST 语义）；supabase 已退役 P2    │
 │  • 幽灵模式: 点击登录页 GHOST MODE 按钮跳过认证          │
 │    → 以 ghost@yyc3.local / developer 角色进入            │
 │    → 所有功能可用，数据仅 localStorage                   │
@@ -136,7 +136,7 @@ export const ARCHITECTURE = `
 │  │                                                        │ │
 │  │  useWebSocketData.ts  ← 模拟 WebSocket 实时数据推送    │ │
 │  │  useBigModelSDK.ts    ← AI SDK Bridge (Z.ai/OpenAI)   │ │
-│  │  supabaseClient.ts    ← 认证 + Ghost Mode              │ │
+│  │  mock-auth.ts         ← 认证 + Ghost Mode（P2 起）      │ │
 │  │  localStorage         ← 会话/配置/主题持久化            │ │
 │  │  IndexedDB (planned)  ← 大量数据本地缓存               │ │
 │  │                                                        │ │

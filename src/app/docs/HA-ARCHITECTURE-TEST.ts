@@ -40,7 +40,7 @@ export const HA_LAYERS = `
 │                                                                  │
 │  Layer 2: 认证与安全层                                           │
 │  ┌─────────────────────────────────────────────────────────┐    │
-│  │ Supabase Auth + Ghost Mode 兜底 + 会话超时保护            │    │
+│  │ mock-auth（本地键控）+ Ghost Mode 兜底 · supabase 已退役   │    │
 │  │ Figma iframe 错误静默拦截 (RF-003)                        │    │
 │  └─────────────────────────────────────────────────────────┘    │
 │                                                                  │
@@ -74,7 +74,7 @@ export const HA_TEST_CASES: HATestCase[] = [
   {
     id: "HA-AUTH-001",
     category: "认证容错",
-    scenario: "Supabase 不可用时的登录降级",
+    scenario: "本地会话键不可用时的登录降级（supabase 已退役）",
     description: "当 Supabase 服务不可达时，系统应提供 Ghost Mode 兜底登录",
     expectedBehavior: "3秒超时后显示登录页，Ghost Mode 按钮可用，以 ghost@yyc3.local 进入",
     testMethod: "Mock supabase.auth.getSession() 超时 → 验证 Ghost 按钮 → 验证角色 developer",

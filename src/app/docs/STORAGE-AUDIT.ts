@@ -57,7 +57,7 @@ export interface LocalStorageKey {
 export const LOCALSTORAGE_REGISTRY: LocalStorageKey[] = [
   {
     key: "yyc3_session",
-    module: "lib/supabaseClient.ts",
+    module: "lib/mock-auth.ts",  // P2：原 supabaseClient 已退役
     purpose: "认证会话 (AppSession: user + token + expiresAt)",
     maxSize: "~200B",
     writeFrequency: "登录/登出时",
@@ -65,7 +65,7 @@ export const LOCALSTORAGE_REGISTRY: LocalStorageKey[] = [
   },
   {
     key: "yyc3_ghost",
-    module: "lib/supabaseClient.ts",
+    module: "lib/mock-auth.ts",  // P2：原 supabaseClient 已退役
     purpose: "幽灵模式标记 ('1' / 删除)",
     maxSize: "1B",
     writeFrequency: "幽灵登录/登出时",

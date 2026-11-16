@@ -93,9 +93,6 @@ export default defineConfig({
             if (id.includes('react-router')) {
               return 'router-vendor';
             }
-            if (id.includes('@supabase')) {
-              return 'supabase-vendor';
-            }
             return 'vendor';
           }
         },

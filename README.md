@@ -42,7 +42,6 @@
 [![Zustand](https://img.shields.io/badge/Zustand_5-FF6B6B?style=for-the-badge)](https://zustand-demo.pmnd.rs/)
 [![Radix UI](https://img.shields.io/badge/Radix_UI-18181B?style=for-the-badge)](https://www.radix-ui.com/)
 [![Electron](https://img.shields.io/badge/Electron_41-47848F?style=for-the-badge&logo=electron&logoColor=white)](https://www.electronjs.org/)
-[![Supabase](https://img.shields.io/badge/Supabase_2-3ECF8E?style=for-the-badge&logo=supabase&logoColor=black)](https://supabase.com/)
 [![Vitest](https://img.shields.io/badge/Vitest_4-FECC2C?style=for-the-badge&logo=vitest&logoColor=black)](https://vitest.dev/)
 [![Playwright](https://img.shields.io/badge/Playwright_1.59-2EAD33?style=for-the-badge&logo=playwright&logoColor=white)](https://playwright.dev/)
 [![PWA](https://img.shields.io/badge/PWA_Ready-5A0FC8?style=for-the-badge)](https://web.dev/progressive-web-apps/)
@@ -319,7 +318,7 @@ graph TD
         direction LR
         D1[WebSocket 实时推送]
         D2[REST API 客户端]
-        D3[Supabase 认证/数据库]
+        D3[本地 mock-auth 认证/本地持久]
         D4[Recharts 数据可视化]
     end
 
@@ -441,7 +440,7 @@ graph TB
     subgraph SupportDocs["配套支撑 Supporting"]
         MOD["modules/ · 8 模块三件套文档"]
         TST["tests/ · 单元测试文档"]
-        SUP["supabase/ · 数据模型"]
+        SUP["supabase/ · 数据模型(已退役)"]
         STD["标准文档 · API 参考 / 用法示例"]
     end
 
@@ -480,7 +479,7 @@ graph TB
 | -------- | ------ | ------ |
 | **模块文档** | [docs/modules/](./docs/modules/README.md) | 1 共享层 + 7 业务模块，每模块 README/COMPONENTS/API-REFERENCE 三件套 |
 | **测试文档** | [docs/tests/](./docs/tests/) | 各模块单元测试说明（shared/admin/ai/business/dev/monitor/ops/ai-family） |
-| **数据模型** | [docs/supabase/](./docs/supabase/family-schema.sql) | AI Family 数据库 Schema |
+| **数据模型(已退役)** | [docs/supabase/](./docs/supabase/family-schema.sql) | AI Family Schema（supabase 已退役，仅历史资产） |
 | **标准文档** | [API-DOCUMENTATION.md](./docs/API-DOCUMENTATION.md) · [USAGE-EXAMPLES.md](./docs/USAGE-EXAMPLES.md) | 接口参考与用法示例 |
 | **应用级文档** | [src/app/docs/](./src/app/docs/) | API/组件参考、开发者交接、测试指南、审核报告、设计指南、存储审计 |
 | **会话衔接** | [docs/](./docs/) | AI 导师工作核心依托、会话总结、上下文记忆、阶段性总结 |
@@ -532,7 +531,6 @@ graph TB
 | 技术                                                                                                                          | 版本   | 描述                     | 官网                                  |
 | ----------------------------------------------------------------------------------------------------------------------------- | ------ | ------------------------ | ------------------------------------- |
 | [![Recharts](https://img.shields.io/badge/Recharts_3-FF5722?style=flat)](https://recharts.org/)                               | 3.8.1  | 响应式图表库，React 原生 | [recharts.org](https://recharts.org/) |
-| [![Supabase](https://img.shields.io/badge/Supabase_2-3ECF8E?style=flat&logo=supabase&logoColor=white)](https://supabase.com/) | 2.98.0 | 后端即服务，认证与数据库 | [supabase.com](https://supabase.com/) |
 | [![CodeMirror](https://img.shields.io/badge/CodeMirror_6-007ACC?style=flat)](https://codemirror.net/)                          | 6.x    | 代码编辑器组件           | [codemirror.net](https://codemirror.net/) |
 | [![xterm.js](https://img.shields.io/badge/xterm_6-000000?style=flat)](https://xtermjs.org/)                                    | 6.0.0  | 终端模拟器组件           | [xtermjs.org](https://xtermjs.org/)   |
 
@@ -627,8 +625,6 @@ cp .env.example .env
 | 变量名                       | 必需  | 默认值                   | 说明              |
 | ---------------------------- | :---: | ------------------------ | ----------------- |
 | `VITE_APP_TITLE`             |   ❌   | `CloudPivot Intelli-Matrix` | 应用标题      |
-| `VITE_SUPABASE_URL`          |   ❌   | -                        | Supabase 项目 URL |
-| `VITE_SUPABASE_ANON_KEY`     |   ❌   | -                        | Supabase 匿名密钥 |
 | `VITE_OLLAMA_BASE_URL`       |   ❌   | `http://localhost:11434` | Ollama API 地址   |
 | `VITE_WS_URL`                |   ❌   | `ws://localhost:8080`    | WebSocket 地址    |
 | `VITE_YYC3_ZHIPU_API_KEY`    |   ❌   | -                        | 智谱 AI API Key   |
@@ -763,9 +759,9 @@ pnpm exec vite preview --port 4180
 
 ### 🔑 登录方式
 
-#### 方式 1: 正常登录 (Supabase 认证)
+#### 方式 1: 一键进入（GHOST 语义 · 原 Supabase 认证已退役）
 
-需要配置 `VITE_SUPABASE_URL` 和 `VITE_SUPABASE_ANON_KEY` 环境变量。
+（supabase 已全量退役——一键进入即 GHOST 语义，无需任何配置。）
 
 #### 方式 2: Ghost Mode (开发模式)
 
@@ -1011,7 +1007,7 @@ git push origin feature/your-feature
 <details>
 <summary><b>Q: 如何跳过登录直接使用？</b></summary>
 
-**A:** 点击登录页的 **GHOST MODE** 按钮，系统将自动以开发模式登录，无需配置 Supabase。
+**A:** 主按钮「进入系统」即一键进入（GHOST 语义）；无需任何账号配置。
 
 </details>
 
@@ -1032,7 +1028,7 @@ git push origin feature/your-feature
 <details>
 <summary><b>Q: 数据存储在哪里？</b></summary>
 
-**A:** 默认使用 localStorage 本地存储。配置 Supabase 后可同步到云端数据库，支持离线优先策略。
+**A:** 全部业务数据本地持久（localStorage persist + migrate 范式，见落档 19）；无后端、数据不出本地为项目红线。
 
 </details>
 

@@ -335,8 +335,8 @@ const ISSUES: Issue[] = [
   },
   {
     id: "RF-012",
-    title: "Mock Supabase → Real Supabase Migration Risk",
-    titleCn: "Mock Supabase 与真实 Supabase 迁移风险",
+    title: "Mock Supabase → Real Supabase Migration Risk (RESOLVED)",
+    titleCn: "Mock Supabase 与真实 Supabase 迁移风险（已消解：P2 全量退役）",
     severity: "low",
     category: "design-debt",
     affectedFiles: [
