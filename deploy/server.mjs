@@ -53,6 +53,15 @@ const DGX_UPSTREAM = (() => {
   catch { return new URL("http://100.65.64.49:8888"); }
 })();
 
+/** NAS 统一网关反代（落档 43：api.0379.world / TS 100.65.172.88:8000，vk 认证）
+ *  头翻译：面板 provider 统一发 Authorization: Bearer <vk>，NAS 网关收 X-API-Key——
+ *  代理层把 Bearer 令牌改写为 X-API-Key 上送（凭据只经 persist/UI，不落代码）。 */
+const NAS_PROXY_PREFIX = "/api/v1/llm/nas";
+const NAS_UPSTREAM = (() => {
+  try { return new URL(process.env.PMO_NAS_URL || "http://100.65.172.88:8000"); }
+  catch { return new URL("http://100.65.172.88:8000"); }
+})();
+
 /** MIME 类型映射 */
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -165,6 +174,39 @@ function proxyToDgx(req, res, subPath) {
   req.pipe(proxyReq, { end: true });
 }
 
+function proxyToNas(req, res, subPath) {
+  const target = new URL(`/${subPath}`, NAS_UPSTREAM);
+  const headers = { ...req.headers, host: NAS_UPSTREAM.host };
+  // Bearer → X-API-Key 头翻译（vk- 令牌）：NAS 网关只认 X-API-Key
+  const auth = headers["authorization"];
+  if (auth && typeof auth === "string" && auth.startsWith("Bearer ") && !headers["x-api-key"]) {
+    headers["x-api-key"] = auth.slice("Bearer ".length).trim();
+    delete headers["authorization"];
+  }
+  const proxyOptions = {
+    hostname: NAS_UPSTREAM.hostname,
+    port: NAS_UPSTREAM.port || 80,
+    path: target.pathname + target.search,
+    method: req.method,
+    headers,
+  };
+  delete proxyOptions.headers["origin"];
+  delete proxyOptions.headers["referer"];
+
+  const proxyReq = http.request(proxyOptions, (proxyRes) => {
+    setCorsHeaders(res);
+    res.writeHead(proxyRes.statusCode || 200, proxyRes.headers);
+    proxyRes.pipe(res, { end: true });
+  });
+  proxyReq.on("error", (err) => {
+    console.error(`[PROXY ERROR] ${req.method} ${target.href} → ${err.message}`);
+    setCorsHeaders(res);
+    res.writeHead(502, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "NAS proxy error", message: err.message, target: target.href }));
+  });
+  req.pipe(proxyReq, { end: true });
+}
+
 // ============================================================
 // 静态文件服务
 // ============================================================
@@ -249,6 +291,16 @@ const server = http.createServer((req, res) => {
     proxyToDgx(req, res, subPath);
     const ts = new Date().toISOString().slice(11, 19);
     console.log(`[${ts}] PROXY ${method} ${urlPath} → dgx:${DGX_UPSTREAM.port}/${subPath}`);
+    return;
+  }
+
+  // ── NAS 统一网关代理（vk 认证经 Bearer→X-API-Key 翻译）──
+  if (urlPath.startsWith(NAS_PROXY_PREFIX)) {
+    const subPath = urlPath.slice(NAS_PROXY_PREFIX.length).replace(/^\//, "");
+    setCorsHeaders(res);
+    proxyToNas(req, res, subPath);
+    const ts = new Date().toISOString().slice(11, 19);
+    console.log(`[${ts}] PROXY ${method} ${urlPath} → nas:${NAS_UPSTREAM.host}/${subPath}`);
     return;
   }
 

@@ -1,0 +1,84 @@
+{
+  "$schema": "https://yyc3.vip/schemas/ai-family-content-pack.schema.json",
+  "_说明": "YYC³ AI Family 内容包模板（落档 43 §四）——按本模板填充后经 面板 → 系统管理 → 配置中心 → 导入 投放；envelope 格式与 ConfigExportCenter 兼容。所有字段可选，仅导入已填域；id 冲突时默认跳过（mergeMode 可改 upsert）。",
+  "pack": {
+    "name": "示例：家庭日常内容包",
+    "packId": "pack-YYYYMMDD-slug",
+    "version": "1.0.0",
+    "author": "作者名/团队",
+    "createdAt": "2026-11-17",
+    "description": "一句话描述本包内容与适用场景"
+  },
+  "domains": {
+    "posts": [
+      {
+        "_字段说明": "family-posts 域；memberId 必须是八成员之一：navigator/thinker/prophet/bolero/meta-oracle/sentinel/master/creative",
+        "id": "post-001",
+        "memberId": "creative",
+        "content": "正文内容（≤2000 字）",
+        "createdAt": "2026-11-17T10:00:00+08:00",
+        "tags": ["示例"]
+      }
+    ],
+    "activities": [
+      {
+        "_字段说明": "family-activities 域；驱动成长页热力图与周统计（按 createdAt 聚合，无活动即全 0——不造数）",
+        "id": "act-001",
+        "type": "milestone",
+        "memberId": "sentinel",
+        "title": "活动标题",
+        "createdAt": "2026-11-17T10:00:00+08:00"
+      }
+    ],
+    "memories": [
+      {
+        "_字段说明": "family-memories 域；家人长期记忆条目",
+        "id": "mem-001",
+        "memberId": "thinker",
+        "content": "记忆内容",
+        "importance": 3,
+        "createdAt": "2026-11-17T10:00:00+08:00"
+      }
+    ],
+    "skills": [
+      {
+        "_字段说明": "family-skills 域；技能条目（技能名+描述+熟练度 0-100）",
+        "id": "skill-001",
+        "memberId": "master",
+        "name": "技能名",
+        "description": "技能描述",
+        "proficiency": 80
+      }
+    ],
+    "settings": {
+      "_字段说明": "family-settings 域子集；仅支持展示类字段（称号/格言/主题色），模型绑定与密钥不接受包导入（凭据卫生红线）",
+      "memberTitles": { "navigator": "可选：成员称号覆盖" },
+      "theme": "可选：主题预设名"
+    },
+    "artworks": [
+      {
+        "_字段说明": "可选：作品/图片资产；path 相对包根目录；单文件 ≤2MB，包总 ≤50MB；fun artworks 替换即经此通道（落档 31 P6 #13）",
+        "id": "art-001",
+        "memberId": "creative",
+        "path": "artworks/example.png",
+        "title": "作品标题"
+      }
+    ]
+  },
+  "import": {
+    "mergeMode": "skipExisting",
+    "_可选值": "skipExisting（默认，id 已存在跳过）| upsert（同 id 覆盖）",
+    "dryRun": true,
+    "_说明": "dryRun=true 时仅校验与预览不落库；正式导入置 false"
+  },
+  "acceptance": {
+    "_验收标准（导入器强制）": [
+      "① pack.packId 全局唯一且不可与已导入包重复",
+      "② 所有 memberId ∈ 八成员枚举",
+      "③ 所有 createdAt/日期为 ISO8601",
+      "④ 单条 content ≤2000 字、整包 ≤5MB（不含 artworks）、含 artworks ≤50MB",
+      "⑤ settings 域出现模型/密钥类字段 → 整包拒收",
+      "⑥ dryRun 预览输出「将导入 N 条 / 跳过 M 条」清单"
+    ]
+  }
+}

@@ -25,8 +25,9 @@
  */
 
 import { useState, useCallback, useMemo, useEffect, useRef, createContext, useContext } from "react";
+import { I18nEngine } from "@yyc3/i18n-core";
+import type { TranslationMap } from "@yyc3/i18n-core";
 import { zhCN, enUS } from "../i18n";
-import type { TranslationKeys } from "../i18n";
 import type { Locale, LocaleInfo, I18nContextValue } from "../types";
 import { useSettingsSSOT } from "../store/slices/settings-ssot-slice";
 
@@ -38,13 +39,29 @@ function toLocale(value: unknown): Locale | null {
 }
 
 // ============================================================
-// 语言包映射
+// i18n 引擎（落档 43：自研 60 行实现换芯 @yyc3/i18n-core）
+// - 嵌套 TranslationMap 原生支持 → zh-CN/en-US 词典原样注册
+// - 缺 key 回退语义一致：返回 key 本身（missingKeyHandler 兜底）
+// - ★ 双引擎固定注册在引擎 DEFAULT_LOCALE("en") 标签下：非默认 locale
+//   的构造会触发异步懒加载，其续体会把已注册词典覆盖为框架自带小语言包
+//   （jsdom 实证）；固定 DEFAULT 则构造器同步短路，注册即终态、永不切换，
+//   零异步竞态。引擎 locale 语义弃用（仅消费 t()），语言切换由应用层
+//   在两引擎间选择（localeRef），LRU 缓存按引擎隔离不可能跨语言串味。
 // ============================================================
 
-const localeMap: Record<Locale, TranslationKeys> = {
-  "zh-CN": zhCN,
-  "en-US": enUS,
+function makeEngine(map: unknown): I18nEngine {
+  const e = new I18nEngine({ locale: "en", missingKeyHandler: (key) => key });
+  e.registerTranslation("en", map as TranslationMap);
+  return e;
+}
+
+const ENGINES: Record<Locale, I18nEngine> = {
+  "zh-CN": makeEngine(zhCN),
+  "en-US": makeEngine(enUS),
 };
+
+/** 当前生效语言（引擎选择的唯一依据；初始化/setLocale/SSOT 同步三处维护） */
+const localeRef: { current: Locale } = { current: "zh-CN" };
 
 export const SUPPORTED_LOCALES: LocaleInfo[] = [
   { code: "zh-CN", label: "简体中文", nativeLabel: "简体中文" },
@@ -54,31 +71,12 @@ export const SUPPORTED_LOCALES: LocaleInfo[] = [
 const STORAGE_KEY = "yyc3_locale";
 
 // ============================================================
-// 工具函数: 深度取值
+// 工具函数: 模板变量归一（string|number → string，引擎参数签名）
 // ============================================================
 
-/**
- * 通过点分 key 获取嵌套翻译值
- * e.g. t("nav.dataMonitor") → zhCN.nav.dataMonitor
- */
-function getNestedValue(obj: Record<string, unknown>, path: string): string {
-  const keys = path.split(".");
-  let result: unknown = obj;
-  for (const k of keys) {
-    if (result === null || typeof result !== "object") {return path;}
-    result = (result as Record<string, unknown>)[k];
-  }
-  return typeof result === "string" ? result : path;
-}
-
-/**
- * 替换模板变量 e.g. "{n} 分钟前" + { n: 5 } → "5 分钟前"
- */
-function interpolate(template: string, vars?: Record<string, string | number>): string {
-  if (!vars) {return template;}
-  return template.replace(/\{(\w+)\}/g, (_, key) =>
-    vars[key] !== null ? String(vars[key]) : `{${key}}`
-  );
+function toEngineParams(vars?: Record<string, string | number>): Record<string, string> | undefined {
+  if (!vars) {return undefined;}
+  return Object.fromEntries(Object.entries(vars).map(([k, v]) => [k, String(v)]));
 }
 
 // ============================================================
@@ -88,10 +86,7 @@ function interpolate(template: string, vars?: Record<string, string | number>): 
 export const I18nContext = createContext<I18nContextValue>({
   locale: "zh-CN",
   setLocale: () => {},
-  t: (key, vars) => {
-    const raw = getNestedValue(zhCN as Record<string, unknown>, key);
-    return vars ? interpolate(raw, vars) : raw;
-  },
+  t: (key, vars) => ENGINES["zh-CN"].t(key, toEngineParams(vars)),
   locales: SUPPORTED_LOCALES,
 });
 
@@ -104,13 +99,22 @@ export function useI18nProvider() {
     if (typeof window === "undefined") {return "zh-CN";}
     // 优先取独立语言键，其次回落设置 SSOT 的 language 值（设置核心统一驱动）
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved === "en-US" || saved === "zh-CN") {return saved;}
-    const ssotLang = toLocale(useSettingsSSOT.getState().values.language);
-    return ssotLang ?? "zh-CN"; // 默认中文
+    const initial: Locale =
+      saved === "en-US" || saved === "zh-CN"
+        ? saved
+        : (toLocale(useSettingsSSOT.getState().values.language) ?? "zh-CN");
+    localeRef.current = initial;
+    return initial;
   });
 
+  /** 应用 Locale 变更 → React 状态 + 引擎选择同步切换 */
+  const applyLocale = useCallback((next: Locale) => {
+    localeRef.current = next;
+    setLocaleState(next);
+  }, []);
+
   const setLocale = useCallback((newLocale: Locale) => {
-    setLocaleState(newLocale);
+    applyLocale(newLocale);
     try {
       localStorage.setItem(STORAGE_KEY, newLocale);
     } catch {
@@ -121,7 +125,7 @@ export function useI18nProvider() {
     if (ssot.values.language !== newLocale) {
       ssot.updateValue("language", newLocale);
     }
-  }, []);
+  }, [applyLocale]);
 
   // 挂载时对齐：若 localStorage 恢复的语言与 SSOT 不一致，回写 SSOT 完成单一数据源归并
   const didInitRef = useRef(false);
@@ -144,23 +148,20 @@ export function useI18nProvider() {
     prevSsotLanguageRef.current = ssotLanguage;
     const next = toLocale(ssotLanguage);
     if (next && next !== locale) {
-      setLocaleState(next);
+      applyLocale(next);
       try {
         localStorage.setItem(STORAGE_KEY, next);
       } catch {
         // storage unavailable
       }
     }
-  }, [ssotLanguage, locale]);
-
-  const translations = useMemo(() => localeMap[locale], [locale]);
+  }, [ssotLanguage, locale, applyLocale]);
 
   const t = useCallback(
     (key: string, vars?: Record<string, string | number>): string => {
-      const raw = getNestedValue(translations as Record<string, unknown>, key);
-      return interpolate(raw, vars);
+      return ENGINES[localeRef.current].t(key, toEngineParams(vars));
     },
-    [translations]
+    []
   );
 
   const value = useMemo<I18nContextValue>(
