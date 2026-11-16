@@ -1,5 +1,10 @@
 # YYC³ CloudPivot Intelli-Matrix - API 文档
 
+> ⚠️ **DEPRECATED（2026-11-16 · 落档 31-P1/N4）**：本文档描述的 db-queries/Supabase 风格 API 已过时。
+> 当前权威 API 面见《落档 18 · API 路由文档 — 真实路由表与数据通道》
+> （docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/18-API路由文档-真实路由表与数据通道-20261116.md）。
+> 本文保留仅作历史参考，不再维护。
+
 ## 核心服务 API
 
 ### 1. 数据库查询服务 (db-queries)

@@ -200,12 +200,12 @@ const FEATURE_CHECKLIST: FeatureChecklist[] = [
     category: "数据层 (Data Layer)",
     items: [
       { name: "createLocalStore CRUD 工厂", status: "complete", detail: "getAll/add/update/remove/reset/export/import/count", path: "src/app/lib/create-local-store.ts" },
-      { name: "10 个 dashboard stores", status: "complete", detail: "nodes/modelPerf/modelDist/recentOps/radar/logs/dbConn/deployedModel/wifi/users", path: "src/app/stores/dashboard-stores.ts" },
+      { name: "10 个 dashboard stores（已退役）", status: "complete", detail: "P1 真实化收尾已删除 legacy dashboard-stores（假种子 dm-1~5/假节点一并清除），活链路=node/metrics/follow-up 等 Zustand slice（落档 31-P1）", path: "src/app/store/slices/" },
       { name: "env-config 31 环境变量", status: "complete", detail: "env() 类型安全读取 + localStorage 持久化 + import/export", path: "src/app/lib/env-config.ts" },
       { name: "api-config 端点配置", status: "complete", detail: "8 个端点 + BroadcastChannel 同步 + ENDPOINT_META UI 描述", path: "src/app/lib/api-config.ts" },
       { name: "IndexedDB 持久化 (yyc3-storage)", status: "complete", detail: "idbPut/idbGetAll/idbClear + 14 个 store", path: "src/app/lib/yyc3-storage.ts" },
       { name: "BroadcastChannel 单例工厂", status: "complete", detail: "getSharedChannel/postToChannel/closeChannel", path: "src/app/lib/broadcast-channel.ts" },
-      { name: "WiFi 自动重连 localStorage 持久化", status: "complete", detail: "wifiAutoReconnectStore (yyc3_wifi_auto_reconnect) 持久化开关/间隔/重试次数/优先 SSID，NetworkConfig 连接历史 Tab 可交互编辑", path: "src/app/stores/dashboard-stores.ts" },
+      { name: "WiFi 自动重连 localStorage 持久化", status: "complete", detail: "原 wifiAutoReconnectStore 已随 legacy dashboard-stores 退役（P1）；自动重连状态现由 network-slice 承载", path: "src/app/store/slices/network-slice.ts" },
     ],
   },
   {

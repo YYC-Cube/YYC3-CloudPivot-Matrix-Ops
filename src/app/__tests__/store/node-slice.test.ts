@@ -167,7 +167,7 @@ describe('useNodeSlice', () => {
       expect(nodes.some((n) => n.id === "GPU-H100-02")).toBe(true);
     });
 
-    it('批5：权威快照不删除用户维护的全节点清单（source=user 保留为 inactive）', () => {
+    it('批5/6：权威快照不删除用户维护的全节点清单（source=user 且状态由 OpsPanel 探针驱动，快照不覆盖）', () => {
       // 用户通过面板录入远端节点（真实集群清单，agent 快照不含它们）
       useNodeSlice.getState().addNode({
         id: "yyc3-n1", status: "active", gpu: 60, mem: 40, temp: 55,
@@ -190,8 +190,8 @@ describe('useNodeSlice', () => {
       expect(ids).toContain("yyc3-n1");
       expect(ids).toContain("yyc3-45");
       expect(ids).toContain("yyc3-22");
-      // 快照中不存在的用户节点置为下线态（如实反映不可达）
-      expect(nodes.find((n) => n.id === "yyc3-n1")?.status).toBe("inactive");
+      // 批6 语义修正：快照外的用户节点保存在性且不覆盖状态（远端状态由 OpsPanel 探针驱动）
+      expect(nodes.find((n) => n.id === "yyc3-n1")?.status).toBe("active");
       // 快照节点保留 agent 上报的真实状态
       expect(nodes.find((n) => n.id === "yyc3-22")?.status).toBe("active");
     });

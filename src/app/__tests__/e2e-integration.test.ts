@@ -100,62 +100,6 @@ describe("E2E: Store CRUD 闭环", () => {
 // 2. Dashboard Stores 默认数据完整性
 // ============================================================
 
-describe("E2E: Dashboard Stores 数据完整性", () => {
-  beforeEach(() => {
-    localStorageMock.clear();
-    vi.clearAllMocks();
-  });
-
-  it("所有 10 个 store 有正确的默认数据", async () => {
-    vi.resetModules();
-    const stores = await import("../stores/dashboard-stores");
-
-    // 各 store 默认数量
-    const expected: [string, number][] = [
-      ["nodeStore", 9],
-      ["modelPerfStore", 5],
-      ["modelDistStore", 5],
-      ["recentOpsStore", 5],
-      ["radarStore", 6],
-      ["logStore", 15],
-      ["dbConnectionStore", 2],
-      ["deployedModelStore", 5],
-      ["wifiNetworkStore", 0],
-      ["userStore", 8],
-    ];
-
-    for (const [name, count] of expected) {
-      const s = (stores as any)[name];
-      expect(s.count(), `${name} 应有 ${count} 条默认数据`).toBe(count);
-    }
-  });
-
-  it("nodeStore 所有节点有 id/status/gpu/mem/temp", async () => {
-    vi.resetModules();
-    const { nodeStore } = await import("../stores/dashboard-stores");
-    const nodes = nodeStore.getAll();
-    for (const node of nodes) {
-      expect(node.id).toBeTruthy();
-      expect(["active", "warning", "inactive"]).toContain(node.status);
-      expect(typeof node.gpu).toBe("number");
-      expect(typeof node.mem).toBe("number");
-      expect(typeof node.temp).toBe("number");
-    }
-  });
-
-  it("userStore 超级管理员不可批量删除", async () => {
-    vi.resetModules();
-    const { userStore } = await import("../stores/dashboard-stores");
-    const admin = userStore.getAll().find(u => u.role === "超级管理员");
-    expect(admin).toBeDefined();
-    expect(admin!.id).toBe("usr-1");
-  });
-});
-
-// ============================================================
-// 3. env-config 配置闭环
-// ============================================================
-
 describe("E2E: env-config 配置闭环", () => {
   beforeEach(() => {
     localStorageMock.clear();
@@ -375,44 +319,6 @@ describe("E2E: 错误处理工具链", () => {
 
 // ============================================================
 // 8. 跨 Store 数据一致性
-// ============================================================
-
-describe("E2E: 跨 Store 数据一致性", () => {
-  beforeEach(() => {
-    localStorageMock.clear();
-    vi.clearAllMocks();
-  });
-
-  it("nodeStore 节点 ID 与 logStore 来源一致", async () => {
-    vi.resetModules();
-    const { nodeStore, logStore } = await import("../stores/dashboard-stores");
-
-    const nodeIds = new Set(nodeStore.getAll().map(n => n.id));
-    const logSources = new Set(logStore.getAll().map(l => l.source));
-
-    // 日志中引用的 GPU 节点 ID 应在 nodeStore 中存在（部分来自 system/scheduler）
-    const gpuLogSources = [...logSources].filter(s => s.startsWith("GPU-"));
-    for (const src of gpuLogSources) {
-      expect(nodeIds.has(src), `日志来源 ${src} 应存在于 nodeStore`).toBe(true);
-    }
-  });
-
-  it("deployedModelStore 节点引用存在于 nodeStore", async () => {
-    vi.resetModules();
-    const { nodeStore, deployedModelStore } = await import("../stores/dashboard-stores");
-
-    const nodeIds = new Set(nodeStore.getAll().map(n => n.id));
-    const models = deployedModelStore.getAll();
-    for (const model of models) {
-      if (model.gpu && model.gpu !== "-") {
-        expect(nodeIds.has(model.gpu), `模型 ${model.name} 引用的节点 ${model.gpu} 应存在`).toBe(true);
-      }
-    }
-  });
-});
-
-// ============================================================
-// 9. 路由完整性验证
 // ============================================================
 
 describe("E2E: 路由完整性", () => {

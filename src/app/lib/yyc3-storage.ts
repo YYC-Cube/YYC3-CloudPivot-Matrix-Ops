@@ -500,19 +500,9 @@ export const LOCALSTORAGE_KEYS = {
   familyMessageSlice: "yyc3-family-messages",
   globalStore: "yyc3-global-store",
 
-  // ── createLocalStore (legacy dashboard-stores) ──
-  nodesStore: "yyc3_nodes",
-  modelPerfStore: "yyc3_model_perf",
-  modelDistStore: "yyc3_model_dist",
-  recentOpsStore: "yyc3_recent_ops",
-  radarStore: "yyc3_radar_data",
-  logStore: "yyc3_logs",
-  dbConnectionStore: "yyc3_db_connections",
-  deployedModelStore: "yyc3_deployed_models",
-  wifiNetworkStore: "yyc3_wifi_networks",
-  userStore: "yyc3_users",
-  wifiAutoReconnectStore: "yyc3_wifi_auto_reconnect",
-  followUpStore: "yyc3_follow_ups",
+  // ── legacy createLocalStore (dashboard-stores) 键注册已随 P1 移除（落档 31）──
+  // 历史 yyc3_nodes / yyc3_deployed_models 等下划线键的存量浏览器数据无消费方，
+  // 可经「存储管理」页查看/清理；alertItems 键仍由 useFollowUp 动态使用：
   alertItemsStore: "yyc3_alert_items",      // useFollowUp.ts (FollowUpItem)
 } as const;
 

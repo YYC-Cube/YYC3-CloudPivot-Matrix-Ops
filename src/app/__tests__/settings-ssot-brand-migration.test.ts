@@ -89,7 +89,8 @@ describe("设置 SSOT 品牌迁移（persist v1 → v2）", () => {
     // zustand persist 在 rehydrate 后会以当前 version 回写
     const raw = localStorage.getItem(STORAGE_KEY);
     expect(raw).toBeTruthy();
-    expect(JSON.parse(raw!).version).toBe(2);
+    // 批6：persist 已升 v3（migrate 补新字段默认值，落档 29）
+    expect(JSON.parse(raw!).version).toBe(3);
   });
 
   it("legacy 归并路径（yyc3_system_settings 旧品牌）应被归一化", async () => {
