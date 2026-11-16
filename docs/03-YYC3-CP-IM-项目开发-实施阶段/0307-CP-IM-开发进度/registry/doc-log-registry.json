@@ -700,6 +700,24 @@
     "docs/YYC3-AI-FAmily-Agent-文档架构-标规体系/YYC3-AI-Family-Agent-交互气泡-落地设计.md",
     "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/47-智谱真Key实测-提示语据实-smoke修复-20261117.md"
    ]
+  },
+  {
+   "trace_id": "TRC-20261117008",
+   "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/49-导航改名与业务空间新增页-气泡文档对齐清单-20261117.md",
+   "action": "create",
+   "timestamp": "2026-11-17T07:42:40+08:00",
+   "version": "v1.0.0",
+   "checksum": "89f110057a080b5d",
+   "author": "YYC³ Team",
+   "changes": [
+    {
+     "field": "content",
+     "summary": "导航 10 项改名 + 业务空间 8 新页（规划中）+ 气泡文档已/未执行清单（16c7fbe）"
+    }
+   ],
+   "related_docs": [
+    "docs/YYC3-AI-FAmily-Agent-文档架构-标规体系/YYC3-AI-Family-Agent-交互气泡-设计文档.md"
+   ]
   }
  ]
 }
