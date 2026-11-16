@@ -12,7 +12,6 @@
 import {
   AlertCircle,
   CheckCircle,
-  ChevronDown, ChevronUp,
   Cpu,
   Download,
   Globe,
@@ -53,8 +52,6 @@ export function ModelProviderPanel() {
     importConfig,
   } = useModelProvider();
 
-  // Provider list expand
-  const [showProviderList, setShowProviderList] = useState(false);
 
   // Import/export state
   const [importText, setImportText] = useState("");
@@ -208,13 +205,13 @@ export function ModelProviderPanel() {
         </GlassCard>
       </div>
 
-      {/* ======== 服务商注册表 ======== */}
+      {/* ======== 服务商一览（落档 45 去重：与设置页重复的详情/编辑已移除，仅留只读 chips） ======== */}
       <GlassCard className="p-4">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-2.5">
           <div className="flex items-center gap-2">
             <Globe className="w-4 h-4 text-[#aa77ff]" />
             <h3 className="text-[#e0f0ff]" style={{ fontSize: "0.88rem" }}>
-              服务商注册表 ({providers.length})
+              服务商一览 ({providers.length})
             </h3>
             {stats.customProviders > 0 && (
               <span className="px-1.5 py-0.5 rounded bg-[rgba(120,80,255,0.1)] text-[#aa77ff]" style={{ fontSize: "0.55rem" }}>
@@ -222,90 +219,27 @@ export function ModelProviderPanel() {
               </span>
             )}
           </div>
-          <button
-            onClick={() => setShowProviderList(!showProviderList)}
-            className="flex items-center gap-1 px-2 py-1 rounded-lg text-[rgba(0,212,255,0.4)] hover:text-[#00d4ff] transition-all"
-            style={{ fontSize: "0.65rem" }}
-          >
-            {showProviderList ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
-            {showProviderList ? "收起" : "展开"}
-          </button>
+          <a href="#/settings" className="text-[rgba(0,212,255,0.45)] hover:text-[#00d4ff] transition-all"
+            style={{ fontSize: "0.65rem" }} title="服务商增删改在「系统设置 → 模型管理」">
+            管理 →
+          </a>
         </div>
-
-        {showProviderList && (
-          <div className="space-y-1.5">
-            {providers.map((p) => (
-              <div
-                key={p.id}
-                className="flex items-center gap-3 p-2.5 rounded-lg bg-[rgba(0,40,80,0.06)] hover:bg-[rgba(0,40,80,0.12)] transition-all group"
-              >
-                {/* 状态指示 */}
-                <div
-                  className="w-2 h-2 rounded-full shrink-0"
-                  style={{
-                    backgroundColor: p.isLocal ? "#00ff88" : "#00d4ff",
-                    boxShadow: `0 0 6px ${p.isLocal ? "rgba(0,255,136,0.4)" : "rgba(0,212,255,0.3)"}`,
-                  }}
-                />
-
-                {/* 信息 */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[#e0f0ff] truncate" style={{ fontSize: "0.78rem" }}>
-                      {p.label}
-                    </span>
-                    {p.isBuiltin && (
-                      <span className="px-1 py-0.5 rounded bg-[rgba(0,212,255,0.06)] text-[rgba(0,212,255,0.35)]" style={{ fontSize: "0.5rem" }}>
-                        内置
-                      </span>
-                    )}
-                    {p.isCustom && (
-                      <span className="px-1 py-0.5 rounded bg-[rgba(120,80,255,0.08)] text-[#aa77ff]" style={{ fontSize: "0.5rem" }}>
-                        自定义
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="text-[rgba(0,212,255,0.2)] truncate" style={{ fontSize: "0.58rem", fontFamily: "'JetBrains Mono', monospace" }}>
-                      {p.baseUrl}
-                    </span>
-                    <span className="text-[rgba(0,212,255,0.15)]" style={{ fontSize: "0.55rem" }}>
-                      · {p.models.length} 模型 · {p.authType}
-                    </span>
-                  </div>
-                </div>
-
-                {/* 操作按钮（落档 44 只读：服务商编辑/删除收敛到系统设置） */}
-                <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <span className="px-1.5 py-0.5 rounded text-[rgba(255,221,0,0.5)]" style={{ fontSize: "0.6rem" }} title="只读——编辑请前往「系统管理 → 模型设置」">
-                    🔒
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {!showProviderList && (
-          <div className="flex items-center gap-2 flex-wrap">
-            {providers.map((p) => (
-              <span
-                key={p.id}
-                className="px-2.5 py-1.5 rounded-lg bg-[rgba(0,40,80,0.1)] border border-[rgba(0,180,255,0.08)] text-[rgba(0,212,255,0.45)] flex items-center gap-1.5"
-                style={{ fontSize: "0.68rem" }}
-                title="只读——编辑请前往「系统管理 → 模型设置」"
-              >
-                {p.isLocal ? (
-                  <Server className="w-3 h-3 text-[#00ff88]" />
-                ) : (
-                  <Globe className="w-3 h-3" />
-                )}
-                {p.label}
-                {p.isCustom && <span className="text-[#aa77ff]">*</span>}
-              </span>
-            ))}
-          </div>
-        )}
+        <div className="flex items-center gap-2 flex-wrap">
+          {providers.map((p) => (
+            <span key={p.id}
+              className="px-2.5 py-1.5 rounded-lg bg-[rgba(0,40,80,0.12)] border border-[rgba(0,180,255,0.1)] text-[rgba(0,212,255,0.55)] flex items-center gap-1.5"
+              style={{ fontSize: "0.68rem" }}
+              title={`${p.baseUrl} · 编辑请前往「系统管理 → 模型设置」`}>
+              {p.isLocal ? <Server className="w-3 h-3 text-[#00ff88]" /> : <Globe className="w-3 h-3" />}
+              {p.label}
+              {p.isCustom && <span className="text-[#aa77ff]">*</span>}
+              {p.apiKey ? <span className="text-[#00ff88]">🔑</span> : null}
+            </span>
+          ))}
+        </div>
+        <p className="text-[rgba(0,212,255,0.28)] mt-2" style={{ fontSize: "0.62rem" }}>
+          本页为只读诊断台（与「系统管理 → 模型管理」同一数据源）；服务商与模型的增删改请在系统设置进行。
+        </p>
       </GlassCard>
 
       {/* ======== Ollama 本地模型 ======== */}
@@ -364,6 +298,58 @@ export function ModelProviderPanel() {
           </p>
         )}
       </GlassCard>
+
+      {/* ======== 问题分析（落档 45：本页独特价值——失败原因与修复指引） ======== */}
+      {(() => {
+        const problems = configuredModels
+          .filter((m) => m.status !== "active")
+          .map((m) => {
+            const failedStep = m.lastTestResult?.steps?.find((s) => s.status === "fail" || s.status === "error");
+            const reason = m.status === "unchecked"
+              ? "尚未测试——点击该行测试按钮验证连通性"
+              : (failedStep?.detail || m.lastTestResult?.suggestion || "测试失败，请查看最近测试步骤");
+            const fix = /401|403|Key|key|认证/i.test(reason)
+              ? "前往「系统管理 → 模型设置」核对该模型 API Key"
+              : /CORS|Failed to fetch|Load failed|不可达/i.test(reason)
+                ? "浏览器直连被拦：确认 3118 反代可用或配置代理 URL"
+                : /格式|choices|空内容/i.test(reason)
+                  ? "检查 API 格式（OpenAI 兼容 / Anthropic Messages）与模型名"
+                  : "在系统设置中重新测试并按提示修正";
+            return { id: m.id, model: m.model, provider: m.providerLabel, status: m.status, reason, fix };
+          });
+        return (
+          <GlassCard className="p-4">
+            <h3 className="text-[#e0f0ff] mb-2.5 flex items-center gap-2" style={{ fontSize: "0.88rem" }}>
+              <HelpCircle className="w-4 h-4 text-[#ffdd00]" />
+              问题分析（{configuredModels.length === 0 ? "暂无模型" : problems.length === 0 ? "全部正常" : `${problems.length} 项待处理`}）
+            </h3>
+            {configuredModels.length === 0 ? (
+              <p className="text-[rgba(0,212,255,0.35)]" style={{ fontSize: "0.72rem" }}>
+                尚无已配置模型——请前往「系统管理 → 模型设置」添加；本页将自动汇总测试失败原因与修复建议。
+              </p>
+            ) : problems.length === 0 ? (
+              <p className="text-[rgba(0,255,136,0.6)]" style={{ fontSize: "0.72rem" }}>
+                所有已配置模型均测通可用 ✓
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {problems.map((pb) => (
+                  <div key={pb.id} className="px-3 py-2 rounded-lg bg-[rgba(255,51,102,0.04)] border border-[rgba(255,51,102,0.15)]">
+                    <p className="text-[#e0f0ff]" style={{ fontSize: "0.72rem" }}>
+                      {pb.model} <span className="text-[rgba(0,212,255,0.35)]">· {pb.provider}</span>
+                      <span className="ml-1.5 px-1 rounded bg-[rgba(255,51,102,0.12)] text-[#ff3366]" style={{ fontSize: "0.6rem" }}>
+                        {pb.status === "unchecked" ? "未检测" : "异常"}
+                      </span>
+                    </p>
+                    <p className="text-[rgba(255,221,0,0.6)] mt-0.5" style={{ fontSize: "0.65rem" }}>原因：{pb.reason.slice(0, 160)}</p>
+                    <p className="text-[rgba(0,212,255,0.5)]" style={{ fontSize: "0.65rem" }}>修复：{pb.fix}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </GlassCard>
+        );
+      })()}
 
       {/* ======== 已配置模型 ======== */}
       <GlassCard className="p-4">

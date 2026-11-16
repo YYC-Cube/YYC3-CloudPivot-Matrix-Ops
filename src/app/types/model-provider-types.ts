@@ -48,6 +48,23 @@ export interface ConfiguredModel {
     vision?: boolean;
     reasoning?: boolean;
   };
+  /** 高级设置（落档 45 图一）：输入类型——文本恒支持（锁定），其余可选 */
+  inputTypes?: {
+    text?: boolean;
+    image?: boolean;
+    video?: boolean;
+    pdf?: boolean;
+  };
+  /** 高级设置（落档 45 图一）：模型能力声明 */
+  modelCapabilities?: {
+    structuredOutput?: boolean;
+    nativeWebSearch?: boolean;
+    systemMessages?: boolean;
+  };
+  /** 高级设置（落档 45 图一）：推理等级（从低到高，如 ["low","high","max"]） */
+  reasoningLevels?: string[];
+  /** 高级设置（落档 45 图一）：推理参数映射（JSON 文本，原样存储） */
+  reasoningParamMapping?: string;
   /** 上下文窗口（tokens，如 128000） */
   contextWindow?: number;
   /** 单次最大输出 tokens（请求 max_tokens 上界） */

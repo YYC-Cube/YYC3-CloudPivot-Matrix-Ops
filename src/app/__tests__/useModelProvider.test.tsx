@@ -62,7 +62,8 @@ describe("useModelProvider", () => {
     it("should contain YanYuCloudCube (YYC³) preset", () => {
       const yyc3 = MODEL_PROVIDERS.find((p) => p.id === "yyc3");
       expect(yyc3).toBeDefined();
-      expect(yyc3?.models).toContain("nemotron-3.5-super-vl");
+      // 落档 45：硬编码系列已清除，模型名由用户输入/上游拉取
+      expect(yyc3?.models).toEqual([]);
       expect(yyc3?.baseUrl).toContain("/api/v1/llm/nas");
     });
 
@@ -74,11 +75,12 @@ describe("useModelProvider", () => {
       expect(zhipu!.isLocal).toBe(false);
     });
 
-    it("should contain DeepSeek", () => {
+    it("should contain DeepSeek（系列已清空，落档 45）", () => {
       const deepseek = MODEL_PROVIDERS.find((p) => p.id === "deepseek");
       expect(deepseek).toBeDefined();
       expect(deepseek!.authType).toBe("bearer");
-      expect(deepseek!.models.length).toBeGreaterThanOrEqual(2);
+      // 落档 45：硬编码系列已清除
+      expect(deepseek!.models).toEqual([]);
     });
 
     it("should contain Ollama (local)", () => {

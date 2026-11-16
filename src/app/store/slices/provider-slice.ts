@@ -43,7 +43,8 @@ export const BUILTIN_PROVIDERS: ModelProviderDef[] = [
     label: "YanYuCloudCube (YYC³)",
     baseUrl: "http://localhost:3118/api/v1/llm/nas/v1",
     authType: "api-key",
-    models: ["nemotron-3.5-super-vl", "qwen3-coder-30b"],
+    // 落档 45：清除硬编码系列——模型名一律由用户输入或「从上游拉取」动态发现
+    models: [],
     requiresApiKey: true,
     isLocal: false,
     isBuiltin: true,
@@ -53,7 +54,7 @@ export const BUILTIN_PROVIDERS: ModelProviderDef[] = [
     label: "Z.ai (智谱)",
     baseUrl: "https://open.bigmodel.cn/api/coding/paas/v4",
     authType: "api-key",
-    models: ["glm-4-flash", "glm-4-plus", "glm-4-air", "glm-4-airx", "glm-4-long", "glm-4v-plus", "glm-4.7", "glm-5", "glm-5-turbo", "glm-5.1"],
+    models: [],
     requiresApiKey: true,
     isLocal: false,
     isBuiltin: true,
@@ -63,7 +64,7 @@ export const BUILTIN_PROVIDERS: ModelProviderDef[] = [
     label: "DeepSeek",
     baseUrl: "https://api.deepseek.com/v1",
     authType: "bearer",
-    models: ["deepseek-chat", "deepseek-coder", "deepseek-reasoner", "deepseek-4", "deepseek-4-flash"],
+    models: [],
     requiresApiKey: true,
     isLocal: false,
     isBuiltin: true,
@@ -91,6 +92,21 @@ const MODELS_KEY = "yyc3_configured_models";
 // 迁移辅助：从旧 localStorage 键读取数据
 // ============================================================
 
+/** 历史硬编码模型系列（落档 45 清除）：迁移时从本地持久化的内置服务商中剔除，
+ *  防止旧值继续渲染为「系列快捷 chips」；用户之后手动输入/上游拉取的模型不受影响。 */
+const HISTORIC_HARDCODED_SERIES: Record<string, string[]> = {
+  yyc3: ["nemotron-3.5-super-vl", "qwen3-coder-30b"],
+  zhipu: ["glm-4-flash", "glm-4-plus", "glm-4-air", "glm-4-airx", "glm-4-long", "glm-4v-plus", "glm-4.7", "glm-5", "glm-5-turbo", "glm-5.1"],
+  deepseek: ["deepseek-chat", "deepseek-coder", "deepseek-reasoner", "deepseek-4", "deepseek-4-flash"],
+};
+
+function stripHistoricSeries(provider: ModelProviderDef): ModelProviderDef {
+  const historic = HISTORIC_HARDCODED_SERIES[provider.id];
+  if (!historic || !provider.models?.length) { return provider; }
+  const legacy = new Set(historic);
+  return { ...provider, models: provider.models.filter((m) => !legacy.has(m)) };
+}
+
 function migrateProviders(): ModelProviderDef[] {
   try {
     const raw = localStorage.getItem(PROVIDERS_KEY);
@@ -100,8 +116,8 @@ function migrateProviders(): ModelProviderDef[] {
       const customProviders = saved.filter((p) => !builtinIds.has(p.id) && p.isCustom);
       const merged = [...BUILTIN_PROVIDERS.map((bp) => {
         const existing = saved.find((s) => s.id === bp.id);
-        return existing && existing.updatedAt ? { ...bp, ...existing } : { ...bp };
-      }), ...customProviders];
+        return stripHistoricSeries(existing && existing.updatedAt ? { ...bp, ...existing } : { ...bp });
+      }), ...customProviders.map(stripHistoricSeries)];
       return merged;
     }
   } catch { /* ignore */ }
@@ -120,12 +136,16 @@ function migrateModels(): ConfiguredModel[] {
 // Slice State & Actions
 // ============================================================
 
-/** 模型创建附加项（落档 44 高级设置） */
+/** 模型创建附加项（落档 44/45 高级设置） */
 export interface ModelExtras {
   apiFormat?: "openai" | "anthropic";
   capabilities?: { tools?: boolean; vision?: boolean; reasoning?: boolean };
   contextWindow?: number;
   maxOutput?: number;
+  inputTypes?: { text?: boolean; image?: boolean; video?: boolean; pdf?: boolean };
+  modelCapabilities?: { structuredOutput?: boolean; nativeWebSearch?: boolean; systemMessages?: boolean };
+  reasoningLevels?: string[];
+  reasoningParamMapping?: string;
 }
 
 export interface ProviderSlice {
@@ -283,6 +303,10 @@ export const useProviderSlice = create<ProviderSlice>()(
           capabilities: extras?.capabilities,
           contextWindow: extras?.contextWindow,
           maxOutput: extras?.maxOutput,
+          inputTypes: extras?.inputTypes,
+          modelCapabilities: extras?.modelCapabilities,
+          reasoningLevels: extras?.reasoningLevels,
+          reasoningParamMapping: extras?.reasoningParamMapping,
           createdAt: Date.now(),
           lastUsed: null,
           status: "unchecked",

@@ -389,8 +389,9 @@ const UPSTREAM_PROXY_MAP: Record<string, string> = {
   deepseek: "/api/v1/llm/deepseek",
 };
 
-/** 解析实际请求根：显式 proxyUrl > 同源反代（http 环境） > 直连 baseUrl */
-function resolveRequestRoot(model: ConfiguredModel): { root: string; viaProxy: boolean } {
+/** 解析实际请求根：显式 proxyUrl > 同源反代（http 环境） > 直连 baseUrl
+ *  导出（落档 45）：系统设置的「从上游拉取模型列表」复用同一路由逻辑 */
+export function resolveRequestRoot(model: Pick<ConfiguredModel, "baseUrl" | "proxyUrl" | "providerId">): { root: string; viaProxy: boolean } {
   const base = (model.baseUrl || "").replace(/\/$/, "");
   if (model.proxyUrl) {
     return { root: `${model.proxyUrl.replace(/\/$/, "")}/${base.replace(/^https?:\/\/[^/]+/, "")}`.replace(/\/+$/, ""), viaProxy: true };

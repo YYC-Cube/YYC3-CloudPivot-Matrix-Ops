@@ -213,8 +213,9 @@ export function AIAssistant({ isMobile }: AIAssistantProps) {
   const settingsValues = ssotValues;
 
   // 派生自全局设置 — 修改即时同步到 Settings 页
-  const apiKey = settingsValues.aiApiKey;
-  const setApiKey = useCallback((v: string) => updateSettingsValue("aiApiKey", v), [updateSettingsValue]);
+  // 落档 45：浮窗不再持有 API Key（取消图四 API 设置），密钥取自所选模型自身配置；
+  // settingsValues.aiApiKey 仅作旧数据兼容读取，不回写、不展示
+  void settingsValues.aiApiKey;
   const selectedModel = settingsValues.aiModel;
   const setSelectedModel = useCallback((v: string) => updateSettingsValue("aiModel", v), [updateSettingsValue]);
   const temperature = parseFloat(settingsValues.aiTemperature) || 0.7;
@@ -239,7 +240,6 @@ export function AIAssistant({ isMobile }: AIAssistantProps) {
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // AI Settings (只保留本地 UI 状态)
-  const [showApiKey, setShowApiKey] = useState(false);
   const [systemPrompt, setSystemPrompt] = useState(PROMPT_PRESETS[4].prompt);
 
   // Command filter
@@ -427,7 +427,7 @@ export function AIAssistant({ isMobile }: AIAssistantProps) {
           ? (typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:11434` : "http://localhost:11434")
           : ""),
         authType: "bearer",
-        apiKey: cm?.apiKey || apiKey || "",
+        apiKey: cm?.apiKey || "",
         modelId: model.id,
         modelName: model.name,
         isLocal: model.isLocal,
@@ -439,7 +439,7 @@ export function AIAssistant({ isMobile }: AIAssistantProps) {
     } finally {
       setDiagRunning(false);
     }
-  }, [selectedModel, availableModels, apiKey, _configuredModels]);
+  }, [selectedModel, availableModels, _configuredModels]);
 
   // Also upgrade single-model testConnection to use engine
   const testConnection = useCallback(async () => {
@@ -460,7 +460,7 @@ export function AIAssistant({ isMobile }: AIAssistantProps) {
           ? (typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:11434` : "http://localhost:11434")
           : ""),
         authType: "bearer",
-        apiKey: cm?.apiKey || apiKey || "",
+        apiKey: cm?.apiKey || "",
         modelId: model.id,
         modelName: model.name,
         isLocal: model.isLocal,
@@ -476,7 +476,7 @@ export function AIAssistant({ isMobile }: AIAssistantProps) {
       setConnTestResult(msg.includes("timeout") ? "连接超时，请检查网络或服务地址" : msg);
       setConnTestTime(Date.now() - t0);
     }
-  }, [selectedModel, availableModels, apiKey, _configuredModels]);
+  }, [selectedModel, availableModels, _configuredModels]);
 
   const cmdCategories = [
     { key: "all", label: "全部" },
@@ -1011,33 +1011,15 @@ export function AIAssistant({ isMobile }: AIAssistantProps) {
           {/* === Settings Tab === */}
           {activeTab === "settings" && (
             <div className="flex-1 overflow-auto p-3 space-y-4">
-              {/* API Key */}
-              <div>
-                <h4 className="text-[#e0f0ff] mb-2 flex items-center gap-2" style={{ fontSize: "0.82rem" }}>
-                  <Key className="w-4 h-4 text-[#ffdd00]" />
-                  OpenAI API 认证
-                </h4>
-                <div className="relative">
-                  <input
-                    type={showApiKey ? "text" : "password"}
-                    value={apiKey}
-                    onChange={e => setApiKey(e.target.value)}
-                    placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxx"
-                    className="w-full px-3 py-2.5 rounded-xl bg-[rgba(0,40,80,0.4)] border border-[rgba(0,180,255,0.15)] text-[#e0f0ff] placeholder-[rgba(0,212,255,0.2)] focus:outline-none focus:border-[rgba(0,212,255,0.4)]"
-                    style={{ fontSize: "0.78rem", fontFamily: "monospace" }}
-                  />
-                  <button
-                    onClick={() => setShowApiKey(!showApiKey)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-[rgba(0,212,255,0.1)]"
-                  >
-                    <span className="text-[rgba(0,212,255,0.4)]" style={{ fontSize: "0.65rem" }}>
-                      {showApiKey ? "隐藏" : "显示"}
-                    </span>
-                  </button>
-                </div>
-                <p className="text-[rgba(0,212,255,0.25)] mt-1" style={{ fontSize: "0.62rem" }}>
-                  {apiKey ? "✅ API Key 已配置" : "⚠️ 未配置 Key，将使用本地模拟模式"}
-                  {" · 密钥仅保存在本地浏览器"}
+              {/* 落档 45（图四）：取消浮窗 API 设置——密钥唯一来源 = 系统设置中
+                  各模型自身 apiKey（调用时自动带出），浮窗不再持有第二份凭据 */}
+              <div className="px-3 py-2.5 rounded-xl bg-[rgba(255,221,0,0.05)] border border-[rgba(255,221,0,0.15)]">
+                <p className="text-[rgba(255,221,0,0.75)] flex items-center gap-1.5" style={{ fontSize: "0.72rem" }}>
+                  <Key className="w-3.5 h-3.5" />
+                  模型与密钥由「系统设置 → 模型设置」统一管理
+                </p>
+                <p className="text-[rgba(0,212,255,0.3)] mt-1" style={{ fontSize: "0.62rem" }}>
+                  本页仅可选择模型、测试连接、查看诊断；密钥自动取自所选模型的配置
                 </p>
               </div>
 

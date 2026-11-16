@@ -163,15 +163,18 @@ describe("useModelProvider", () => {
   it("should not add duplicate model to provider", () => {
     const { result } = renderHook(() => useModelProvider());
 
-    const zhipu = result.current.providers.find((p) => p.id === "zhipu");
-    const initialCount = zhipu?.models.length || 0;
+    // 落档 45：内置系列已清空，用动态名构造重复场景
+    act(() => {
+      result.current.addModelToProvider("zhipu", "dup-model-x");
+    });
+    const afterFirst = result.current.providers.find((p) => p.id === "zhipu")?.models.length || 0;
 
     act(() => {
-      result.current.addModelToProvider("zhipu", "glm-4-flash");
+      result.current.addModelToProvider("zhipu", "dup-model-x");
     });
 
     const updatedZhipu = result.current.providers.find((p) => p.id === "zhipu");
-    expect(updatedZhipu?.models.length).toBe(initialCount);
+    expect(updatedZhipu?.models.length).toBe(afterFirst);
   });
 
   it("should remove model from provider", () => {

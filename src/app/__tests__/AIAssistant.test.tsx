@@ -303,22 +303,20 @@ describe("AIAssistant", () => {
       fireEvent.click(screen.getAllByText("配置")[0]);
     }
 
-    it("应渲染 API Key 输入框", () => {
+    it("应不再渲染 API Key 输入框（落档 45 图四：取消浮窗 API 设置）", () => {
       openSettings();
-      expect(screen.getByPlaceholderText("sk-xxxxxxxxxxxxxxxxxxxxxxxx")).toBeInTheDocument();
+      expect(screen.queryByPlaceholderText("sk-xxxxxxxxxxxxxxxxxxxxxxxx")).toBeNull();
     });
 
-    it("应渲染未配置 Key 提示", () => {
+    it("应显示模型/密钥统一管理提示", () => {
       openSettings();
-      expect(screen.getAllByText(/未配置 Key/)[0]).toBeInTheDocument();
+      expect(screen.getAllByText(/统一管理/)[0]).toBeInTheDocument();
+      expect(screen.getAllByText(/系统设置 → 模型设置/)[0]).toBeInTheDocument();
     });
 
-    it("输入 API Key 后应显示已配置", () => {
+    it("浮窗不再回写 aiApiKey（单一凭据来源 = 模型自身配置）", () => {
       openSettings();
-      const input = screen.getByPlaceholderText("sk-xxxxxxxxxxxxxxxxxxxxxxxx");
-      fireEvent.change(input, { target: { value: "sk-test123" } });
-      // 检查 updateValue 是否被调用
-      expect(mockSettingsStore.updateValue).toHaveBeenCalledWith("aiApiKey", "sk-test123");
+      expect(mockSettingsStore.updateValue).not.toHaveBeenCalledWith("aiApiKey", expect.anything());
     });
 
     it("应渲染模型选择按钮", () => {
@@ -340,11 +338,10 @@ describe("AIAssistant", () => {
       expect(screen.getAllByText(/Temperature/)[0]).toBeInTheDocument();
     });
 
-    it("显示/隐藏 API Key 切换", () => {
+    it("显示/隐藏 API Key 切换已移除（图四取消 API 设置）", () => {
       openSettings();
-      const toggleBtn = screen.getAllByText("显示")[0];
-      fireEvent.click(toggleBtn);
-      expect(screen.getAllByText("隐藏")[0]).toBeInTheDocument();
+      expect(screen.queryByText("显示")).toBeNull();
+      expect(screen.queryByText("隐藏")).toBeNull();
     });
   });
 

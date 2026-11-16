@@ -29,6 +29,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useModelProvider } from "../hooks/useModelProvider";
 import { GlassCard } from "../modules/shared/GlassCard";
+import { resolveRequestRoot } from "../lib/family-ai-service";
 import type { ConfiguredModel } from "../types";
 
 const STATUS_CONFIG = {
@@ -78,6 +79,41 @@ export function UnifiedModelManager({ compact = false, showHeader = true }: Unif
   const [providerDeleteConfirm, setProviderDeleteConfirm] = useState<string | null>(null);
   // 图一式双栏：当前选中服务商（左列表 → 右详情）
   const [selProviderId, setSelProviderId] = useState<string | null>(null);
+  const [upstreamFetching, setUpstreamFetching] = useState(false);
+
+  /** 从上游动态发现模型列表（落档 45：替代硬编码系列）——GET {root}/models */
+  const fetchUpstreamModels = async (p: NonNullable<typeof selectedProvider>) => {
+    if (p.id === "ollama") {
+      toast.info("Ollama 请在「AI 智能 → 模型管理」或用 Ollama 刷新获取本地模型");
+      return;
+    }
+    setUpstreamFetching(true);
+    try {
+      const { root } = resolveRequestRoot({ baseUrl: p.baseUrl, proxyUrl: undefined, providerId: p.id });
+      const res = await fetch(`${root}/models`, {
+        headers: p.apiKey ? { Authorization: `Bearer ${p.apiKey}` } : {},
+        signal: AbortSignal.timeout(15000),
+      });
+      if (!res.ok) {
+        const body = await res.text().catch(() => "");
+        toast.error(`上游返回 HTTP ${res.status}${body ? `：${body.slice(0, 100)}` : ""}`);
+        return;
+      }
+      const data = await res.json() as { data?: Array<{ id?: string }>; models?: Array<{ name?: string }> };
+      const names = [
+        ...(data.data || []).map(m => m.id || ""),
+        ...(data.models || []).map(m => m.name || ""),
+      ].filter(Boolean);
+      if (names.length === 0) { toast.info("上游未返回模型列表（该端点可能不支持 /models）"); return; }
+      updateProvider(p.id, { models: [...new Set(names)] });
+      toast.success(`已从上游发现 ${new Set(names).size} 个模型，可点击 chip 快捷添加`);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      toast.error(`拉取失败：${msg.slice(0, 120)}`);
+    } finally {
+      setUpstreamFetching(false);
+    }
+  };
 
   const selectedProvider = useMemo(
     () => providers.find(pl => pl.id === selProviderId) || null,
@@ -102,6 +138,16 @@ export function UnifiedModelManager({ compact = false, showHeader = true }: Unif
   const [fReasoning, setFReasoning] = useState(false);
   const [fContextWindow, setFContextWindow] = useState(0);
   const [fMaxOutput, setFMaxOutput] = useState(0);
+  // 落档 45 图一：输入类型 / 模型能力 / 推理等级 / 推理参数映射
+  const [fInputImage, setFInputImage] = useState(false);
+  const [fInputVideo, setFInputVideo] = useState(false);
+  const [fInputPdf, setFInputPdf] = useState(false);
+  const [fStructuredOut, setFStructuredOut] = useState(false);
+  const [fWebSearch, setFWebSearch] = useState(false);
+  const [fSystemMessages, setFSystemMessages] = useState(false);
+  const [fReasoningLevels, setFReasoningLevels] = useState<string[]>([]);
+  const [fLevelInput, setFLevelInput] = useState("");
+  const [fParamMapping, setFParamMapping] = useState("");
 
   const providerOptions = useMemo(() =>
     providers.map(p => ({
@@ -131,6 +177,9 @@ export function UnifiedModelManager({ compact = false, showHeader = true }: Unif
     setFAdvancedOpen(false);
     setFTools(false); setFVision(false); setFReasoning(false);
     setFContextWindow(0); setFMaxOutput(0);
+    setFInputImage(false); setFInputVideo(false); setFInputPdf(false);
+    setFStructuredOut(false); setFWebSearch(false); setFSystemMessages(false);
+    setFReasoningLevels([]); setFLevelInput(""); setFParamMapping("");
   };
 
   const openAdd = () => {
@@ -240,6 +289,12 @@ export function UnifiedModelManager({ compact = false, showHeader = true }: Unif
     setFAdvancedOpen(false);
     setFTools(!!m.capabilities?.tools); setFVision(!!m.capabilities?.vision); setFReasoning(!!m.capabilities?.reasoning);
     setFContextWindow(m.contextWindow || 0); setFMaxOutput(m.maxOutput || 0);
+    setFInputImage(!!m.inputTypes?.image); setFInputVideo(!!m.inputTypes?.video); setFInputPdf(!!m.inputTypes?.pdf);
+    setFStructuredOut(!!m.modelCapabilities?.structuredOutput);
+    setFWebSearch(!!m.modelCapabilities?.nativeWebSearch);
+    setFSystemMessages(!!m.modelCapabilities?.systemMessages);
+    setFReasoningLevels(m.reasoningLevels || []);
+    setFLevelInput(""); setFParamMapping(m.reasoningParamMapping || "");
   };
 
   const closeForm = () => { setEditModel(null); setIsAdding(false); setShowForm(false); };
@@ -257,6 +312,10 @@ export function UnifiedModelManager({ compact = false, showHeader = true }: Unif
         capabilities: { tools: fTools, vision: fVision, reasoning: fReasoning },
         contextWindow: fContextWindow || undefined,
         maxOutput: fMaxOutput || undefined,
+        inputTypes: { text: true, image: fInputImage, video: fInputVideo, pdf: fInputPdf },
+        modelCapabilities: { structuredOutput: fStructuredOut, nativeWebSearch: fWebSearch, systemMessages: fSystemMessages },
+        reasoningLevels: fReasoningLevels.length ? fReasoningLevels : undefined,
+        reasoningParamMapping: fParamMapping.trim() || undefined,
       });
       if (newModel) {
         toast.success(`模型 ${fModel} 已添加`, { style: { background: "rgba(8,25,55,0.95)", border: "1px solid rgba(0,255,136,0.3)", color: "#e0f0ff" } });
@@ -272,11 +331,15 @@ export function UnifiedModelManager({ compact = false, showHeader = true }: Unif
         capabilities: { tools: fTools, vision: fVision, reasoning: fReasoning },
         contextWindow: fContextWindow || undefined,
         maxOutput: fMaxOutput || undefined,
+        inputTypes: { text: true, image: fInputImage, video: fInputVideo, pdf: fInputPdf },
+        modelCapabilities: { structuredOutput: fStructuredOut, nativeWebSearch: fWebSearch, systemMessages: fSystemMessages },
+        reasoningLevels: fReasoningLevels.length ? fReasoningLevels : undefined,
+        reasoningParamMapping: fParamMapping.trim() || undefined,
       });
       toast.success(`模型 ${fModel} 已更新`, { style: { background: "rgba(8,25,55,0.95)", border: "1px solid rgba(0,255,136,0.3)", color: "#e0f0ff" } });
       closeForm();
     }
-  }, [fProviderId, fModel, fApiKey, fBaseUrl, fProxyUrl, fApiFormat, fTools, fVision, fReasoning, fContextWindow, fMaxOutput, isAdding, editModel, providers, addModel, updateModel]);
+  }, [fProviderId, fModel, fApiKey, fBaseUrl, fProxyUrl, fApiFormat, fTools, fVision, fReasoning, fContextWindow, fMaxOutput, fInputImage, fInputVideo, fInputPdf, fStructuredOut, fWebSearch, fSystemMessages, fReasoningLevels, fParamMapping, isAdding, editModel, providers, addModel, updateModel]);
 
   const handleTest = useCallback(async (id: string) => {
     try {
@@ -602,18 +665,30 @@ export function UnifiedModelManager({ compact = false, showHeader = true }: Unif
                         暂无已配置模型——点「添加模型」，或从下方系列快捷添加
                       </p>
                     )}
-                    {selectedProvider.models.length > 0 && (
-                      <div className="flex items-center gap-1.5 flex-wrap pt-1">
-                        {selectedProvider.models.map(mname => (
-                          <button key={mname} onClick={() => quickAddModel(selectedProvider, mname)}
-                            className="px-2 py-1 rounded-md bg-[rgba(0,212,255,0.06)] border border-[rgba(0,180,255,0.15)] text-[rgba(224,240,255,0.6)] hover:border-[rgba(0,212,255,0.4)] hover:text-[#e0f0ff] transition-all"
-                            style={{ fontSize: "0.65rem", fontFamily: "'JetBrains Mono', monospace" }}
-                            title={providerModels.some(pm => pm.model === mname) ? "已配置" : "点击快速添加"}>
-                            + {mname}{providerModels.some(pm => pm.model === mname) ? " ✓" : ""}
-                          </button>
-                        ))}
-                      </div>
-                    )}
+                    {/* 落档 45：清除硬编码系列——改为「从上游拉取模型列表」动态发现 */}
+                    <div className="flex items-center gap-1.5 flex-wrap pt-1">
+                      <button onClick={() => void fetchUpstreamModels(selectedProvider)}
+                        disabled={upstreamFetching}
+                        className="px-2 py-1 rounded-md bg-[rgba(0,140,200,0.12)] border border-[rgba(0,180,255,0.25)] text-[#00d4ff] hover:bg-[rgba(0,140,200,0.2)] transition-all disabled:opacity-50 flex items-center gap-1"
+                        style={{ fontSize: "0.65rem" }}
+                        title="调用 {BaseURL}/models 动态发现可用模型（不再内置硬编码列表）">
+                        {upstreamFetching ? <RefreshCw className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                        从上游拉取模型列表
+                      </button>
+                      {selectedProvider.models.length > 0 && selectedProvider.models.map(mname => (
+                        <button key={mname} onClick={() => quickAddModel(selectedProvider, mname)}
+                          className="px-2 py-1 rounded-md bg-[rgba(0,212,255,0.06)] border border-[rgba(0,180,255,0.15)] text-[rgba(224,240,255,0.6)] hover:border-[rgba(0,212,255,0.4)] hover:text-[#e0f0ff] transition-all"
+                          style={{ fontSize: "0.65rem", fontFamily: "'JetBrains Mono', monospace" }}
+                          title={providerModels.some(pm => pm.model === mname) ? "已配置" : "点击快速添加"}>
+                          + {mname}{providerModels.some(pm => pm.model === mname) ? " ✓" : ""}
+                        </button>
+                      ))}
+                      {selectedProvider.models.length === 0 && !upstreamFetching && (
+                        <span className="text-[rgba(0,212,255,0.3)]" style={{ fontSize: "0.62rem" }}>
+                          尚无系列列表——拉取上游或直接「添加模型」手输模型名
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -733,6 +808,92 @@ export function UnifiedModelManager({ compact = false, showHeader = true }: Unif
                       </label>
                     ))}
                   </div>
+                </div>
+
+                {/* 输入类型（图一）：文本恒支持并锁定 */}
+                <div>
+                  <label className="text-[rgba(0,212,255,0.5)] block mb-1.5" style={{ fontSize: "0.7rem" }}>输入类型</label>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="px-2.5 py-1 rounded-md border border-[rgba(0,212,255,0.35)] bg-[rgba(0,212,255,0.08)] text-[#00d4ff] flex items-center gap-1"
+                      style={{ fontSize: "0.68rem" }} title="文本输入为必选（锁定）">
+                      ✓ 文本 🔒
+                    </span>
+                    {([
+                      { key: "image", label: "图片", val: fInputImage, set: setFInputImage },
+                      { key: "video", label: "视频", val: fInputVideo, set: setFInputVideo },
+                      { key: "pdf", label: "PDF", val: fInputPdf, set: setFInputPdf },
+                    ] as const).map(opt => (
+                      <button key={opt.key} type="button" onClick={() => opt.set(!opt.val)}
+                        className={`px-2.5 py-1 rounded-md border transition-all ${opt.val
+                          ? "bg-[rgba(0,212,255,0.15)] border-[rgba(0,212,255,0.45)] text-[#00d4ff]"
+                          : "border-[rgba(0,180,255,0.15)] text-[rgba(224,240,255,0.5)] hover:border-[rgba(0,212,255,0.3)]"}`}
+                        style={{ fontSize: "0.68rem" }}>
+                        {opt.val ? "✓ " : ""}{opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 模型能力（图一） */}
+                <div>
+                  <label className="text-[rgba(0,212,255,0.5)] block mb-1.5" style={{ fontSize: "0.7rem" }}>模型能力</label>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {([
+                      { key: "sout", label: "结构化输出", val: fStructuredOut, set: setFStructuredOut },
+                      { key: "web", label: "原生联网搜索", val: fWebSearch, set: setFWebSearch },
+                      { key: "sys", label: "对话中系统消息", val: fSystemMessages, set: setFSystemMessages },
+                    ] as const).map(opt => (
+                      <button key={opt.key} type="button" onClick={() => opt.set(!opt.val)}
+                        className={`px-2.5 py-1 rounded-md border transition-all ${opt.val
+                          ? "bg-[rgba(0,212,255,0.15)] border-[rgba(0,212,255,0.45)] text-[#00d4ff]"
+                          : "border-[rgba(0,180,255,0.15)] text-[rgba(224,240,255,0.5)] hover:border-[rgba(0,212,255,0.3)]"}`}
+                        style={{ fontSize: "0.68rem" }}>
+                        {opt.val ? "✓ " : ""}{opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 推理等级（图一）：从低到高，可增删 */}
+                <div>
+                  <label className="text-[rgba(0,212,255,0.5)] block mb-1.5" style={{ fontSize: "0.7rem" }}
+                    title="设置聊天时可选择的推理等级，必须按推理强度从低到高排列。请勿配置模型不支持的推理等级。">
+                    推理等级（从低到高）
+                  </label>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {fReasoningLevels.map((lv, i) => (
+                      <span key={`${lv}-${i}`} className="px-2.5 py-1 rounded-md bg-[rgba(0,212,255,0.1)] border border-[rgba(0,212,255,0.3)] text-[#00d4ff] flex items-center gap-1"
+                        style={{ fontSize: "0.68rem", fontFamily: "'JetBrains Mono', monospace" }}>
+                        {i + 1}. {lv}
+                        <button type="button" onClick={() => setFReasoningLevels(prev => prev.filter((_, idx) => idx !== i))}
+                          className="ml-0.5 text-[rgba(255,51,102,0.7)] hover:text-[#ff3366]" title="移除">×</button>
+                      </span>
+                    ))}
+                    <input value={fLevelInput} onChange={e => setFLevelInput(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === "Enter" && fLevelInput.trim()) {
+                          e.preventDefault();
+                          setFReasoningLevels(prev => [...prev, fLevelInput.trim()]);
+                          setFLevelInput("");
+                        }
+                      }}
+                      placeholder="输入等级后回车（如 low）"
+                      className="px-2.5 py-1 rounded-md bg-[rgba(0,40,80,0.4)] border border-[rgba(0,180,255,0.15)] text-[#e0f0ff] focus:outline-none focus:border-[rgba(0,212,255,0.4)]"
+                      style={{ fontSize: "0.68rem", width: "11rem" }} />
+                    <button type="button"
+                      onClick={() => { const v = fLevelInput.trim(); if (v) { setFReasoningLevels(prev => [...prev, v]); setFLevelInput(""); } }}
+                      className="px-2 py-1 rounded-md border border-[rgba(0,180,255,0.25)] text-[rgba(0,212,255,0.7)] hover:text-[#00d4ff]"
+                      style={{ fontSize: "0.72rem" }} title="添加等级">＋</button>
+                  </div>
+                </div>
+
+                {/* 推理参数映射（图一）：JSON 文本 */}
+                <div>
+                  <label className="text-[rgba(0,212,255,0.5)] block mb-1.5" style={{ fontSize: "0.7rem" }}>推理参数映射</label>
+                  <textarea value={fParamMapping} onChange={e => setFParamMapping(e.target.value)}
+                    rows={4} placeholder={'{\n  "thinking": {\n    "type": "enabled"\n  }\n}'}
+                    className="w-full px-3 py-2 rounded-lg bg-[rgba(0,40,80,0.4)] border border-[rgba(0,180,255,0.15)] text-[#e0f0ff] focus:outline-none focus:border-[rgba(0,212,255,0.4)] resize-y"
+                    style={{ fontSize: "0.72rem", fontFamily: "'JetBrains Mono', monospace" }} />
                 </div>
 
                 <div>
