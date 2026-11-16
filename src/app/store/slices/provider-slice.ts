@@ -18,7 +18,6 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { testAIConnection, type AIConnectionConfig } from '../../lib/connection-test-engine';
 import { env } from '../../lib/env-config';
 import { getOllamaTagsUrl } from '../../lib/ollama-url';
 import { useSettingsSSOT } from './settings-ssot-slice';
@@ -29,6 +28,7 @@ import type {
   OllamaModel,
   OllamaTagsResponse,
 } from '../../types';
+import { callConfiguredModel } from '../../lib/model-request';
 
 // ============================================================
 // 内置服务商定义（规范来源）
@@ -332,51 +332,64 @@ export const useProviderSlice = create<ProviderSlice>()(
 
         set((s) => ({ testingIds: [...s.testingIds, id] }));
 
-        const isLocal = model.providerId === "ollama" || model.providerLabel.toLowerCase().includes("ollama");
-        const ollamaDefault = env("OLLAMA_BASE_URL") || "http://localhost:11434";
-        const baseUrl = model.baseUrl || (isLocal ? ollamaDefault : "");
+        // 落档 46：测试 = 实弹（与聊天同一统一层），不再走独立诊断链路。
+        // 原实现直连 baseUrl + 恒 OpenAI 格式 → 反代/Anthropic 端点恒假阳性。
+        const startedAt = Date.now();
+        let ok = false;
+        let detail = "";
+        const steps: Array<{ label: string; status: string; detail: string; latencyMs?: number }> = [];
 
         try {
-          const config: AIConnectionConfig = {
-            providerId: model.providerId,
-            providerLabel: model.providerLabel,
-            baseUrl,
-            authType: "bearer",
-            apiKey: model.apiKey || "",
-            modelId: model.id,
-            modelName: model.model,
-            isLocal,
-            proxyUrl: model.proxyUrl,
-          };
-
-          const result = await testAIConnection(config);
-
-          set((s) => ({
-            configuredModels: s.configuredModels.map((m) => {
-              if (m.id !== id) { return m; }
-              return {
-                ...m,
-                status: result.overallStatus === "pass" || result.overallStatus === "warn" ? "active" as const : "error" as const,
-                lastUsed: Date.now(),
-                lastTestResult: {
-                  steps: result.steps.map(st => ({ label: st.label, status: st.status, detail: st.detail, latencyMs: st.latencyMs })),
-                  suggestion: result.suggestion,
-                  totalLatencyMs: result.totalLatencyMs,
-                  testedAt: Date.now(),
-                },
-              };
-            }),
-            testingIds: s.testingIds.filter((tid) => tid !== id),
-          }));
-        } catch {
-          set((s) => ({
-            configuredModels: s.configuredModels.map((m) => {
-              if (m.id !== id) { return m; }
-              return { ...m, status: "error" as const, lastUsed: Date.now() };
-            }),
-            testingIds: s.testingIds.filter((tid) => tid !== id),
-          }));
+          if (model.providerId === "ollama") {
+            const base = (model.baseUrl || env("OLLAMA_BASE_URL") || "http://localhost:11434").replace(/\/$/, "");
+            const res = await fetch(`${base}/api/tags`, { signal: AbortSignal.timeout(8000) });
+            const latency = Date.now() - startedAt;
+            ok = res.ok;
+            detail = ok
+              ? `Ollama 服务可达（${base}/api/tags 200）`
+              : `Ollama 服务返回 HTTP ${res.status}（${base}/api/tags）`;
+            steps.push({ label: "Ollama 服务", status: ok ? "pass" : "fail", detail, latencyMs: latency });
+          } else {
+            const t0 = Date.now();
+            const r = await callConfiguredModel("", [{ role: "user", content: "ping" }], model, {
+              temperature: 0,
+              maxTokens: 1,
+            });
+            const latency = Date.now() - t0;
+            ok = r.success;
+            detail = ok ? "模型真实往返成功（1 token 冒烟）" : (r.error || "调用失败");
+            steps.push({ label: "网络可达性", status: "pass", detail: `请求已发出（${latency}ms）`, latencyMs: latency });
+            steps.push({
+              label: r.success ? "API Key 认证 + 生成" : "调用失败",
+              status: r.success ? "pass" : "fail",
+              detail,
+              latencyMs: latency,
+            });
+          }
+        } catch (e) {
+          const msg = e instanceof Error ? e.message : String(e);
+          detail = msg.includes("timeout") || msg.includes("abort") ? "连接超时（8-60s）" : msg;
+          steps.push({ label: "调用异常", status: "fail", detail });
+          ok = false;
         }
+
+        set((s) => ({
+          configuredModels: s.configuredModels.map((m) => {
+            if (m.id !== id) { return m; }
+            return {
+              ...m,
+              status: ok ? "active" as const : "error" as const,
+              lastUsed: Date.now(),
+              lastTestResult: {
+                steps,
+                suggestion: ok ? undefined : detail,
+                totalLatencyMs: Date.now() - startedAt,
+                testedAt: Date.now(),
+              },
+            };
+          }),
+          testingIds: s.testingIds.filter((tid) => tid !== id),
+        }));
       },
 
       testAllConnections: async () => {

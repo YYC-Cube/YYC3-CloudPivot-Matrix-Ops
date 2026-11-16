@@ -120,7 +120,15 @@ describe("useModelProvider", () => {
       expect(result.current.configuredModels.length).toBe(0);
     });
 
-    it("testConnection should update status to active", async () => {
+    it("testConnection should update status to active（落档 46 实弹语义）", async () => {
+      // 本文件全局 fetch 被 mock 为抛错（供离线用例）；此用例单独 stub 成功响应，
+      // 验证「测试=实弹走统一层」后 200 + 有效 choices → active
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+        ok: true,
+        status: 200,
+        text: () => Promise.resolve(""),
+        json: () => Promise.resolve({ choices: [{ message: { content: "pong" }, finish_reason: "stop" }] }),
+      } as unknown as Response);
       const { result } = renderHook(() => useModelProvider());
       act(() => {
         result.current.addModel("deepseek", "deepseek-chat", "sk-test-123");
@@ -130,6 +138,8 @@ describe("useModelProvider", () => {
         await result.current.testConnection(id);
       });
       expect(result.current.configuredModels[0].status).toBe("active");
+      expect(result.current.configuredModels[0].lastTestResult?.steps?.length).toBeGreaterThan(0);
+      fetchSpy.mockRestore();
     });
 
     it("modalOpen control should work", () => {

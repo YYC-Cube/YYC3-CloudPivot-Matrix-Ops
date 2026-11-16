@@ -46,10 +46,17 @@ describe("useModelProvider", () => {
       ollamaLoading: false,
       ollamaError: null,
     });
+    // 落档 46：测试链路已实弹化（provider-slice 直接经统一层 POST），
+    // mock 需返回 OpenAI 风格成功响应（choices 非空）+ Ollama tags 兼容
     vi.mocked(fetch).mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ models: [] }),
-    } as Response);
+      status: 200,
+      text: () => Promise.resolve(""),
+      json: () => Promise.resolve({
+        models: [],
+        choices: [{ message: { content: "pong" }, finish_reason: "stop" }],
+      }),
+    } as unknown as Response);
   });
 
   afterEach(() => {

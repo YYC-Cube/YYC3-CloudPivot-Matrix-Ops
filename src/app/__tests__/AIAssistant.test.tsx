@@ -55,19 +55,26 @@ vi.mock("../hooks/useModelProvider", () => ({
   }),
 }));
 
-vi.mock("../store/slices/provider-slice", () => ({
-  useProviderSlice: () => ({
+vi.mock("../store/slices/provider-slice", () => {
+  const state = {
+    providers: [
+      { id: "ollama", label: "Ollama (本地)", baseUrl: "http://localhost:11434", requiresApiKey: false, models: [], isLocal: true },
+      { id: "openai", label: "OpenAI", baseUrl: "https://api.openai.com/v1", requiresApiKey: true, models: [], isLocal: false },
+    ],
     configuredModels: [
       { id: "cm-1", model: "Qwen-72B", providerId: "ollama", providerLabel: "Ollama" },
-      { id: "cm-2", model: "GPT-4o", providerId: "openai", providerLabel: "OpenAI" },
-      { id: "cm-3", model: "GPT-3.5 Turbo", providerId: "openai", providerLabel: "OpenAI" },
+      { id: "cm-2", model: "GPT-4o", providerId: "openai", providerLabel: "OpenAI", apiKey: "sk-test" },
+      { id: "cm-3", model: "GPT-3.5 Turbo", providerId: "openai", providerLabel: "OpenAI", apiKey: "sk-test" },
       { id: "cm-4", model: "LLaMA-70B", providerId: "ollama", providerLabel: "Ollama" },
     ],
     ollamaModels: [],
     ollamaLoading: false,
     fetchOllamaModels: vi.fn(),
-  }),
-}));
+  };
+  const hook = () => state;
+  hook.getState = () => state;
+  return { useProviderSlice: hook };
+});
 
 // 落档 44：AIAssistant 已从旧 useSettingsStore 迁移到 settings-ssot 单一数据源，
 // mock 同步落到 ssot slice（useSettingsSSOT(selector) 形式，需同时支持选择器与无参调用）

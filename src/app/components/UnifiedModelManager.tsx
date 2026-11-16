@@ -87,23 +87,45 @@ export function UnifiedModelManager({ compact = false, showHeader = true }: Unif
       toast.info("Ollama 请在「AI 智能 → 模型管理」或用 Ollama 刷新获取本地模型");
       return;
     }
+    // 落档 46（图二 401 根因）：优先用「输入框当前 Key」——用户刚粘贴未点保存时
+    // 拉取不能只读持久化值；两者皆空且需要 Key 时前置拦截并给明确指引
+    // Key 解析顺序：输入框当前值 > 服务商级 Key > 该服务商下任一已配置模型的 Key
+    // （落档 46 修复：真实场景 Key 常存在模型上，服务商级为空）
+    const effectiveKey =
+      (p.id === selProviderId ? pApiKey.trim() : "")
+      || p.apiKey
+      || configuredModels.find(m => m.providerId === p.id && m.apiKey)?.apiKey
+      || "";
+    if (p.requiresApiKey && !effectiveKey) {
+      toast.error("请先在上方「API Key」填入并保存，再拉取模型列表（上游需要 Authorization）");
+      return;
+    }
     setUpstreamFetching(true);
     try {
       const { root } = resolveRequestRoot({ baseUrl: p.baseUrl, proxyUrl: undefined, providerId: p.id });
       const res = await fetch(`${root}/models`, {
-        headers: p.apiKey ? { Authorization: `Bearer ${p.apiKey}` } : {},
+        headers: effectiveKey ? { Authorization: `Bearer ${effectiveKey}` } : {},
         signal: AbortSignal.timeout(15000),
       });
       if (!res.ok) {
         const body = await res.text().catch(() => "");
-        toast.error(`上游返回 HTTP ${res.status}${body ? `：${body.slice(0, 100)}` : ""}`);
+        const hint = res.status === 401 || res.status === 403
+          ? "（Key 未送达或无效：确认已填 Key 并保存，或该端点不支持 /models）"
+          : "";
+        toast.error(`上游返回 HTTP ${res.status}${hint}${body ? `：${body.slice(0, 100)}` : ""}`);
         return;
       }
-      const data = await res.json() as { data?: Array<{ id?: string }>; models?: Array<{ name?: string }> };
-      const names = [
-        ...(data.data || []).map(m => m.id || ""),
-        ...(data.models || []).map(m => m.name || ""),
-      ].filter(Boolean);
+      // 落档 46：上游 /models 有三种返回形态——裸数组（NAS vLLM 实证）、
+      // {data:[...]}（OpenAI 官方）、{models:[{name}]}（Ollama 风格），全兼容
+      const payload = await res.json() as unknown;
+      const list: Array<Record<string, unknown>> = Array.isArray(payload)
+        ? payload as Array<Record<string, unknown>>
+        : ((payload as { data?: unknown[] })?.data as Array<Record<string, unknown>>
+          || (payload as { models?: unknown[] })?.models as Array<Record<string, unknown>>
+          || []);
+      const names = list
+        .map(m => (typeof m === "string" ? m : String(m.id ?? m.name ?? m.model ?? "")))
+        .filter(Boolean);
       if (names.length === 0) { toast.info("上游未返回模型列表（该端点可能不支持 /models）"); return; }
       updateProvider(p.id, { models: [...new Set(names)] });
       toast.success(`已从上游发现 ${new Set(names).size} 个模型，可点击 chip 快捷添加`);

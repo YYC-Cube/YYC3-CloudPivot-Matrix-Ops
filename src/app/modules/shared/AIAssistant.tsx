@@ -180,13 +180,18 @@ export function AIAssistant({ isMobile }: AIAssistantProps) {
   const { configuredModels: _configuredModels, ollamaModels, ollamaLoading, fetchOllamaModels } = useProviderSlice();
 
   const availableModels = useMemo(() => {
-    const models: Array<{ id: string; name: string; provider: string; isLocal: boolean }> = [];
+    // 落档 46 自审：取消浮窗 API 编辑后，Key 唯一来源=模型配置；此处标注缺 Key，
+    // 避免用户选到必然失败的模型却无从得知（选中后发送会给出明确指引）
+    const { providers: _providers } = useProviderSlice.getState();
+    const models: Array<{ id: string; name: string; provider: string; isLocal: boolean; missingKey: boolean }> = [];
     _configuredModels.forEach((cm) => {
+      const prov = _providers.find(pp => pp.id === cm.providerId);
       models.push({
         id: cm.id,
         name: `${cm.model} (${cm.providerLabel})`,
         provider: cm.providerLabel,
         isLocal: cm.providerId === "ollama",
+        missingKey: !!prov?.requiresApiKey && !cm.apiKey,
       });
     });
     const configuredOllamaNames = new Set(
@@ -199,6 +204,7 @@ export function AIAssistant({ isMobile }: AIAssistantProps) {
           name: om.name,
           provider: "Ollama (本地)",
           isLocal: true,
+          missingKey: false,
         });
       }
     });
@@ -429,7 +435,9 @@ export function AIAssistant({ isMobile }: AIAssistantProps) {
         authType: "bearer",
         apiKey: cm?.apiKey || "",
         modelId: model.id,
-        modelName: model.name,
+        // 落档 46（图三 HTTP 500 根因）：必须传真实模型名 cm.model，
+        // 原 model.name = "模型 (服务商)" 显示串被当 API model 发出 → 上游 500
+        modelName: cm?.model || model.name.replace(/\s*\([^)]*\)\s*$/, ""),
         isLocal: model.isLocal,
       }] : [];
       const result = await runFullSystemDiagnostic({ aiConfigs, testWs: true });
@@ -462,7 +470,7 @@ export function AIAssistant({ isMobile }: AIAssistantProps) {
         authType: "bearer",
         apiKey: cm?.apiKey || "",
         modelId: model.id,
-        modelName: model.name,
+        modelName: cm?.model || model.name.replace(/\s*\([^)]*\)\s*$/, ""),
         isLocal: model.isLocal,
       };
       const result = await testAIConnection(config);
@@ -1061,6 +1069,9 @@ export function AIAssistant({ isMobile }: AIAssistantProps) {
                       >
                         {model.isLocal && (
                           <span className="text-[#00ff88] shrink-0" style={{ fontSize: "0.58rem" }}>本地</span>
+                        )}
+                        {model.missingKey && (
+                          <span className="text-[#ffdd00] shrink-0" style={{ fontSize: "0.58rem" }} title="该模型未配置 API Key——请在「系统设置 → 模型设置」补充">缺Key</span>
                         )}
                         <span className="truncate flex-1">{model.name}</span>
                         <span className="text-[rgba(0,212,255,0.25)] shrink-0" style={{ fontSize: "0.55rem" }}>
