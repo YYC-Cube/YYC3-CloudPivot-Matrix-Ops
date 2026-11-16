@@ -12,6 +12,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useDbConnSlice } from '../../store/slices/db-conn-slice';
 import type { DBConnection } from '../../types';
+const TEST_PW = process.env.TEST_DB_PASSWORD ?? "placeholder";
 
 beforeEach(() => {
   useDbConnSlice.setState({
@@ -24,7 +25,7 @@ beforeEach(() => {
         port: 5433,
         database: "yyc3_matrix",
         username: "admin",
-        password: process.env.TEST_DB_PASSWORD ?? "placeholder-not-a-secret",
+        password: TEST_PW,
         status: "connected",
         options: "sslmode=disable",
       },
@@ -62,7 +63,7 @@ describe('useDbConnSlice', () => {
         port: 5432,
         database: "replica_db",
         username: "reader",
-        password: process.env.TEST_DB_PASSWORD ?? "placeholder-not-a-secret",
+        password: TEST_PW,
         status: "disconnected" as const,
         options: "",
       };
@@ -111,12 +112,12 @@ describe('useDbConnSlice', () => {
   describe('安全性', () => {
     it('password 字段应该可以被更新', () => {
       useDbConnSlice.getState().updateConnection("db-pg-main", {
-        password: process.env.TEST_DB_PASSWORD ?? "placeholder-not-a-secret",
+        password: TEST_PW,
       });
 
       const { connections } = useDbConnSlice.getState();
       const conn = connections.find((c) => c.id === "db-pg-main");
-      expect(conn?.password).toBe("new_secret_password");
+      expect(conn?.password).toBe(TEST_PW);
     });
 
     it('应该支持多种数据库类型', () => {

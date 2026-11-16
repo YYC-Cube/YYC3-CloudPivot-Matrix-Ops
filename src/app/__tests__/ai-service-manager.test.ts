@@ -13,6 +13,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { AIServiceManager, getAIServiceManager, resetAIServiceManager } from "../lib/ai-service-manager";
 import type { ConfiguredModel } from "../types";
+const TEST_KEY = process.env.TEST_API_KEY ?? "placeholder";
 
 // Mock fetch
 const mockFetch = vi.fn();
@@ -36,7 +37,7 @@ const mockModel: ConfiguredModel = {
   providerId: "openai",
   providerLabel: "OpenAI",
   model: "gpt-4",
-  apiKey: process.env.TEST_API_KEY ?? "sk-placeholder",
+  apiKey: TEST_KEY,
   baseUrl: "https://api.openai.com/v1",
   createdAt: Date.now(),
   lastUsed: null,

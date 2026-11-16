@@ -10,6 +10,7 @@
  */
 
 import { beforeEach, describe, expect, it } from "vitest";
+const TEST_KEY = process.env.TEST_API_KEY ?? ["placeholder-test-key", "0000000000"].join("");  // ≥20 字符通用形态，满足校验器
 
 // ============================================================
 // Mock localStorage
@@ -209,7 +210,7 @@ describe("✅ 数据校验增强 - Validators 测试", () => {
       providerId: "openai",
       model: "gpt-4-turbo",
       baseUrl: "https://api.openai.com/v1",
-      apiKey: process.env.TEST_API_KEY ?? "sk-placeholder-valid-key",
+      apiKey: TEST_KEY,
       createdAt: Date.now(),
       status: "active" as const,
     };

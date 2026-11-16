@@ -36,6 +36,7 @@ Element.prototype.scrollIntoView = vi.fn();
 // ===============================
 
 // Mock useModelProvider
+const TEST_KEY = process.env.TEST_API_KEY ?? "placeholder";
 const mockConfiguredModels = [
   {
     id: "zhipu-glm4-1",
@@ -53,7 +54,7 @@ const mockConfiguredModels = [
     providerId: "openai" as const,
     providerLabel: "OpenAI",
     model: "gpt-4o",
-    apiKey: process.env.TEST_API_KEY ?? "sk-placeholder",
+    apiKey: TEST_KEY,
     baseUrl: "https://api.openai.com/v1",
     createdAt: Date.now(),
     lastUsed: null,

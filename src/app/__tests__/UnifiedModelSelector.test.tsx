@@ -45,13 +45,14 @@ vi.mock("../modules/shared/GlassCard", () => ({
 // 测试数据（status 严格使用 "active"|"error"|"unchecked"）
 // ──────────────────────────────────────────────────────────────────
 
+const TEST_KEY = process.env.TEST_API_KEY ?? "placeholder";
 const mockModels: ConfiguredModel[] = [
   {
     id: "m-zhipu-glm4-1",
     providerId: "zhipu",
     providerLabel: "Z.ai",
     model: "glm-4-flash",
-    apiKey: process.env.TEST_API_KEY ?? "sk-placeholder-1",
+    apiKey: TEST_KEY + "-1",
     baseUrl: "https://open.bigmodel.cn/api/paas/v4",
     createdAt: Date.now() - 86400_000,
     lastUsed: Date.now() - 3600_000,
@@ -72,7 +73,7 @@ const mockModels: ConfiguredModel[] = [
     providerId: "deepseek",
     providerLabel: "DeepSeek",
     model: "deepseek-chat",
-    apiKey: process.env.TEST_API_KEY ?? "sk-placeholder-2",
+    apiKey: TEST_KEY + "-2",
     baseUrl: "https://api.deepseek.com/v1",
     createdAt: Date.now() - 172800_000,
     lastUsed: Date.now() - 7200_000,

@@ -17,6 +17,7 @@ import { useFamilyPostsSlice } from "../modules/ai-family/store/family-posts-sli
 import { useFamilySettingsSlice } from "../modules/ai-family/store/family-settings-slice";
 import { useProviderSlice } from "../store/slices/provider-slice";
 import type { ConfiguredModel, ModelProviderDef } from "../types";
+const TEST_KEY = process.env.TEST_API_KEY ?? "placeholder";
 
 // ═══ 工具 ═══
 
@@ -94,7 +95,7 @@ describe("checkMemberReadiness · 成员接线就绪判定", () => {
 
   it("绑定 + 已配置 + 有密钥 → 就绪并返回配置模型", () => {
     useProviderSlice.setState({
-      configuredModels: [makeConfiguredModel({ apiKey: process.env.TEST_API_KEY ?? "sk-placeholder" })],
+      configuredModels: [makeConfiguredModel({ apiKey: TEST_KEY })],
     });
     const r = checkMemberReadiness("navigator");
     expect(r.ready).toBe(true);
