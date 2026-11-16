@@ -61,6 +61,10 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      # P7：文档日志体系门禁（0307 台帐区标头规范）
+      - name: Docs headers check
+        run: pnpm docs:check
+
       - name: Type check
         run: pnpm type-check
 

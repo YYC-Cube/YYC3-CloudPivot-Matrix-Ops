@@ -113,7 +113,7 @@
 
 ---
 
-**[在线演示 Demo](https://matrix.yyc3.top/)** · **[文档体系 Docs](./docs/README.md)** · **[模块文档 Module Docs](./docs/modules/README.md)** · **[开发标准 Dev Standard](./docs/10-YYC3-CP-IM-项目模版-标准规范/)** · **[贡献指南 Contributing](#-贡献指南--contributing)**
+**[在线演示 Demo](https://matrix.yyc3.vip/)** · **[文档体系 Docs](./docs/README.md)** · **[模块文档 Module Docs](./docs/modules/README.md)** · **[开发标准 Dev Standard](./docs/10-YYC3-CP-IM-项目模版-标准规范/)** · **[贡献指南 Contributing](#-贡献指南--contributing)**
 
 </div>
 
@@ -1105,7 +1105,7 @@ SOFTWARE.
 
 **Made with ❤️ by [YanYuCloudCube Team](https://github.com/YYC-Cube)**
 
-**[GitHub](https://github.com/YYC-Cube/YYC3-Cloud-Matrix)** · **[在线演示](https://matrix.yyc3.top/)** · **[文档体系](./docs/README.md)** · **[模块文档](./docs/modules/README.md)** · **[开发标准](./docs/10-YYC3-CP-IM-项目模版-标准规范/)** · **[贡献指南](#-贡献指南--contributing)**
+**[GitHub](https://github.com/YYC-Cube/YYC3-Cloud-Matrix)** · **[在线演示](https://matrix.yyc3.vip/)** · **[文档体系](./docs/README.md)** · **[模块文档](./docs/modules/README.md)** · **[开发标准](./docs/10-YYC3-CP-IM-项目模版-标准规范/)** · **[贡献指南](#-贡献指南--contributing)**
 
 ---
 
