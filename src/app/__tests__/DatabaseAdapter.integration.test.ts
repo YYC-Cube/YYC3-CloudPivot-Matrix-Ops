@@ -68,8 +68,8 @@ describe("DatabaseAdapter Integration Tests", () => {
         host: "localhost",
         port: 5432,
         database: "test_db",
-        username: "test_user",
-        password: "test_password",
+        username: process.env.TEST_DB_USER ?? "placeholder-user",
+        password: process.env.TEST_DB_PASSWORD ?? "placeholder-not-a-secret",
       };
 
       connectionId = "test-connection-1";
@@ -93,8 +93,8 @@ describe("DatabaseAdapter Integration Tests", () => {
         host: "localhost",
         port: 5432,
         database: "test_db",
-        username: "test_user",
-        password: "test_password",
+        username: process.env.TEST_DB_USER ?? "placeholder-user",
+        password: process.env.TEST_DB_PASSWORD ?? "placeholder-not-a-secret",
       };
 
       connectionId = "test-connection-2";
@@ -151,8 +151,8 @@ describe("DatabaseAdapter Integration Tests", () => {
         host: "localhost",
         port: 5432,
         database: "test_db",
-        username: "test_user",
-        password: "test_password",
+        username: process.env.TEST_DB_USER ?? "placeholder-user",
+        password: process.env.TEST_DB_PASSWORD ?? "placeholder-not-a-secret",
       };
 
       connectionId = "test-connection-3";
@@ -196,8 +196,8 @@ describe("DatabaseAdapter Integration Tests", () => {
         host: "localhost",
         port: 5432,
         database: "test_db",
-        username: "test_user",
-        password: "test_password",
+        username: process.env.TEST_DB_USER ?? "placeholder-user",
+        password: process.env.TEST_DB_PASSWORD ?? "placeholder-not-a-secret",
       };
 
       connectionId = "test-connection-4";
@@ -226,8 +226,8 @@ describe("DatabaseAdapter Integration Tests", () => {
         host: "localhost",
         port: 5432,
         database: "test_db",
-        username: "test_user",
-        password: "test_password",
+        username: process.env.TEST_DB_USER ?? "placeholder-user",
+        password: process.env.TEST_DB_PASSWORD ?? "placeholder-not-a-secret",
       };
 
       connectionId = "test-connection-5";
@@ -257,8 +257,8 @@ describe("DatabaseAdapter Integration Tests", () => {
         host: "localhost",
         port: 5432,
         database: "test_db",
-        username: "test_user",
-        password: "test_password",
+        username: process.env.TEST_DB_USER ?? "placeholder-user",
+        password: process.env.TEST_DB_PASSWORD ?? "placeholder-not-a-secret",
       };
 
       connectionId = "test-connection-6";
@@ -290,8 +290,8 @@ describe("DatabaseAdapter Integration Tests", () => {
         host: "localhost",
         port: 5432,
         database: "test_db",
-        username: "test_user",
-        password: "test_password",
+        username: process.env.TEST_DB_USER ?? "placeholder-user",
+        password: process.env.TEST_DB_PASSWORD ?? "placeholder-not-a-secret",
       };
 
       connectionId = "test-connection-7";
@@ -320,8 +320,8 @@ describe("DatabaseAdapter Integration Tests", () => {
         host: "localhost",
         port: 5432,
         database: "test_db",
-        username: "test_user",
-        password: "test_password",
+        username: process.env.TEST_DB_USER ?? "placeholder-user",
+        password: process.env.TEST_DB_PASSWORD ?? "placeholder-not-a-secret",
       };
 
       connectionId = "test-connection-8";
@@ -352,8 +352,8 @@ describe("DatabaseAdapter Integration Tests", () => {
         host: "localhost",
         port: 5432,
         database: "test_db",
-        username: "test_user",
-        password: "test_password",
+        username: process.env.TEST_DB_USER ?? "placeholder-user",
+        password: process.env.TEST_DB_PASSWORD ?? "placeholder-not-a-secret",
       };
 
       connectionId = "test-connection-9";
@@ -382,8 +382,8 @@ describe("DatabaseAdapter Integration Tests", () => {
         host: "invalid-host",
         port: 5432,
         database: "test_db",
-        username: "test_user",
-        password: "test_password",
+        username: process.env.TEST_DB_USER ?? "placeholder-user",
+        password: process.env.TEST_DB_PASSWORD ?? "placeholder-not-a-secret",
       };
 
       connectionId = "test-connection-10";
@@ -409,8 +409,8 @@ describe("DatabaseAdapter Integration Tests", () => {
         host: "localhost",
         port: 5432,
         database: "test_db",
-        username: "test_user",
-        password: "test_password",
+        username: process.env.TEST_DB_USER ?? "placeholder-user",
+        password: process.env.TEST_DB_PASSWORD ?? "placeholder-not-a-secret",
       };
 
       connectionId = "test-connection-11";
@@ -441,8 +441,8 @@ describe("DatabaseAdapter Integration Tests", () => {
         host: "localhost",
         port: 5432,
         database: "test_db",
-        username: "test_user",
-        password: "test_password",
+        username: process.env.TEST_DB_USER ?? "placeholder-user",
+        password: process.env.TEST_DB_PASSWORD ?? "placeholder-not-a-secret",
       };
 
       connectionId = "test-connection-12";
