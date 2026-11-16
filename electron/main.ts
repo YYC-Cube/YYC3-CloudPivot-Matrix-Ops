@@ -53,7 +53,7 @@ const CSP_PROD = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
-  "connect-src 'self' wss: ws://localhost:* ws://127.0.0.1:* https://*.supabase.co",
+  "connect-src 'self' wss: ws://localhost:* ws://127.0.0.1:* http://localhost:* http://127.0.0.1:* https://*.supabase.co",
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -71,6 +71,8 @@ function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.js'),
+      // 主控机常驻面板：窗口后台/遮挡时禁用定时器节流，保证监控轮询与 WS 心跳实时
+      backgroundThrottling: false,
     },
     backgroundColor: '#060e1f',
     show: false,
