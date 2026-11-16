@@ -94,7 +94,7 @@ describe("checkMemberReadiness · 成员接线就绪判定", () => {
 
   it("绑定 + 已配置 + 有密钥 → 就绪并返回配置模型", () => {
     useProviderSlice.setState({
-      configuredModels: [makeConfiguredModel({ apiKey: "sk-test-key" })],
+      configuredModels: [makeConfiguredModel({ apiKey: process.env.TEST_API_KEY ?? "sk-placeholder" })],
     });
     const r = checkMemberReadiness("navigator");
     expect(r.ready).toBe(true);

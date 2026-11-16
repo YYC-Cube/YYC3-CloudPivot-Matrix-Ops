@@ -209,7 +209,7 @@ describe("✅ 数据校验增强 - Validators 测试", () => {
       providerId: "openai",
       model: "gpt-4-turbo",
       baseUrl: "https://api.openai.com/v1",
-      apiKey: "sk-valid-key-12345678901234567890",
+      apiKey: process.env.TEST_API_KEY ?? "sk-placeholder-valid-key",
       createdAt: Date.now(),
       status: "active" as const,
     };

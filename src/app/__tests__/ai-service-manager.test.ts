@@ -36,7 +36,7 @@ const mockModel: ConfiguredModel = {
   providerId: "openai",
   providerLabel: "OpenAI",
   model: "gpt-4",
-  apiKey: "test-api-key",
+  apiKey: process.env.TEST_API_KEY ?? "sk-placeholder",
   baseUrl: "https://api.openai.com/v1",
   createdAt: Date.now(),
   lastUsed: null,

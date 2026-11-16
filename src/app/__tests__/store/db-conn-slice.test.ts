@@ -24,7 +24,7 @@ beforeEach(() => {
         port: 5433,
         database: "yyc3_matrix",
         username: "admin",
-        password: "secret123",
+        password: process.env.TEST_DB_PASSWORD ?? "placeholder-not-a-secret",
         status: "connected",
         options: "sslmode=disable",
       },
@@ -62,7 +62,7 @@ describe('useDbConnSlice', () => {
         port: 5432,
         database: "replica_db",
         username: "reader",
-        password: "reader_pass",
+        password: process.env.TEST_DB_PASSWORD ?? "placeholder-not-a-secret",
         status: "disconnected" as const,
         options: "",
       };
@@ -111,7 +111,7 @@ describe('useDbConnSlice', () => {
   describe('安全性', () => {
     it('password 字段应该可以被更新', () => {
       useDbConnSlice.getState().updateConnection("db-pg-main", {
-        password: "new_secret_password",
+        password: process.env.TEST_DB_PASSWORD ?? "placeholder-not-a-secret",
       });
 
       const { connections } = useDbConnSlice.getState();

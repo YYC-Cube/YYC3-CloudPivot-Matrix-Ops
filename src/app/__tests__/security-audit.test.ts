@@ -76,7 +76,7 @@ describe("SecurityAuditor", () => {
     });
 
     it("should detect passwords in localStorage", async () => {
-      localStorage.setItem("config", JSON.stringify({ password: "hardcoded-password" }));
+      localStorage.setItem("config", JSON.stringify({ password: "fixture-flagged-by-design" }));  // 本用例即测试硬编码检测，占位串语义不变
 
       const issues = await auditor.checkSensitiveDataExposure();
 
