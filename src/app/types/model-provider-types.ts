@@ -20,6 +20,8 @@ export interface ModelProviderDef {
   authType: "bearer" | "api-key" | "none";
   models: string[];
   requiresApiKey: boolean;
+  /** 服务商级 API Key（落档 43 §八：详情面板管理；cm 创建时自动带出，仅 persist 本地） */
+  apiKey?: string;
   isLocal: boolean;
   isBuiltin?: boolean;
   isCustom?: boolean;
