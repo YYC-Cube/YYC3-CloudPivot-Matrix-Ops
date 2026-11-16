@@ -170,7 +170,8 @@
     },
     "files": [
       "dist/**/*",
-      "dist-electron/**/*",
+      "dist-electron/electron/**/*",
+      "dist-electron/src/**/*",
       "package.json"
     ],
     "extraResources": [
@@ -193,7 +194,7 @@
         }
       ],
       "icon": "public/yyc3-icons/macOS/1024.png",
-      "artifactName": "${productName}-${version}-mac-${arch}.${ext}",
+      "artifactName": "YYC3-PivotMatrixOps-${version}-mac-${arch}.${ext}",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "entitlements": "resources/entitlements.mac.plist",
@@ -216,7 +217,7 @@
         }
       ],
       "icon": "public/yyc3-icons/macOS/512.png",
-      "artifactName": "${productName}-${version}-win-${arch}.${ext}",
+      "artifactName": "YYC3-PivotMatrixOps-${version}-win-${arch}.${ext}",
       "requestedExecutionLevel": "asInvoker"
     },
     "linux": {
@@ -235,7 +236,7 @@
         }
       ],
       "icon": "public/yyc3-icons/macOS/512.png",
-      "artifactName": "${productName}-${version}-linux-${arch}.${ext}",
+      "artifactName": "YYC3-PivotMatrixOps-${version}-linux-${arch}.${ext}",
       "category": "Utility"
     },
     "nsis": {
