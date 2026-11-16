@@ -25,8 +25,14 @@ vi.mock("react-router", () => ({
   useNavigate: () => vi.fn(),
 }));
 
-vi.mock("../store/slices/provider-slice", () => ({
-  useProviderSlice: () => ({
+vi.mock("../store/slices/provider-slice", () => {
+  const _mockState = {
+    fetchOllamaModels: vi.fn(),
+    ollamaModels: [],
+    ollamaLoading: false,
+    ollamaError: null,
+  };
+  const _hook = () => ({
     providers: [
       { id: "openai", label: "OpenAI", baseUrl: "https://api.openai.com/v1", models: ["gpt-4o", "gpt-4o-mini"], isLocal: false },
       { id: "deepseek", label: "DeepSeek", baseUrl: "https://api.deepseek.com/v1", models: ["deepseek-chat"], isLocal: false },
@@ -45,8 +51,10 @@ vi.mock("../store/slices/provider-slice", () => ({
     testConnection: vi.fn(async () => { }),
     testAllConnections: vi.fn(async () => []),
     presetModels: vi.fn(),
-  }),
-}));
+  });
+  _hook.getState = () => _mockState;
+  return { useProviderSlice: _hook };
+});
 
 vi.mock("../store/slices/family-settings-slice", () => {
   const state = {

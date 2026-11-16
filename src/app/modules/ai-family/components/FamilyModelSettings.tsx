@@ -385,8 +385,10 @@ export function FamilyModelSettings() {
   const [activeTab, setActiveTab] = useState<"members" | "keys" | "overview">("members");
 
   useEffect(() => {
-    providerSlice.fetchOllamaModels();
-  }, [providerSlice]);
+    // 落档 40：原依赖 [providerSlice]（整 store 引用）——fetchOllamaModels 触发 state 变更
+    // → 新引用再触发 effect → 无限循环冻结渲染器（#/ai-family/models 挂起根因）
+    useProviderSlice.getState().fetchOllamaModels();
+  }, []);
 
   // Handlers
   const handleKeyChange = useCallback((providerId: string, key: string) => {
