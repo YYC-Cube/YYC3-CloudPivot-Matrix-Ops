@@ -483,6 +483,24 @@
       "related_docs": [
         "docs/README.md"
       ]
+    },
+    {
+      "trace_id": "TRC-20261116027",
+      "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/37-M4方案A落地-多节点WS直连池-双流实证-P7收尾-20261116.md",
+      "action": "create",
+      "timestamp": "2026-11-16T15:40:00+08:00",
+      "version": "v1.0.0",
+      "checksum": "453b1486d7f58ced",
+      "author": "YYC³ Team",
+      "changes": [
+        {
+          "field": "content",
+          "summary": "M4 方案A落地（useMultiNodeWS+双流实证）+ P7 收尾（CI/域名）"
+        }
+      ],
+      "related_docs": [
+        "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/35-M4双节点汇聚方案设计-三方案对比与实施路线-20261116.md"
+      ]
     }
   ]
 }
