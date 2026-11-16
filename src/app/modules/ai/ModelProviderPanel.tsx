@@ -22,6 +22,7 @@ import {
   Upload,
 } from "lucide-react";
 import React, { useContext, useState } from "react";
+import { toast } from "sonner";
 import { useI18n } from "../../hooks/useI18n";
 import { useModelProvider } from "../../hooks/useModelProvider";
 import { ViewContext } from "../../lib/view-context";
@@ -396,7 +397,12 @@ export function ModelProviderPanel() {
 
                     <div className="flex items-center gap-1.5 shrink-0">
                       <button
-                        onClick={() => testConnection(cm.id)}
+                        onClick={async () => {
+                          // 落档 47：只读页测试也据实反馈
+                          const r = await testConnection(cm.id);
+                          if (r?.ok) { toast.success(`测试通过：${cm.model}`); }
+                          else { toast.error(`测试失败：${r?.detail || "未知原因"}`); }
+                        }}
                         className="p-1.5 rounded-lg hover:bg-[rgba(0,180,255,0.08)] transition-all"
                         title={t("modelProvider.testConnection")}
                       >

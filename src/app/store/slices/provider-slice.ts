@@ -172,7 +172,7 @@ export interface ProviderSlice {
   addModel: (providerId: ModelProviderId, model: string, apiKey: string, customBaseUrl?: string, proxyUrl?: string, extras?: ModelExtras) => ConfiguredModel | undefined;
   updateModel: (id: string, updates: Partial<ConfiguredModel>) => void;
   removeModel: (id: string) => void;
-  testConnection: (id: string) => Promise<void>;
+  testConnection: (id: string) => Promise<{ ok: boolean; detail: string }>;
   testAllConnections: () => Promise<void>;
   setActiveModel: (id: string | null) => void;
   getActiveModel: () => ConfiguredModel | undefined;
@@ -328,7 +328,7 @@ export const useProviderSlice = create<ProviderSlice>()(
 
       testConnection: async (id) => {
         const model = get().configuredModels.find((m) => m.id === id);
-        if (!model) { return; }
+        if (!model) { return { ok: false, detail: "模型不存在" }; }
 
         set((s) => ({ testingIds: [...s.testingIds, id] }));
 
@@ -351,13 +351,18 @@ export const useProviderSlice = create<ProviderSlice>()(
             steps.push({ label: "Ollama 服务", status: ok ? "pass" : "fail", detail, latencyMs: latency });
           } else {
             const t0 = Date.now();
+            // 落档 47：smoke 用 32 tokens——原 max_tokens:1 会让上游返回空 content
+            // （finish_reason=length）而误判失败（图二「测试通过却异常」的另一半根因）
             const r = await callConfiguredModel("", [{ role: "user", content: "ping" }], model, {
               temperature: 0,
-              maxTokens: 1,
+              maxTokens: 32,
             });
             const latency = Date.now() - t0;
-            ok = r.success;
-            detail = ok ? "模型真实往返成功（1 token 冒烟）" : (r.error || "调用失败");
+            // 服务可达 + choices 非空即视为连通（即使内容被截断）
+            ok = r.success || /finish_reason=length/.test(r.error || "");
+            detail = ok
+              ? (r.success ? "模型真实往返成功（32 tokens 冒烟）" : "服务可达（输出被截断，连通性正常）")
+              : (r.error || "调用失败");
             steps.push({ label: "网络可达性", status: "pass", detail: `请求已发出（${latency}ms）`, latencyMs: latency });
             steps.push({
               label: r.success ? "API Key 认证 + 生成" : "调用失败",
@@ -390,6 +395,8 @@ export const useProviderSlice = create<ProviderSlice>()(
           }),
           testingIds: s.testingIds.filter((tid) => tid !== id),
         }));
+        // 落档 47：返回真实结果，供 UI 提示语与实际状态一致（原提示恒「通过」）
+        return { ok, detail };
       },
 
       testAllConnections: async () => {

@@ -365,10 +365,15 @@ export function UnifiedModelManager({ compact = false, showHeader = true }: Unif
 
   const handleTest = useCallback(async (id: string) => {
     try {
-      await testConnection(id);
-      toast.success("连接测试通过", { style: { background: "rgba(8,25,55,0.95)", border: "1px solid rgba(0,255,136,0.3)", color: "#e0f0ff" } });
+      // 落档 47：提示语据实——原实现无论成败都弹「连接测试通过」（图二矛盾证据）
+      const r = await testConnection(id);
+      if (r?.ok) {
+        toast.success(`连接测试通过${r.detail ? `：${r.detail}` : ""}`, { style: { background: "rgba(8,25,55,0.95)", border: "1px solid rgba(0,255,136,0.3)", color: "#e0f0ff" } });
+      } else {
+        toast.error(`连接测试失败：${r?.detail || "未知原因"}`, { style: { background: "rgba(8,25,55,0.95)", border: "1px solid rgba(255,51,102,0.3)", color: "#e0f0ff" } });
+      }
     } catch (e: any) {
-      toast.error(`测试失败: ${e.message}`, { style: { background: "rgba(8,25,55,0.95)", border: "1px solid rgba(255,51,102,0.3)", color: "#e0f0ff" } });
+      toast.error(`测试异常: ${e.message}`, { style: { background: "rgba(8,25,55,0.95)", border: "1px solid rgba(255,51,102,0.3)", color: "#e0f0ff" } });
     }
   }, [testConnection]);
 
