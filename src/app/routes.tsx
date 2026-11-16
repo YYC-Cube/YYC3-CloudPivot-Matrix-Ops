@@ -95,9 +95,6 @@ const ThemeCustomizer = lazy(() =>
 const CLITerminal = lazy(() =>
   import("./modules/dev/CLITerminal").then((m) => ({ default: m.CLITerminal })),
 );
-const IDEPanel = lazy(() =>
-  import("./modules/dev/IDEPanel").then((m) => ({ default: m.IDEPanel })),
-);
 const OperationAudit = lazy(() =>
   import("./modules/admin/OperationAudit").then((m) => ({ default: m.OperationAudit })),
 );
@@ -206,7 +203,6 @@ export const router = createHashRouter([
       { path: "models", Component: withSuspense(ModelProviderPanel) },
       { path: "theme", Component: withSuspense(ThemeCustomizer) },
       { path: "terminal", Component: withSuspense(CLITerminal) },
-      { path: "ide", Component: withSuspense(IDEPanel) },
       { path: "audit", Component: withSuspense(OperationAudit) },
       { path: "users", Component: withSuspense(UserManagement) },
       { path: "settings", Component: withSuspense(SystemSettings) },

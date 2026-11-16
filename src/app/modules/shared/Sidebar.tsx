@@ -144,7 +144,6 @@ const NAV_CATEGORIES: NavCategory[] = [
       { key: "nav.devGuide", path: "/dev-guide", icon: BookOpen },
       { key: "nav.theme", path: "/theme", icon: Paintbrush },
       { key: "nav.terminal", path: "/terminal", icon: Terminal },
-      { key: "nav.ide", path: "/ide", icon: Monitor },
       { key: "nav.refactoring", path: "/refactoring", icon: GitBranch },
       { key: "nav.architecture", path: "/architecture", icon: Layers },
     ],

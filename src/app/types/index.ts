@@ -76,7 +76,7 @@ export type {
 export type {
   ChatMessage, CommandCategory, BeforeInstallPromptEvent,
   KeyboardShortcut, CommandPaletteItem, RegisteredShortcut,
-  TerminalHistoryEntry, IDEPanelTab,
+  TerminalHistoryEntry,
   SWStatus, CacheEntry, PWAState,
 } from "./ui-types";
 

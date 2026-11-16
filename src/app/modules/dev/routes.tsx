@@ -50,9 +50,6 @@ const ThemeCustomizer = lazy(() =>
 const CLITerminal = lazy(() =>
   import("./CLITerminal").then((m) => ({ default: m.CLITerminal })),
 );
-const IDEPanel = lazy(() =>
-  import("./IDEPanel").then((m) => ({ default: m.IDEPanel })),
-);
 const RefactoringReport = lazy(() =>
   import("./RefactoringReport").then((m) => ({ default: m.RefactoringReport })),
 );
@@ -65,7 +62,6 @@ export const devRoutes = [
   { path: "dev-guide", Component: withSuspense(DevGuidePage) },
   { path: "theme", Component: withSuspense(ThemeCustomizer) },
   { path: "terminal", Component: withSuspense(CLITerminal) },
-  { path: "ide", Component: withSuspense(IDEPanel) },
   { path: "refactoring", Component: withSuspense(RefactoringReport) },
   { path: "architecture", Component: withSuspense(ArchitectureAudit) },
 ];

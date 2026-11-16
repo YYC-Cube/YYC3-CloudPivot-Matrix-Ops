@@ -36,10 +36,10 @@ export type PageCategory =
   | "monitoring"
   | "operations"
   | "ai-family"
-  | "ide"
   | "settings"
   | "data"
-  | "system";
+  | "system"
+  | "ide";  // 开发工具类（ide-panel 已拆除，cli-terminal 等沿用）
 
 export interface PageLayout {
   showHeader: boolean;
@@ -517,41 +517,7 @@ export const PAGE_REGISTRY: Record<string, PageConfig> = {
     version: "1.0.0",
   },
 
-  // ── IDE 类 ──
-  "ide-panel": {
-    id: "ide-panel",
-    path: "/ide",
-    title: "IDE 面板",
-    titleEn: "IDE Panel",
-    description: "集成开发环境、代码编辑、终端",
-    icon: "Code" as unknown as ElementType,
-    category: "ide",
-    layout: {
-      showHeader: false,
-      showSidebar: false,
-      showBottomNav: false,
-      maxWidth: "full",
-      padding: "none",
-      scrollable: false,
-    },
-    header: {
-      showTitle: false,
-      showBackButton: false,
-      showActions: false,
-      sticky: false,
-      fontSize: "md",
-    },
-    sidebar: {
-      showInNav: true,
-      navOrder: 30,
-      navGroup: "开发",
-    },
-    permissions: ["admin", "developer"],
-    storageKeys: ["yyc3-ide-layout", "yyc3-ide-settings"],
-    editable: true,
-    version: "1.0.0",
-  },
-
+  // ── IDE 类（cli-terminal 等开发工具；ide-panel 已随 IDE 模块拆除——落档 36）──
   "cli-terminal": {
     id: "cli-terminal",
     path: "/terminal",

@@ -68,9 +68,6 @@ export interface TerminalHistoryEntry {
   status: "success" | "error" | "info";
 }
 
-/** IDE 面板 Tab */
-export type IDEPanelTab = "monitor" | "alerts" | "operations" | "logs";
-
 /** Service Worker 状态 */
 export type SWStatus = "idle" | "installing" | "waiting" | "active" | "error" | "unsupported";
 

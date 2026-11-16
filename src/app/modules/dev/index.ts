@@ -14,7 +14,7 @@
  * - 设计系统 (Design System)
  * - 主题定制 (Theme Customizer)
  * - CLI 终端 (CLI Terminal)
- * - IDE 面板 (IDE Panel)
+ * - IDE 面板（已拆除——落档 36）
  * - 重构报告 (Refactoring Report)
  * - 架构审计 (Architecture Audit)
  * - 开发指南 (Dev Guide)
@@ -29,15 +29,9 @@ export { DevGuidePage } from './DevGuidePage';
 export { ThemeCustomizer } from './ThemeCustomizer';
 export { CLITerminal } from './CLITerminal';
 export { IntegratedTerminal } from './IntegratedTerminal';
-export { IDEPanel } from './IDEPanel';
 export { RefactoringReport } from './RefactoringReport';
 export { ArchitectureAudit } from './ArchitectureAudit';
 
-// IDE 子模块
-export { IDELayout } from './ide/IDELayout';
-export { IDETopBar } from './ide/IDETopBar';
-export { IDEStatusBar } from './ide/IDEStatusBar';
-export { IDESettingsPanel } from './ide/IDESettingsPanel';
 
 // Hooks
 export { useTerminal } from './hooks/useTerminal';

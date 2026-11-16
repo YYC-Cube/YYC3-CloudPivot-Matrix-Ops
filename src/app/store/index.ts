@@ -28,7 +28,6 @@ export { useFollowUpSlice } from './slices/follow-up-slice';
 export { useFamilyMemberSlice, useFamilyMessageSlice, useFamilySettingsSlice } from '../modules/ai-family/store';
 export { useProviderSlice } from './slices/provider-slice';
 export { useAISuggestionSlice } from './slices/ai-suggestion-slice';
-export { useIDESettingsSlice } from './slices/ide-settings-slice';
 export { useUIPrefsSlice } from './slices/ui-prefs-slice';
 export type { AlertThresholds } from './slices/ui-prefs-slice';
 export { useOfflineSlice } from './slices/offline-slice';

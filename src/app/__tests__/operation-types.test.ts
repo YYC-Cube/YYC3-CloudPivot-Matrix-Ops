@@ -18,8 +18,6 @@ import type {
   OperationTemplateItem,
   OperationLogEntry,
   LogFilterType,
-  TerminalHistoryEntry,
-  IDEPanelTab,
 } from "../types";
 
 describe("操作中心类型定义 (第 11 类)", () => {
@@ -103,25 +101,3 @@ describe("操作中心类型定义 (第 11 类)", () => {
   });
 });
 
-describe("IDE 终端类型定义 (第 12 类)", () => {
-  it("TerminalHistoryEntry 应有完整字段", () => {
-    const entry: TerminalHistoryEntry = {
-      id: "cmd-1",
-      input: "yyc3 status",
-      output: "OK",
-      timestamp: Date.now(),
-      status: "success",
-    };
-    expect(entry.status).toBe("success");
-  });
-
-  it("TerminalHistoryEntry status 应支持 3 种", () => {
-    const statuses: TerminalHistoryEntry["status"][] = ["success", "error", "info"];
-    expect(statuses.length).toBe(3);
-  });
-
-  it("IDEPanelTab 应支持 4 种", () => {
-    const tabs: IDEPanelTab[] = ["monitor", "alerts", "operations", "logs"];
-    expect(tabs.length).toBe(4);
-  });
-});
