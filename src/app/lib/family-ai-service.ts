@@ -372,10 +372,12 @@ async function callRealLLM(
         model: model.model,
         messages,
         temperature: config.temperature ?? 0.8,
-        max_tokens: config.maxTokens ?? 500,
+        // 2048：为推理型模型（reasoning 链，DGX nemotron-3.5 实证 500 不足）留头部空间
+        max_tokens: config.maxTokens ?? 2048,
         stream: false,
       }),
-      signal: AbortSignal.timeout(30000),
+      // 60s：DGX 级大模型推理实测可达 30s+（落档 39）
+      signal: AbortSignal.timeout(60000),
     });
 
     if (!response.ok) {
@@ -388,12 +390,22 @@ async function callRealLLM(
     }
 
     const data = await response.json() as {
-      choices?: Array<{ message?: { content?: string } }>;
+      choices?: Array<{
+        message?: { content?: string; reasoning?: string };
+        finish_reason?: string;
+      }>;
     };
-    const text = data.choices?.[0]?.message?.content?.trim() || "";
-    return text
-      ? { text, success: true }
-      : { text: "", success: false, error: "模型返回了空内容" };
+    const choice = data.choices?.[0];
+    const text = choice?.message?.content?.trim() || "";
+    if (text) { return { text, success: true }; }
+    // 推理型模型兼容（落档 39 · DGX nemotron-3.5 实证）：content 为空而
+    // reasoning 链有实质内容时，取其末段（结论通常在尾部）作为回复
+    const reasoning = choice?.message?.reasoning?.trim() || "";
+    if (reasoning) {
+      const tail = reasoning.length > 400 ? reasoning.slice(-400) : reasoning;
+      return { text: tail, success: true };
+    }
+    return { text: "", success: false, error: "模型返回了空内容" };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     return {
