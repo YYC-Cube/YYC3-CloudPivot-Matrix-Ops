@@ -15,7 +15,10 @@ const IS_TEST = typeof process !== "undefined" && process.env.NODE_ENV === "test
 // 批5修复：保留 BASE_URL 原值——Electron file:// 下 BASE_URL="./" 若吞成 ""，
 // src 会变成绝对路径 /yyc3-icons/... → file:// 404 裂图（Web http 源不受影响）。
 // "./yyc3-icons/..." 相对文档路径在 hash 路由下两端均正确解析。
-const BASE = (typeof import.meta !== "undefined" && (import.meta as unknown as Record<string, Record<string, string>>).env?.BASE_URL) || "";
+// 落档42审计根修：仅剥尾部斜杠——dev/Pages 构建下 BASE_URL="/" 时原拼接产出
+// "//yyc3-icons/..." 协议相对 URL → "yyc3-icons" 被当主机名 → ERR_NAME_NOT_RESOLVED；
+// "./"→"." 与 "/"→"" 两条链语义均保持不变。
+const BASE = ((typeof import.meta !== "undefined" && (import.meta as unknown as Record<string, Record<string, string>>).env?.BASE_URL) || "").replace(/\/+$/, "");
 
 const logo16 = IS_TEST ? "/placeholder-logo.png" : `${BASE}/yyc3-icons/macOS/16.png`;
 const logo32 = IS_TEST ? "/placeholder-logo.png" : `${BASE}/yyc3-icons/macOS/32.png`;
