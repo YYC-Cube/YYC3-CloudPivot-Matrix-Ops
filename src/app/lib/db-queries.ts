@@ -9,7 +9,6 @@
  * @tags: [lib]
  */
 
-import { supabase } from "./supabaseClient";
 
 // ============================================================
 // 类型定义
@@ -248,7 +247,6 @@ export function importDbData(jsonStr: string): boolean {
 
 /** 获取活跃模型列表 */
 export async function getActiveModels(): Promise<{ data: Model[]; error: null }> {
-  void supabase; // placeholder for future Supabase integration
   return { data: [...getModels()], error: null };
 }
 

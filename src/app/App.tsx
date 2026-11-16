@@ -28,7 +28,7 @@ import { router } from "./routes";
 import { Login } from "./modules/shared/Login";
 import { ErrorBoundary } from "./modules/shared/ErrorBoundary";
 import { installGlobalErrorListeners } from "./lib/error-handler";
-import { supabase, ghostSignIn, isGhostMode } from "./lib/supabaseClient";
+import { ghostSignIn, isGhostMode, getLocalSession, signOutLocal } from "./lib/mock-auth";
 import { useYYC3Head } from "./hooks/useYYC3Head";
 import { useI18nProvider, I18nContext } from "./hooks/useI18n";
 import { AuthContext } from "./lib/authContext";
@@ -36,7 +36,7 @@ import { isFigmaPlatformError } from "./lib/figma-error-filter";
 import { FamilyDataAccessor } from "./modules/ai-family/lib/family-data-accessor";
 import { useFamilyMemberSlice } from "./store";
 import { refreshFromStore } from "./modules/ai-family/components/shared";
-import type { UserRole, AppSession } from "./types";
+import type { UserRole } from "./types";
 
 // ────────────────────────────────────────────────────────────────
 // RF-003: Figma 平台 iframe 通信错误静默拦截
@@ -129,39 +129,21 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    // 检查现有会话（带超时保护，防止 iframe 沙盒阻塞）
-    const timeout = setTimeout(() => {
-      // 超时兜底：3 秒内未完成认证检查，默认未登录
-      setAuthenticated((prev) => (prev === null ? false : prev));
-    }, 3000);
-
-    supabase.auth
-      .getSession()
-      .then(({ data }) => {
-        clearTimeout(timeout);
-        setAuthenticated(!!data.session);
-        if (data.session) {
-          const session = data.session as AppSession;
-          setUserEmail(session.user?.email ?? "admin@cloudpivot.local");
-          setUserRole(session.user?.role ?? "admin");
-          setIsGhost(isGhostMode());
-        }
-      })
-      .catch(() => {
-        clearTimeout(timeout);
-        setAuthenticated(false);
-      });
-
-    return () => clearTimeout(timeout);
+    // P2 解耦（落档 31）：本地会话检查改为同步读取（原 supabase 异步 + 3s 超时兜底不再需要）
+    const session = getLocalSession();
+    setAuthenticated(!!session);
+    if (session) {
+      setUserEmail(session.user?.email ?? "ghost@yyc3.local");
+      setUserRole(session.user?.role ?? "admin");
+      setIsGhost(isGhostMode());
+    }
   }, []);
 
   const handleLoginSuccess = useCallback(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      const session = data.session as AppSession | null;
-      setUserEmail(session?.user?.email ?? "admin@cloudpivot.local");
-      setUserRole(session?.user?.role ?? "admin");
-      setIsGhost(isGhostMode());
-    });
+    const session = getLocalSession();
+    setUserEmail(session?.user?.email ?? "ghost@yyc3.local");
+    setUserRole(session?.user?.role ?? "admin");
+    setIsGhost(isGhostMode());
     setAuthenticated(true);
   }, []);
 
@@ -176,7 +158,7 @@ export default function App() {
   }, []);
 
   const handleLogout = useCallback(async () => {
-    await supabase.auth.signOut();
+    signOutLocal();
     setAuthenticated(false);
     setUserEmail("");
     setUserRole("");

@@ -59,7 +59,7 @@ import { useLocation, useNavigate } from "react-router";
 import { getNavVisibilitySnapshot, subscribePageConfigs } from "../../config";
 import { useI18n } from "../../hooks/useI18n";
 import { useAlerts } from "../../stores/global-store";
-import { isGhostMode } from "../../lib/supabaseClient";
+import { isGhostMode } from "../../lib/mock-auth";
 import { useSettingsSSOT } from "../../store/slices/settings-ssot-slice";
 import type { ConnectionState } from "../../types";
 import { ConnectionStatus } from "./ConnectionStatus";

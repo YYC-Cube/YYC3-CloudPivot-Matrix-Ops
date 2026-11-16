@@ -117,7 +117,7 @@ const TEST_FILES: TestFileInfo[] = [
   { file: "error-handler.test.ts", type: "unit", environment: "node", status: "complete", coverage: "错误分类+日志+trySafe" },
   { file: "network-utils.test.ts", type: "unit", environment: "node", status: "complete", coverage: "配置 CRUD+URL+连接测试" },
   { file: "backgroundSync.test.ts", type: "unit", environment: "node", status: "complete", coverage: "队列增删+统计+重试" },
-  { file: "supabaseClient.test.ts", type: "unit", environment: "node", status: "complete", coverage: "Mock 登录/登出+会话" },
+  { file: "mock-auth.test 覆盖于 Login/App 用例", type: "unit", environment: "node", status: "complete", coverage: "Ghost 登录/登出+会话（原 supabaseClient.test 已随 P2 退役）" },
   { file: "db-queries.test.ts", type: "unit", environment: "node", status: "complete", coverage: "Mock 数据格式+查询" },
   { file: "figma-error-filter.test.ts", type: "unit", environment: "node", status: "complete", coverage: "RF-003 错误判定函数" },
   { file: "yyc3-storage.test.ts", type: "unit", environment: "node", status: "complete", coverage: "IndexedDB 工具封装" },
@@ -211,7 +211,7 @@ const FEATURE_CHECKLIST: FeatureChecklist[] = [
   {
     category: "认证 (Authentication)",
     items: [
-      { name: "Mock Supabase Client", status: "complete", detail: "admin/dev 双角色 + Ghost 幽灵模式", path: "src/app/lib/supabaseClient.ts" },
+      { name: "Mock 认证（原 Supabase Client）", status: "complete", detail: "P2 解耦：ghost/会话逻辑迁 mock-auth.ts，supabase 双客户端已删（落档 31-P2）", path: "src/app/lib/mock-auth.ts" },
       { name: "AuthContext", status: "complete", detail: "logout/userEmail/userRole/isGhost", path: "src/app/lib/authContext.ts" },
       { name: "Login 页面", status: "complete", detail: "邮箱密码登录 + Ghost 快速登录 + 加载/错误状态", path: "src/app/components/Login.tsx" },
     ],
@@ -425,7 +425,7 @@ export function ArchitectureAudit() {
                 { layer: "状态层 (State)", color: "#4ade80", items: "React useState/useReducer → 29 Custom Hooks → Context (Auth/WebSocket/View/I18n)" },
                 { layer: "数据层 (Data)", color: "#fbbf24", items: "10 createLocalStore → localStorage → IndexedDB (yyc3-storage) → BroadcastChannel 同步" },
                 { layer: "配置层 (Config)", color: "#f97316", items: "env-config (31 vars) → api-config (8 endpoints) → import.meta.env → localStorage" },
-                { layer: "基础设施 (Infra)", color: "#ef4444", items: "ErrorBoundary → error-handler → figma-error-filter → backgroundSync → supabaseClient (Mock)" },
+                { layer: "基础设施 (Infra)", color: "#ef4444", items: "ErrorBoundary → error-handler → figma-error-filter → backgroundSync → mock-auth (Ghost)" },
               ].map(l => (
                 <div key={l.layer} className="flex items-start gap-3">
                   <div className="w-3 h-3 rounded-full mt-1 shrink-0" style={{ backgroundColor: l.color }} />
