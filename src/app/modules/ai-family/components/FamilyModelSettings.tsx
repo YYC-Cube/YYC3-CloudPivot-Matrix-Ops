@@ -78,6 +78,7 @@ function MemberModelCard({
   diagResult,
   providers,
   providersMap,
+  certifiedGroups,
   onChangeModel,
   onTestConnection,
   onSpeak,
@@ -89,6 +90,7 @@ function MemberModelCard({
   diagResult?: DiagResult;
   providers: ProviderDef[];
   providersMap: Record<string, ProviderDef>;
+  certifiedGroups: Array<{ providerId: string; providerLabel: string; models: Array<{ id: string; model: string; status: string }> }>;
   onChangeModel: (providerId: string, modelId: string) => void;
   onTestConnection: () => void;
   onSpeak: () => void;
@@ -168,20 +170,23 @@ function MemberModelCard({
               </div>
             </div>
 
-            {/* Model selector */}
+            {/* Model selector — 主控指令（落档 43 §十）：禁止硬编码系列，只显示
+                provider-slice SSOT 中已认证（测通/激活）的模型，按服务商分组选择 */}
             <div>
-              <div className="text-white/40 mb-2" style={{ fontSize: "0.65rem" }}>模型选择</div>
+              <div className="text-white/40 mb-2" style={{ fontSize: "0.65rem" }}>
+                模型选择 <span className="text-white/20">（已认证模型 · 与「系统设置 → 模型管理」同源同步）</span>
+              </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {providers.map((p: ProviderDef) => (
-                  <div key={p.id}>
-                    <div className="text-white/30 mb-1" style={{ fontSize: "0.6rem" }}>{p.name}</div>
+                {certifiedGroups.length > 0 ? certifiedGroups.map((grp) => (
+                  <div key={grp.providerId}>
+                    <div className="text-white/30 mb-1" style={{ fontSize: "0.6rem" }}>{grp.providerLabel}</div>
                     <div className="space-y-1">
-                      {p.models.map((m: { id: string; name: string; desc: string; ctx?: string }) => {
-                        const isActive = assignment.providerId === p.id && assignment.modelId === m.id;
+                      {grp.models.map((m) => {
+                        const isActive = assignment.providerId === grp.providerId && assignment.modelId === m.model;
                         return (
                           <button
-                            key={`${p.id}-${m.id}`}
-                            onClick={() => onChangeModel(p.id, m.id)}
+                            key={`${grp.providerId}-${m.id}`}
+                            onClick={() => onChangeModel(grp.providerId, m.model)}
                             className={`w-full text-left px-2 py-1.5 rounded transition-all ${isActive
                               ? "bg-[rgba(0,212,255,0.1)] border border-[rgba(0,212,255,0.3)]"
                               : "bg-white/[0.02] border border-transparent hover:bg-white/[0.05] hover:border-white/[0.08]"
@@ -190,18 +195,22 @@ function MemberModelCard({
                             <div className="flex items-center gap-1.5">
                               {isActive && <Check className="w-3 h-3 text-cyan-400" />}
                               <span className={`${isActive ? "text-cyan-300" : "text-white/60"}`} style={{ fontSize: "0.7rem" }}>
-                                {m.name}
+                                {m.model}
                               </span>
-                              {m.ctx && (
-                                <span className="text-white/20 ml-auto" style={{ fontSize: "0.55rem" }}>{m.ctx}</span>
-                              )}
+                              <span className="text-white/20 ml-auto" style={{ fontSize: "0.55rem" }}>
+                                {m.status === "active" ? "测通" : "已激活"}
+                              </span>
                             </div>
                           </button>
                         );
                       })}
                     </div>
                   </div>
-                ))}
+                )) : (
+                  <div className="col-span-full px-3 py-3 rounded bg-white/[0.02] text-white/30" style={{ fontSize: "0.68rem" }}>
+                    暂无已认证模型——请前往「系统设置 → 模型管理」添加并测通后此处即可选（本列表与全局设置同源实时同步，不支持在此编辑）
+                  </div>
+                )}
               </div>
             </div>
 
@@ -371,6 +380,19 @@ export function FamilyModelSettings() {
     }));
     return [...mapped].sort((a, b) => (a.id === "ollama" ? -1 : b.id === "ollama" ? 1 : 0));
   }, [providerSlice.providers]);
+
+  /** 已认证模型分组（主控指令：与系统设置 SSOT 同源——仅 configuredModels 中
+   *  测通(active)/已激活的模型进入家人可选列表，预设系列不再硬编码渲染） */
+  const certifiedGroups = useMemo(() => {
+    const byProvider = new Map<string, { providerId: string; providerLabel: string; models: Array<{ id: string; model: string; status: string }> }>();
+    for (const m of providerSlice.configuredModels) {
+      if (m.status !== "active") { continue; }
+      const grp = byProvider.get(m.providerId) || { providerId: m.providerId, providerLabel: m.providerLabel, models: [] };
+      grp.models.push({ id: m.id, model: m.model, status: m.status });
+      byProvider.set(m.providerId, grp);
+    }
+    return [...byProvider.values()];
+  }, [providerSlice.configuredModels]);
 
   const PROVIDERS_MAP = useMemo(() =>
     Object.fromEntries(PROVIDERS.map(p => [p.id, p])),
@@ -621,6 +643,7 @@ export function FamilyModelSettings() {
                   diagResult={diagnostics[member.id]}
                   providers={PROVIDERS}
                   providersMap={PROVIDERS_MAP}
+                  certifiedGroups={certifiedGroups}
                   onChangeModel={(pid, mid) => handleChangeModel(member.id, pid, mid)}
                   onTestConnection={() => handleTestConnection(member.id)}
                   onSpeak={() => handleSpeak(member, profile)}

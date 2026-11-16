@@ -9,6 +9,8 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import type { ChatMessage } from "../types";
 import { PROMPT_PRESETS } from "../constants";
 import { useSettingsSSOT } from "../../../store/slices/settings-ssot-slice";
+import { useProviderSlice } from "../../../store/slices/provider-slice";
+import { callConfiguredModel } from "../../../lib/family-ai-service";
 
 function generateMockResponse(userMsg: string): string {
   const lower = userMsg.toLowerCase();
@@ -102,10 +104,37 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
         await new Promise((r) => setTimeout(r, 800 + Math.random() * 1200));
       }
 
-      // 演示模式关闭：不返回编造的集群数据，如实引导配置真实模型服务
-      const response = demoMode
-        ? generateMockResponse(content)
-        : "演示模式已关闭：AI 智能助理未接入真实模型服务。\n\n请前往「系统设置 → 模型管理」配置本地 Ollama 或云端 API Key；或在「系统设置 → 显示与界面」开启演示模式体验模拟回复。";
+      let response: string;
+      // 真实路径（落档 43 §十）：统一数据源 = provider-slice getActiveModel()，
+      // 调用层 = callConfiguredModel（与 Family 群聊/单聊同链路）。demoMode
+      // 开启且无激活模型时才走本地模拟；无激活模型如实引导，不编造回复。
+      const activeModel = useProviderSlice.getState().getActiveModel();
+      if (activeModel) {
+        const history = messages
+          .filter((m) => m.id !== "welcome-new" && m.id !== "welcome")
+          .slice(-10)
+          .map((m) => ({
+            role: (m.role === "user" ? "user" : "assistant") as "user" | "assistant",
+            content: m.content,
+          }));
+        const result = await callConfiguredModel(
+          systemPrompt,
+          [
+            { role: "system", content: systemPrompt },
+            ...history,
+            { role: "user", content: content.trim() },
+          ],
+          activeModel,
+          { temperature: 0.7, maxTokens: 2048 },
+        );
+        response = result.success
+          ? result.text
+          : `模型调用失败（${activeModel.model}）：${result.error ?? "未知错误"}\n\n可在「系统设置 → 模型管理」测试连接或切换激活模型。`;
+      } else {
+        response = demoMode
+          ? generateMockResponse(content)
+          : "暂无激活模型：AI 智能助理已接入统一模型数据源，请前往「系统设置 → 模型管理」添加模型并激活（或点服务商详情内系列快捷添加）。";
+      }
       const assistantMsg: ChatMessage = {
         id: `msg-${Date.now()}-resp`,
         role: "assistant",
@@ -117,7 +146,7 @@ export function useChat(options: UseChatOptions = {}): UseChatReturn {
       setIsTyping(false);
       onResponse?.(assistantMsg);
     },
-    [demoMode, onResponse]
+    [demoMode, onResponse, messages, systemPrompt]
   );
 
   const clearChat = useCallback(() => {

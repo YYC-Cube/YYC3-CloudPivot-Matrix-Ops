@@ -154,7 +154,7 @@ export interface ProviderSlice {
   fetchOllamaModels: (baseUrl?: string) => Promise<OllamaModel[]>;
 
   // Preset
-  presetModels: () => void;
+  presetModels: () => { added: number; skipped: string[] };
 
   // Import/Export
   exportConfig: () => string;
@@ -459,53 +459,43 @@ export const useProviderSlice = create<ProviderSlice>()(
       },
 
       presetModels: () => {
-        const existing = get().configuredModels;
-        const existingKeys = new Set(existing.map((m) => `${m.providerId}:${m.model}`));
+        // 落档 43 §十评估处置：原实现硬编码 zhipu/deepseek 系列 + 从 VITE_ env 读
+        // key（客户端包必然为空，产出恒"未检测"死模型）——与统一数据源纪律冲突。
+        // 现改为：遍历 providers 注册表（含自定义），凡「有预设系列且 Key 就绪
+        // （provider.apiKey 或无需 Key）」的服务商，一键补齐其未配置的系列模型，
+        // 状态 unchecked（待测试）；无 Key 服务商跳过并在返回值中报告。
+        const { providers, configuredModels } = get();
+        const existingKeys = new Set(configuredModels.map((m) => `${m.providerId}:${m.model}`));
         const presets: ConfiguredModel[] = [];
+        const skipped: string[] = [];
 
-        const zhipuApiKey = env("ZHIPU_API_KEY");
-        const deepseekApiKey = env("DEEPSEEK_API_KEY");
-        const zhipuBaseUrl = BUILTIN_PROVIDERS.find(p => p.id === "zhipu")?.baseUrl || "https://open.bigmodel.cn/api/coding/paas/v4";
-        const deepseekBaseUrl = BUILTIN_PROVIDERS.find(p => p.id === "deepseek")?.baseUrl || "https://api.deepseek.com/v1";
-
-        const zhipuModels = ["glm-4-flash", "glm-4-plus", "glm-5", "glm-5-turbo"];
-        const deepseekModels = ["deepseek-chat", "deepseek-4", "deepseek-4-flash"];
-
-        for (const model of zhipuModels) {
-          if (!existingKeys.has(`zhipu:${model}`)) {
-            presets.push({
-              id: `preset-zhipu-${model}-${Date.now()}`,
-              providerId: "zhipu",
-              providerLabel: "Z.ai (智谱)",
-              model,
-              apiKey: zhipuApiKey,
-              baseUrl: zhipuBaseUrl,
-              createdAt: Date.now(),
-              lastUsed: null,
-              status: "unchecked",
-            });
+        for (const p of providers) {
+          const keyReady = !p.requiresApiKey || !!p.apiKey;
+          if (!keyReady) {
+            skipped.push(p.label);
+            continue;
           }
-        }
-
-        for (const model of deepseekModels) {
-          if (!existingKeys.has(`deepseek:${model}`)) {
-            presets.push({
-              id: `preset-deepseek-${model}-${Date.now()}`,
-              providerId: "deepseek",
-              providerLabel: "DeepSeek",
-              model,
-              apiKey: deepseekApiKey,
-              baseUrl: deepseekBaseUrl,
-              createdAt: Date.now(),
-              lastUsed: null,
-              status: "unchecked",
-            });
+          for (const modelName of p.models) {
+            if (!existingKeys.has(`${p.id}:${modelName}`)) {
+              presets.push({
+                id: `preset-${p.id}-${modelName}-${Date.now()}`,
+                providerId: p.id,
+                providerLabel: p.label,
+                model: modelName,
+                apiKey: p.apiKey || "",
+                baseUrl: p.baseUrl,
+                createdAt: Date.now(),
+                lastUsed: null,
+                status: "unchecked",
+              });
+            }
           }
         }
 
         if (presets.length > 0) {
           set((s) => ({ configuredModels: [...s.configuredModels, ...presets] }));
         }
+        return { added: presets.length, skipped };
       },
     }),
     {

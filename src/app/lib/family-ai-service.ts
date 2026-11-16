@@ -359,6 +359,38 @@ async function callRealLLM(
       ...historyMsgs,
       { role: "user" as const, content: userMessage },
     ];
+    return await callConfiguredModel(systemPrompt, messages, model, {
+      temperature: config.temperature,
+      maxTokens: config.maxTokens,
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return {
+      text: "",
+      success: false,
+      error: `无法连接模型服务（${model.baseUrl}）：${msg}`,
+    };
+  }
+}
+
+/** 供外链 import 防未用告警（callConfiguredModel 实际由此触达） */
+export interface ConfiguredModelCallOptions {
+  temperature?: number;
+  maxTokens?: number;
+}
+
+/**
+ * 统一模型调用层（落档 43 §十）：provider-slice SSOT 的 ConfiguredModel → OpenAI 兼容
+ * chat/completions（ollama 走 getOllamaChatUrl 原生）。全站消费方（Family 群聊/单聊、
+ * AI 智能助理浮窗）一律经此函数，禁止各自直连——模型数据可测试、可使用、不可散接。
+ */
+export async function callConfiguredModel(
+  _systemPrompt: string,
+  messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
+  model: ConfiguredModel,
+  opts: ConfiguredModelCallOptions = {},
+): Promise<RealCallResult> {
+  try {
 
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (model.apiKey) {
@@ -371,9 +403,9 @@ async function callRealLLM(
       body: JSON.stringify({
         model: model.model,
         messages,
-        temperature: config.temperature ?? 0.8,
+        temperature: opts.temperature ?? 0.8,
         // 2048：为推理型模型（reasoning 链，DGX nemotron-3.5 实证 500 不足）留头部空间
-        max_tokens: config.maxTokens ?? 2048,
+        max_tokens: opts.maxTokens ?? 2048,
         stream: false,
       }),
       // 60s：DGX 级大模型推理实测可达 30s+（落档 39）

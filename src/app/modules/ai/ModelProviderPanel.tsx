@@ -26,6 +26,7 @@ import {
   Upload,
 } from "lucide-react";
 import React, { useContext, useState } from "react";
+import { toast } from "sonner";
 import { useI18n } from "../../hooks/useI18n";
 import { useModelProvider } from "../../hooks/useModelProvider";
 import { ViewContext } from "../../lib/view-context";
@@ -431,7 +432,12 @@ export function ModelProviderPanel() {
             {t("modelProvider.configuredModels")}
           </h3>
           <button
-            onClick={() => presetModels()}
+            onClick={() => {
+              const r = presetModels();
+              if (r.added > 0) { toast.success(`已预设 ${r.added} 个模型（未检测态，请测试后使用）`); }
+              else if (r.skipped.length > 0) { toast.info(`无可预设项——以下服务商缺 API Key：${r.skipped.join("、")}`); }
+              else { toast.info("系列模型均已配置"); }
+            }}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(0,212,255,0.08)] border border-[rgba(0,212,255,0.15)] text-cyan-300 hover:bg-[rgba(0,212,255,0.15)] transition-all"
             style={{ fontSize: "0.7rem" }}
           >
