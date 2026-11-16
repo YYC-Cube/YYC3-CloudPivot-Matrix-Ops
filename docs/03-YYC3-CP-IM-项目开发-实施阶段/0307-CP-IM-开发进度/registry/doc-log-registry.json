@@ -608,6 +608,24 @@
    "related_docs": [
     "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/42-全局深度审核-43路由矩阵-视效统一-数据架构全景-20261117.md"
    ]
+  },
+  {
+   "trace_id": "TRC-20261117003",
+   "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/44-模型路由彻底统一-选择即用-格式分流-反代与只读纪律-20261117.md",
+   "action": "create",
+   "timestamp": "2026-11-17T04:26:31+08:00",
+   "version": "v1.0.0",
+   "checksum": "850239a170024f6f",
+   "author": "YYC³ Team",
+   "changes": [
+    {
+     "field": "content",
+     "summary": "六图三根因收口：浮窗选择即用/API格式分流/CORS白名单反代/高级设置/群聊降级/只读纪律（4f0e99d）"
+    }
+   ],
+   "related_docs": [
+    "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/43-i18n引擎换芯-NAS统一网关接入-P6外部输入处置-20261117.md"
+   ]
   }
  ]
 }
