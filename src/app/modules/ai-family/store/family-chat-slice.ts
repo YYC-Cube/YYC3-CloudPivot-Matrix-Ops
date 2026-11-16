@@ -12,6 +12,14 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+/** 消息富内容分段（落档 48 气泡对齐：交互气泡-设计文档 §4.1 七层结构简化版） */
+export interface ChatMessagePart {
+  type: "text" | "code";
+  text: string;
+  /** code 段语言标注（```lang） */
+  lang?: string;
+}
+
 export interface ChatMessage {
   id: string;
   sender: string;
@@ -20,6 +28,12 @@ export interface ChatMessage {
   type: "text" | "system" | "thinking";
   /** llm=真实模型 agent/mock=演示引擎 error=诚实离线提示 */
   source?: "llm" | "agent" | "mock" | "error";
+  /** 生命周期（§4.5 状态机）：pending 发送中 → complete 完成；error 失败可重试 */
+  lifecycle?: "pending" | "streaming" | "complete" | "error";
+  /** 端到端耗时（真实 LLM 往返） */
+  latencyMs?: number;
+  /** 富内容分段（代码块等）；缺省时按纯文本渲染 */
+  parts?: ChatMessagePart[];
 }
 
 // 仅保留系统欢迎语（UI 提示，非伪造对话）；历史假消息 m1/m2 由 migrate 清除
@@ -34,7 +48,9 @@ const MAX_MESSAGES_PER_CHANNEL = 200;
 
 interface FamilyChatSlice {
   channels: Record<string, ChatMessage[]>;
-  addMessage: (channelId: string, message: Omit<ChatMessage, "id">) => void;
+  addMessage: (channelId: string, message: Omit<ChatMessage, "id">) => string;
+  /** 更新已发消息（生命周期/富内容/延迟）——落档 48 气泡状态机 */
+  updateMessage: (channelId: string, id: string, patch: Partial<Omit<ChatMessage, "id" | "sender">>) => void;
   clearChannel: (channelId: string) => void;
   getChannelMessages: (channelId: string) => ChatMessage[];
 }
@@ -50,14 +66,28 @@ export const useFamilyChatSlice = create<FamilyChatSlice>()(
     (set, get) => ({
       channels: { "family-group": SEED_GROUP_MESSAGES },
 
-      addMessage: (channelId, message) =>
+      addMessage: (channelId, message) => {
+        const newId = `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
         set((s) => {
           const existing = s.channels[channelId] || [];
           const updated = trimMessages([
             ...existing,
-            { ...message, id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}` },
+            { ...message, id: newId },
           ]);
           return { channels: { ...s.channels, [channelId]: updated } };
+        });
+        return newId;
+      },
+
+      updateMessage: (channelId, id, patch) =>
+        set((s) => {
+          const existing = s.channels[channelId] || [];
+          return {
+            channels: {
+              ...s.channels,
+              [channelId]: existing.map((m) => (m.id === id ? { ...m, ...patch } : m)),
+            },
+          };
         }),
 
       clearChannel: (channelId) =>

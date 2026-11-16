@@ -92,6 +92,20 @@ vi.mock("../store/slices/settings-ssot-slice", () => {
   return { useSettingsSSOT: hook };
 });
 
+// 落档 48 测试卫生：组件挂载会真实连 WS（undici dispatchEvent 与 jsdom Event 类型冲突
+// 产生 unhandled error）——测试环境直接 mock 数据层
+vi.mock("../hooks/useWebSocketData", () => ({
+  useWebSocketData: () => ({
+    connectionState: "disconnected",
+    isSimulated: true,
+    reconnectCount: 0,
+    lastSyncTime: null,
+    manualReconnect: vi.fn(),
+    liveQPS: 0,
+    liveLatency: 0,
+  }),
+}));
+
 vi.mock("../modules/shared/YYC3LogoSvg", () => ({
   YYC3LogoSvg: () => <div data-testid="yyc3-logo-svg" />,
 }));

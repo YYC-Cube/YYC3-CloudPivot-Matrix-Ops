@@ -15,6 +15,8 @@
  * - v1.1: Ollama 智能闭环 — 端口探测 + 进程推测 + 环境变量修复建议
  */
 
+import { resolveRequestRoot, callConfiguredModel } from "./model-request";
+
 // ============================================================
 // Types
 // ============================================================
@@ -133,7 +135,13 @@ export async function testAIConnection(config: AIConnectionConfig): Promise<Conn
     result.steps.push({ label, status, detail, latencyMs, timestamp: Date.now() });
   };
 
-  const base = config.baseUrl.replace(/\/$/, "");
+  // 落档 48：base 必须走统一路由（同源反代）——原实现直连 baseUrl，
+  // bigmodel 等上游被浏览器 CORS 拦（图一 Load failed / HTTP 0 根因）
+  const { root: base } = resolveRequestRoot({
+    baseUrl: config.baseUrl,
+    proxyUrl: config.proxyUrl,
+    providerId: config.providerId,
+  });
 
   if (config.isLocal) {
     return await testOllamaModelConnection(config, result, addStep);
@@ -166,31 +174,49 @@ export async function testAIConnection(config: AIConnectionConfig): Promise<Conn
     result.steps[result.steps.length - 1] = { ...result.steps[result.steps.length - 1], status: "warn", detail: `预检异常: ${corsRes.errorMsg || `HTTP ${corsRes.status}`}`, latencyMs: corsRes.latencyMs };
   }
 
-  // Step 3: API Key authentication
+  // Step 3: API Key authentication（落档 48：改走统一层实弹——与聊天同链路、
+  // 同 apiFormat 分流、同反代路由；原实现 max_tokens:1 会让上游返回空 content 误判）
   if (config.apiKey) {
     addStep("API Key 认证", "running", `验证 ${config.modelName} 认证...`);
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    headers["Authorization"] = `Bearer ${config.apiKey}`;
-    const directUrl = config.proxyUrl ? `${config.proxyUrl.replace(/\/$/, "")}/${chatEndpoint}` : chatEndpoint;
-    const authRes = await timedFetch(directUrl, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ model: config.modelName, messages: [{ role: "user", content: "ping" }], max_tokens: 1 }),  // 落档 40：modelId 是 cm 内部 ID，API 需要实际模型名
-    }, 45000);  // 落档 39：DGX 级大模型首字延迟可超 12s（与 service 60s 对齐留余量）
-
-    if (authRes.ok) {
-      result.steps[result.steps.length - 1] = { ...result.steps[result.steps.length - 1], status: "pass", detail: `认证成功 · ${config.modelName} 可用 (${authRes.latencyMs}ms)`, latencyMs: authRes.latencyMs };
-    } else if (authRes.status === 401 || authRes.body?.includes("Unauthorized")) {
-      result.steps[result.steps.length - 1] = { ...result.steps[result.steps.length - 1], status: "fail", detail: "API Key 无效或已过期", latencyMs: authRes.latencyMs };
+    const t0 = Date.now();
+    const r = await callConfiguredModel(
+      "",
+      [{ role: "user", content: "ping" }],
+      {
+        id: config.modelId,
+        providerId: config.providerId,
+        providerLabel: config.providerLabel,
+        model: config.modelName,
+        apiKey: config.apiKey,
+        baseUrl: config.baseUrl,
+        proxyUrl: config.proxyUrl,
+        // 智谱 thinking 默认开启会吞光输出：smoke 显式关闭（与 provider-slice 一致）
+        reasoningParamMapping: config.providerId === "zhipu" ? '{"thinking":{"type":"disabled"}}' : undefined,
+        createdAt: 0,
+        lastUsed: null,
+        status: "unchecked",
+      },
+      { maxTokens: 64, temperature: 0 },
+    );
+    const latencyMs = Date.now() - t0;
+    const last = result.steps[result.steps.length - 1];
+    if (r.success) {
+      result.steps[result.steps.length - 1] = { ...last, status: "pass", detail: `认证成功 · ${config.modelName} 可用 (${latencyMs}ms)`, latencyMs };
+    } else if (/finish_reason=length/.test(r.error || "")) {
+      // 服务可达但输出被截断：连通性正常（warn 而非 fail）
+      result.steps[result.steps.length - 1] = { ...last, status: "warn", detail: `服务可达 · 输出被截断（连通性正常，${latencyMs}ms）`, latencyMs };
+    } else if (/HTTP 401|Unauthorized|invalid|令牌/i.test(r.error || "")) {
+      result.steps[result.steps.length - 1] = { ...last, status: "fail", detail: "API Key 无效或已过期", latencyMs };
       result.suggestion = `请检查 ${config.providerLabel} 的 API Key 是否正确`;
-    } else if (authRes.status === 403) {
-      result.steps[result.steps.length - 1] = { ...result.steps[result.steps.length - 1], status: "fail", detail: `API Key 无权访问 ${config.modelName}`, latencyMs: authRes.latencyMs };
-    } else if (authRes.status === 429) {
-      result.steps[result.steps.length - 1] = { ...result.steps[result.steps.length - 1], status: "warn", detail: "API 限流中 (429)，Key 有效但请求过频", latencyMs: authRes.latencyMs };
-    } else if (authRes.errorType === "cors") {
-      result.steps[result.steps.length - 1] = { ...result.steps[result.steps.length - 1], status: "fail", detail: "CORS 阻止认证请求 — 需配置代理", latencyMs: authRes.latencyMs };
+    } else if (/HTTP 403/.test(r.error || "")) {
+      result.steps[result.steps.length - 1] = { ...last, status: "fail", detail: `API Key 无权访问 ${config.modelName}`, latencyMs };
+    } else if (/HTTP 429/.test(r.error || "")) {
+      result.steps[result.steps.length - 1] = { ...last, status: "warn", detail: "API 限流中 (429)，Key 有效但请求过频", latencyMs };
+    } else if (/CORS|Failed to fetch|Load failed|网络不可达/i.test(r.error || "")) {
+      result.steps[result.steps.length - 1] = { ...last, status: "fail", detail: "网络不可达/CORS 阻止 — 请确认 3118 同源反代可用", latencyMs };
+      result.suggestion = "确认本机面板服务(3118)在运行；或为模型配置代理 URL";
     } else {
-      result.steps[result.steps.length - 1] = { ...result.steps[result.steps.length - 1], status: "fail", detail: `HTTP ${authRes.status}: ${(authRes.body || authRes.errorMsg || "").slice(0, 150)}`, latencyMs: authRes.latencyMs };
+      result.steps[result.steps.length - 1] = { ...last, status: "fail", detail: (r.error || "调用失败").slice(0, 200), latencyMs };
     }
   } else {
     addStep("API Key 认证", "skip", "未配置 API Key，跳过认证");
@@ -201,10 +227,14 @@ export async function testAIConnection(config: AIConnectionConfig): Promise<Conn
     addStep("CORS 代理通道", "running", `通过代理 ${config.proxyUrl} 测试...`);
     const proxyHeaders: Record<string, string> = { "Content-Type": "application/json" };
     if (config.apiKey) { proxyHeaders["Authorization"] = `Bearer ${config.apiKey}`; }
-    const proxyRes = await timedFetch(`${config.proxyUrl.replace(/\/$/, "")}/${chatEndpoint}`, {
+    // chatEndpoint 已是 resolveRequestRoot 的结果（可能已含 proxyUrl），避免双拼
+    const proxyUrlFinal = chatEndpoint.startsWith(config.proxyUrl.replace(/\/$/, ""))
+      ? chatEndpoint
+      : `${config.proxyUrl.replace(/\/$/, "")}/${(config.baseUrl || "").replace(/^https?:\/\/[^/]+/, "").replace(/^\//, "")}/chat/completions`;
+    const proxyRes = await timedFetch(proxyUrlFinal, {
       method: "POST",
       headers: proxyHeaders,
-      body: JSON.stringify({ model: config.modelName, messages: [{ role: "user", content: "ping" }], max_tokens: 1 }),  // 落档 40：modelId 是 cm 内部 ID，API 需要实际模型名
+      body: JSON.stringify({ model: config.modelName, messages: [{ role: "user", content: "ping" }], max_tokens: 32 }),  // 落档 48：1 token 会致空内容误判
     }, 45000);  // 落档 39：DGX 级大模型首字延迟可超 12s（与 service 60s 对齐留余量）
     if (proxyRes.ok) {
       result.steps[result.steps.length - 1] = { ...result.steps[result.steps.length - 1], status: "pass", detail: `代理转发成功 (${proxyRes.latencyMs}ms)`, latencyMs: proxyRes.latencyMs };

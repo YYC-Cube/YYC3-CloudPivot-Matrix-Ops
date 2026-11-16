@@ -63,6 +63,18 @@ function getOllamaChatUrl(): string {
 }
 
 /** 统一模型调用：按 apiFormat 分流（openai /chat/completions ｜ anthropic /v1/messages） */
+/** 解析「推理参数映射」JSON → 请求体附加项（落档 48 落地：此前仅存储未注入） */
+function parseReasoningMapping(model: ConfiguredModel): Record<string, unknown> {
+  if (!model.reasoningParamMapping) { return {}; }
+  try {
+    const parsed = JSON.parse(model.reasoningParamMapping) as unknown;
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+  } catch { /* 忽略非法 JSON —— UI 已提示 */ }
+  return {};
+}
+
 export async function callConfiguredModel(
   _systemPrompt: string,
   messages: Array<{ role: "system" | "user" | "assistant"; content: string }>,
@@ -93,6 +105,7 @@ export async function callConfiguredModel(
           "anthropic-dangerous-direct-browser-access": "true",
         },
         body: JSON.stringify({
+          ...parseReasoningMapping(model),
           model: model.model,
           max_tokens: maxTokens,
           ...(sys ? { system: sys } : {}),
@@ -148,6 +161,9 @@ export async function callConfiguredModel(
       method: "POST",
       headers,
       body: JSON.stringify({
+        // 落档 48：推理参数映射注入（如智谱 {"thinking":{"type":"disabled"}}）；
+        // 核心字段后展开，防映射覆盖 model/messages
+        ...parseReasoningMapping(model),
         model: model.model,
         messages,
         temperature,

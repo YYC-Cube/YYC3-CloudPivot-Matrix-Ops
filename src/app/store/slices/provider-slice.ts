@@ -353,20 +353,29 @@ export const useProviderSlice = create<ProviderSlice>()(
             const t0 = Date.now();
             // 落档 47：smoke 用 32 tokens——原 max_tokens:1 会让上游返回空 content
             // （finish_reason=length）而误判失败（图二「测试通过却异常」的另一半根因）
-            const r = await callConfiguredModel("", [{ role: "user", content: "ping" }], model, {
+            // 64 tokens + 智谱 thinking 默认开启会吞掉全部输出 → smoke 显式关闭
+            // （仅测试请求；用户可在高级设置「推理参数映射」为聊天固化该参数）
+            const smokeModel = model.providerId === "zhipu" && !model.reasoningParamMapping
+              ? { ...model, reasoningParamMapping: '{"thinking":{"type":"disabled"}}' }
+              : model;
+            const r = await callConfiguredModel("", [{ role: "user", content: "ping" }], smokeModel, {
               temperature: 0,
-              maxTokens: 32,
+              maxTokens: 64,
             });
             const latency = Date.now() - t0;
             // 服务可达 + choices 非空即视为连通（即使内容被截断）
-            ok = r.success || /finish_reason=length/.test(r.error || "");
-            detail = ok
-              ? (r.success ? "模型真实往返成功（32 tokens 冒烟）" : "服务可达（输出被截断，连通性正常）")
-              : (r.error || "调用失败");
+            const truncatedOnly = !r.success && /finish_reason=length/.test(r.error || "");
+            ok = r.success || truncatedOnly;
+            detail = r.success
+              ? "模型真实往返成功（32 tokens 冒烟）"
+              : truncatedOnly
+                ? "服务可达 · 输出被截断（连通性正常）"
+                : (r.error || "调用失败");
             steps.push({ label: "网络可达性", status: "pass", detail: `请求已发出（${latency}ms）`, latencyMs: latency });
+            // 落档 48：步骤标签/状态与结论一致——原实现 ok=true 但 label 仍「调用失败」+ fail
             steps.push({
-              label: r.success ? "API Key 认证 + 生成" : "调用失败",
-              status: r.success ? "pass" : "fail",
+              label: r.success ? "API Key 认证 + 生成" : truncatedOnly ? "连通性验证" : "调用失败",
+              status: r.success ? "pass" : truncatedOnly ? "warn" : "fail",
               detail,
               latencyMs: latency,
             });

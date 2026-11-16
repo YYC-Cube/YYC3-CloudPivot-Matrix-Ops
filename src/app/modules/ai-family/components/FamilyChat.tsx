@@ -22,6 +22,21 @@ import { FamilyAIService } from "../../../lib/family-ai-service";
 
 type ChannelType = "family-group" | string;
 
+/** 富内容分段：```lang ... ``` → code 段（落档 48 气泡对齐 §7.1 代码块） */
+function parseParts(text: string): Array<{ type: "text" | "code"; text: string; lang?: string }> {
+  const parts: Array<{ type: "text" | "code"; text: string; lang?: string }> = [];
+  const re = /```([\w+#.-]*)\n?([\s\S]*?)```/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) {
+    if (m.index > last) { parts.push({ type: "text", text: text.slice(last, m.index) }); }
+    parts.push({ type: "code", lang: m[1] || "text", text: m[2].replace(/\n$/, "") });
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) { parts.push({ type: "text", text: text.slice(last) }); }
+  return parts.length ? parts : [{ type: "text", text }];
+}
+
 function nowTimeStr(): string {
   const now = new Date();
   return `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
@@ -32,6 +47,7 @@ export function FamilyChat() {
   const { members } = useFamilyMemberSlice();
   const channelsData = useFamilyChatSlice((s) => s.channels);
   const addMessage = useFamilyChatSlice((s) => s.addMessage);
+  const updateMessage = useFamilyChatSlice((s) => s.updateMessage);
   const [activeChannel, setActiveChannel] = useState<ChannelType>("family-group");
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -50,9 +66,11 @@ export function FamilyChat() {
     const text = input.trim();
     if (!text || sending) { return; }
 
-    addMessage(activeChannel, { sender: "user", text, time: nowTimeStr(), type: "text" });
+    // 落档 48 气泡状态机：用户消息 pending，回复落地后整条链路 complete
+    const userMsgId = addMessage(activeChannel, { sender: "user", text, time: nowTimeStr(), type: "text", lifecycle: "pending" });
     setInput("");
     setSending(true);
+    const startedAt = Date.now();
 
     try {
       // 发送后的最新历史（含本条用户消息），供模型上下文使用
@@ -66,6 +84,7 @@ export function FamilyChat() {
             channelType: "private",
           });
 
+      updateMessage(activeChannel, userMsgId, { lifecycle: "complete" });
       if (response.source === "error") {
         // 诚实离线：未接线/未配置/不可达时如实说明，绝不伪造回复
         const name = activeChannel === "family-group"
@@ -77,6 +96,7 @@ export function FamilyChat() {
           time: nowTimeStr(),
           type: "system",
           source: "error",
+          lifecycle: "error",
         });
       } else {
         addMessage(activeChannel, {
@@ -85,12 +105,26 @@ export function FamilyChat() {
           time: nowTimeStr(),
           type: "text",
           source: response.source,
+          lifecycle: "complete",
+          latencyMs: response.latencyMs ?? (Date.now() - startedAt),
+          parts: parseParts(response.text),
         });
       }
+    } catch {
+      // 异常兜底：用户消息标失败（可重试），并追加错误气泡
+      updateMessage(activeChannel, userMsgId, { lifecycle: "error" });
+      addMessage(activeChannel, {
+        sender: "system",
+        text: "消息发送异常，请点击「重试」重新发送",
+        time: nowTimeStr(),
+        type: "system",
+        source: "error",
+        lifecycle: "error",
+      });
     } finally {
       setSending(false);
     }
-  }, [input, activeChannel, sending, addMessage, members]);
+  }, [input, activeChannel, sending, addMessage, updateMessage, members]);
 
   const channels = [
     { id: "family-group" as const, label: "家庭群聊", icon: Users, desc: "全体家人", color: "#00d4ff" },
@@ -238,16 +272,63 @@ export function FamilyChat() {
                       background: isUser
                         ? "linear-gradient(135deg, rgba(0,120,200,0.25), rgba(0,80,160,0.15))"
                         : "rgba(15,25,50,0.6)",
-                      border: `1px solid ${isUser ? "rgba(0,180,255,0.15)" : "rgba(0,180,255,0.06)"}`,
+                      // 落档 48 视觉令牌：非用户气泡按身份色描边；失败态红色描边
+                      border: msg.lifecycle === "error"
+                        ? "1px solid rgba(255,51,102,0.45)"
+                        : isUser
+                          ? "1px solid rgba(0,180,255,0.15)"
+                          : `1px solid ${avatarColor}26`,
+                      borderLeft: isUser ? undefined : `2px solid ${msg.lifecycle === "error" ? "#ff3366" : avatarColor}`,
+                      opacity: msg.lifecycle === "pending" ? 0.65 : 1,
                     }}
                   >
-                    <p className="text-[rgba(224,240,255,0.8)]" style={{ fontSize: "0.8rem", lineHeight: 1.7 }}>
-                      {msg.text}
-                    </p>
+                    {/* 富内容分段：代码块独立渲染（§7.1）；纯文本保持段落 */}
+                    {(msg.parts && msg.parts.length > 0 ? msg.parts : [{ type: "text" as const, text: msg.text }]).map((part, pi) => (
+                      part.type === "code" ? (
+                        <div key={pi} className="my-1.5 rounded-lg overflow-hidden border border-[rgba(0,180,255,0.12)]">
+                          <div className="px-2.5 py-1 bg-[rgba(0,40,80,0.55)] text-[rgba(0,212,255,0.5)] flex items-center justify-between"
+                            style={{ fontSize: "0.55rem", fontFamily: "'JetBrains Mono', monospace" }}>
+                            <span>{part.lang || "text"}</span>
+                          </div>
+                          <pre className="px-2.5 py-2 bg-[rgba(2,8,20,0.85)] overflow-x-auto"
+                            style={{ fontSize: "0.7rem", lineHeight: 1.6, fontFamily: "'JetBrains Mono', monospace", color: "rgba(224,240,255,0.85)", margin: 0 }}>
+                            {part.text}
+                          </pre>
+                        </div>
+                      ) : (
+                        <p key={pi} className="text-[rgba(224,240,255,0.8)] whitespace-pre-wrap" style={{ fontSize: "0.8rem", lineHeight: 1.7 }}>
+                          {part.text}
+                        </p>
+                      )
+                    ))}
                   </div>
-                  <span className="mt-1 block text-[rgba(224,240,255,0.2)]" style={{ fontSize: "0.5rem", textAlign: isUser ? "right" : "left" }}>
-                    {msg.time}
-                  </span>
+                  <div className="mt-1 flex items-center gap-2" style={{ justifyContent: isUser ? "flex-end" : "flex-start" }}>
+                    <span className="text-[rgba(224,240,255,0.2)]" style={{ fontSize: "0.5rem" }}>{msg.time}</span>
+                    {msg.lifecycle === "pending" && (
+                      <span className="text-[rgba(0,212,255,0.45)]" style={{ fontSize: "0.5rem" }}>发送中…</span>
+                    )}
+                    {typeof msg.latencyMs === "number" && msg.lifecycle === "complete" && !isUser && (
+                      <span className="text-[rgba(0,255,136,0.35)]" style={{ fontSize: "0.5rem" }}>
+                        {(msg.latencyMs / 1000).toFixed(1)}s
+                      </span>
+                    )}
+                    {msg.lifecycle === "error" && (
+                      <button
+                        onClick={() => {
+                          // 重试：取最近一条用户消息重发
+                          const lastUser = [...messages].reverse().find(m => m.sender === "user");
+                          if (lastUser) {
+                            setInput(lastUser.text);
+                            setTimeout(() => void handleSend(), 0);
+                          }
+                        }}
+                        className="px-1.5 py-0.5 rounded text-[#ff3366] border border-[rgba(255,51,102,0.3)] hover:bg-[rgba(255,51,102,0.1)] transition-colors"
+                        style={{ fontSize: "0.5rem" }}
+                      >
+                        重试
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             );
