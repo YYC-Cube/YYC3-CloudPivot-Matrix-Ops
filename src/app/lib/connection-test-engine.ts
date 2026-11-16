@@ -176,7 +176,7 @@ export async function testAIConnection(config: AIConnectionConfig): Promise<Conn
       method: "POST",
       headers,
       body: JSON.stringify({ model: config.modelId, messages: [{ role: "user", content: "ping" }], max_tokens: 1 }),
-    }, 12000);
+    }, 45000);  // 落档 39：DGX 级大模型首字延迟可超 12s（与 service 60s 对齐留余量）
 
     if (authRes.ok) {
       result.steps[result.steps.length - 1] = { ...result.steps[result.steps.length - 1], status: "pass", detail: `认证成功 · ${config.modelName} 可用 (${authRes.latencyMs}ms)`, latencyMs: authRes.latencyMs };
@@ -205,7 +205,7 @@ export async function testAIConnection(config: AIConnectionConfig): Promise<Conn
       method: "POST",
       headers: proxyHeaders,
       body: JSON.stringify({ model: config.modelId, messages: [{ role: "user", content: "ping" }], max_tokens: 1 }),
-    }, 12000);
+    }, 45000);  // 落档 39：DGX 级大模型首字延迟可超 12s（与 service 60s 对齐留余量）
     if (proxyRes.ok) {
       result.steps[result.steps.length - 1] = { ...result.steps[result.steps.length - 1], status: "pass", detail: `代理转发成功 (${proxyRes.latencyMs}ms)`, latencyMs: proxyRes.latencyMs };
     } else {

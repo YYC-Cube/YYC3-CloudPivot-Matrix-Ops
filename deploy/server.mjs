@@ -46,6 +46,12 @@ const DIST_DIR = path.resolve(__dirname, process.env.DIST_DIR || "../dist");
 
 /** Ollama 代理前缀 */
 const OLLAMA_PROXY_PREFIX = "/api/v1/llm/ollama";
+/** DGX vLLM 反代（落档 39：浏览器直连被 CORS 拒，走面板同源代理） */
+const DGX_PROXY_PREFIX = "/api/v1/llm/dgx";
+const DGX_UPSTREAM = (() => {
+  try { return new URL(process.env.PMO_DGX_URL || "http://100.65.64.49:8888"); }
+  catch { return new URL("http://100.65.64.49:8888"); }
+})();
 
 /** MIME 类型映射 */
 const MIME_TYPES = {
@@ -130,6 +136,35 @@ function proxyToOllama(req, res, subPath) {
   req.pipe(proxyReq, { end: true });
 }
 
+/**
+ * 将 /api/v1/llm/dgx/xxx 代理到 DGX_UPSTREAM/xxx（vLLM OpenAI 兼容面）
+ */
+function proxyToDgx(req, res, subPath) {
+  const target = new URL(`/${subPath}`, DGX_UPSTREAM);
+  const proxyOptions = {
+    hostname: DGX_UPSTREAM.hostname,
+    port: DGX_UPSTREAM.port || 80,
+    path: target.pathname + target.search,
+    method: req.method,
+    headers: { ...req.headers, host: DGX_UPSTREAM.host },
+  };
+  delete proxyOptions.headers["origin"];
+  delete proxyOptions.headers["referer"];
+
+  const proxyReq = http.request(proxyOptions, (proxyRes) => {
+    setCorsHeaders(res);
+    res.writeHead(proxyRes.statusCode || 200, proxyRes.headers);
+    proxyRes.pipe(res, { end: true });
+  });
+  proxyReq.on("error", (err) => {
+    console.error(`[PROXY ERROR] ${req.method} ${target.href} → ${err.message}`);
+    setCorsHeaders(res);
+    res.writeHead(502, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "DGX proxy error", message: err.message, target: target.href }));
+  });
+  req.pipe(proxyReq, { end: true });
+}
+
 // ============================================================
 // 静态文件服务
 // ============================================================
@@ -204,6 +239,16 @@ const server = http.createServer((req, res) => {
     proxyToOllama(req, res, subPath);
     const ts = new Date().toISOString().slice(11, 19);
     console.log(`[${ts}] PROXY ${method} ${urlPath} → ollama:${OLLAMA_PORT}/api/${subPath}`);
+    return;
+  }
+
+  // ── DGX vLLM 代理 ──
+  if (urlPath.startsWith(DGX_PROXY_PREFIX)) {
+    const subPath = urlPath.slice(DGX_PROXY_PREFIX.length).replace(/^\//, "");
+    setCorsHeaders(res);
+    proxyToDgx(req, res, subPath);
+    const ts = new Date().toISOString().slice(11, 19);
+    console.log(`[${ts}] PROXY ${method} ${urlPath} → dgx:${DGX_UPSTREAM.port}/${subPath}`);
     return;
   }
 
