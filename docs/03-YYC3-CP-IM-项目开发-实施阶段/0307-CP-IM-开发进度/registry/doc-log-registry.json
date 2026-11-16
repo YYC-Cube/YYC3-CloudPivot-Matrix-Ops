@@ -465,6 +465,24 @@
       "related_docs": [
         "docs/03-YYC3-CP-IM-项目开发-实施阶段/0307-CP-IM-开发进度/logs/2026-W47/YYC3-Cloud-Matrix-glm-20261116/02-执行日志与进度跟踪.md"
       ]
+    },
+    {
+      "trace_id": "TRC-20261116026",
+      "document": "docs/00-YYC3-CP-IM-项目总览-目录索引/006-CP-IM-项目总览索引-文档台帐-全目录现状对齐.md",
+      "action": "create",
+      "timestamp": "2026-11-16T14:10:00+08:00",
+      "version": "v1.0.0",
+      "checksum": "775d99f4eec18572",
+      "author": "YYC³ Team",
+      "changes": [
+        {
+          "field": "content",
+          "summary": "文档台帐：docs/ 全目录现状对齐 + 根散归档 + README v4"
+        }
+      ],
+      "related_docs": [
+        "docs/README.md"
+      ]
     }
   ]
 }
