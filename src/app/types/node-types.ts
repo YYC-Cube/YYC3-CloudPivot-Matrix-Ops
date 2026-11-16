@@ -60,6 +60,8 @@ export interface NodeData {
   role?: string;
   /** 主机地址（Tailscale IP / 主机名）——批5 全节点清单 */
   host?: string;
+  /** 该节点 agent WS 端口（默认 3113）——M4 方案 A：useMultiNodeWS 直连远端快照 */
+  wsPort?: number;
   /** 数据来源：user=用户在面板维护的全节点清单（WS 权威快照不删除）；ws=agent 快照上报 */
   source?: "user" | "ws";
   /** OpsPanel 真实指标（每卡 DCGM / vLLM 推理率）——P4；缺失=数据源未覆盖该节点 */

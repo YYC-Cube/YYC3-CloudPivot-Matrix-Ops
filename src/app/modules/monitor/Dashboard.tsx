@@ -69,6 +69,7 @@ import { GlassCard } from "../shared/GlassCard";
 import { NodeDetailModal } from "./NodeDetailModal";
 import { NodeEditModal } from "./NodeEditModal";
 import { useOpsPanelMetrics } from "../../hooks/useOpsPanelMetrics";
+import { useMultiNodeWS } from "../../hooks/useMultiNodeWS";
 
 // ============================================================
 // Static reference data → 从 localStorage 读取 (可编辑)
@@ -234,6 +235,8 @@ export function Dashboard() {
   );
   // 批6：OpsPanel 多节点真实指标轮询（端点在系统设置可编辑，即时生效）
   useOpsPanelMetrics();
+  // M4 方案 A：多节点 WS 直连池（用户清单 host/wsPort → 远端 agent 快照归并）
+  useMultiNodeWS();
   // 批5：节点添加/编辑表单状态（替换硬编码占位添加）
   const [nodeEdit, setNodeEdit] = useState<{ mode: "add" } | { mode: "edit"; node: NodeData } | null>(null);
 

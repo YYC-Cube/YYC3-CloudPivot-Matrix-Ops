@@ -29,6 +29,7 @@ type FormState = {
   id: string;
   role: string;
   host: string;
+  wsPort: string;
   status: NodeStatusType;
   gpu: string;
   mem: string;
@@ -42,6 +43,7 @@ function toForm(node: NodeData | null): FormState {
     id: node?.id || "",
     role: node?.role || "",
     host: node?.host || "",
+    wsPort: node?.wsPort ? String(node.wsPort) : "",
     status: node?.status || "inactive",
     gpu: String(node?.gpu ?? 0),
     mem: String(node?.mem ?? 0),
@@ -77,6 +79,7 @@ export function NodeEditModal({ initial, onClose, onSubmit, onRemove }: NodeEdit
       id,
       role: form.role.trim(),
       host: form.host.trim(),
+      wsPort: form.wsPort.trim() ? Math.max(1, Math.min(65535, Number(form.wsPort) || 3113)) : undefined,
       status: form.status,
       gpu: clampPct(form.gpu),
       mem: clampPct(form.mem),
@@ -145,6 +148,16 @@ export function NodeEditModal({ initial, onClose, onSubmit, onRemove }: NodeEdit
                 value={form.host}
                 onChange={(e) => set("host", e.target.value)}
                 placeholder="如 100.65.64.49"
+              />
+            </div>
+            <div>
+              <label className={label}>agent WS 端口</label>
+              <input
+                className={input}
+                type="number"
+                value={form.wsPort}
+                onChange={(e) => set("wsPort", e.target.value)}
+                placeholder="默认 3113"
               />
             </div>
           </div>
