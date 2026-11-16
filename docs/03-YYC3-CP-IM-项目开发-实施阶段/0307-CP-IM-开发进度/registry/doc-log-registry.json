@@ -134,7 +134,7 @@
       "action": "create",
       "timestamp": "2026-11-16T02:50:00+08:00",
       "version": "v1.0.0",
-      "checksum": "055e84cce0310c22",
+      "checksum": "13c732d09da37827",
       "author": "YYC³ Team",
       "changes": [
         {
@@ -163,7 +163,7 @@
       "action": "create",
       "timestamp": "2026-11-16T02:50:00+08:00",
       "version": "v1.0.0",
-      "checksum": "64a2dd2366f9b716",
+      "checksum": "9bcf5545bd3ecc1f",
       "author": "YYC³ Team",
       "changes": [
         {
@@ -427,6 +427,42 @@
       ],
       "related_docs": [
         "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/31-后续落地推进计划-总纲-P1至P7阶段化执行-20261116.md",
+        "docs/03-YYC3-CP-IM-项目开发-实施阶段/0307-CP-IM-开发进度/logs/2026-W47/YYC3-Cloud-Matrix-glm-20261116/02-执行日志与进度跟踪.md"
+      ]
+    },
+    {
+      "trace_id": "TRC-20261116024",
+      "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/35-M4双节点汇聚方案设计-三方案对比与实施路线-20261116.md",
+      "action": "create",
+      "timestamp": "2026-11-16T13:10:00+08:00",
+      "version": "v1.0.0",
+      "checksum": "7ee0b97756c5c0a5",
+      "author": "YYC³ Team",
+      "changes": [
+        {
+          "field": "content",
+          "summary": "M4 三方案评分（A 前端多 WS 推荐）+ 实施分解，提前兑现 11-24 承诺"
+        }
+      ],
+      "related_docs": [
+        "docs/03-YYC3-CP-IM-项目开发-实施阶段/0307-CP-IM-开发进度/logs/2026-W47/YYC3-Cloud-Matrix-glm-20261116/02-执行日志与进度跟踪.md"
+      ]
+    },
+    {
+      "trace_id": "TRC-20261116025",
+      "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/36-导航功能分类全局推进计划-数据源统一系统管理-核心链路-20261116.md",
+      "action": "create",
+      "timestamp": "2026-11-16T13:10:00+08:00",
+      "version": "v1.0.0",
+      "checksum": "e016e4e9bd8daa36",
+      "author": "YYC³ Team",
+      "changes": [
+        {
+          "field": "content",
+          "summary": "导航七分类进度矩阵≈96% + 数据源统一系统管理 + IDE 拆除记录"
+        }
+      ],
+      "related_docs": [
         "docs/03-YYC3-CP-IM-项目开发-实施阶段/0307-CP-IM-开发进度/logs/2026-W47/YYC3-Cloud-Matrix-glm-20261116/02-执行日志与进度跟踪.md"
       ]
     }
