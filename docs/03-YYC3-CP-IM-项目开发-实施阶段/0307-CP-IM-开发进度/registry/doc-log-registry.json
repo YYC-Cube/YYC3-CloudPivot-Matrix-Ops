@@ -626,6 +626,24 @@
    "related_docs": [
     "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/43-i18n引擎换芯-NAS统一网关接入-P6外部输入处置-20261117.md"
    ]
+  },
+  {
+   "trace_id": "TRC-20261117004",
+   "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/45-高级设置全量-硬编码清零-浮窗去凭据-模型页去重-20261117.md",
+   "action": "create",
+   "timestamp": "2026-11-17T04:56:31+08:00",
+   "version": "v1.0.0",
+   "checksum": "ade583acd4cc9c83",
+   "author": "YYC³ Team",
+   "changes": [
+    {
+     "field": "content",
+     "summary": "四图收口：高级设置六组/硬编码清零+上游发现/浮窗去API设置/模型页诊断台化（cc7b6b3）"
+    }
+   ],
+   "related_docs": [
+    "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/44-模型路由彻底统一-选择即用-格式分流-反代与只读纪律-20261117.md"
+   ]
   }
  ]
 }
