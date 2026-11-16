@@ -537,6 +537,22 @@
       "related_docs": [
         "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/38-本地模型接线实证-自定义服务商-真实对话往返-20261116.md"
       ]
+    },
+    {
+      "trace_id": "TRC-20261116030",
+      "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/40-三遗留项根修-引擎modelName-models页无限循环-mock重构-20261116.md",
+      "action": "create",
+      "timestamp": "2026-11-16T17:40:00+08:00",
+      "version": "v1.0.0",
+      "checksum": "98644c70e99f18bc",
+      "author": "YYC³ Team",
+      "changes": [
+        {
+          "field": "content",
+          "summary": "三遗留项根修：引擎 modelName + models 页无限循环 + mock getState"
+        }
+      ],
+      "related_docs": []
     }
   ]
 }
