@@ -134,7 +134,7 @@
       "action": "create",
       "timestamp": "2026-11-16T02:50:00+08:00",
       "version": "v1.0.0",
-      "checksum": "24848ec5f1217b8f",
+      "checksum": "fa56b115768088f5",
       "author": "YYC³ Team",
       "changes": [
         {
@@ -387,6 +387,24 @@
         {
           "field": "content",
           "summary": "P1-P3 执行报告：三提交全绿 + CORS 根因链 + 7/7 双端实证"
+        }
+      ],
+      "related_docs": [
+        "docs/03-YYC3-CP-IM-项目开发-实施阶段/0307-CP-IM-开发进度/logs/2026-W47/YYC3-Cloud-Matrix-glm-20261116/02-执行日志与进度跟踪.md"
+      ]
+    },
+    {
+      "trace_id": "TRC-20261116022",
+      "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/33-supabase全局退役-P4深度接入-每卡DCGM与vLLM直达节点详情-20261116.md",
+      "action": "create",
+      "timestamp": "2026-11-16T11:30:00+08:00",
+      "version": "v1.0.0",
+      "checksum": "692872dd36c38c18",
+      "author": "YYC³ Team",
+      "changes": [
+        {
+          "field": "content",
+          "summary": "supabase 全局退役清理 + P4 每卡 DCGM/vLLM 深度接入 + 实证"
         }
       ],
       "related_docs": [
