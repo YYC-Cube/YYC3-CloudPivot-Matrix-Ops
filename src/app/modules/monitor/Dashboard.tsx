@@ -68,6 +68,7 @@ import { AlertBanner } from "./AlertBanner";
 import { GlassCard } from "../shared/GlassCard";
 import { NodeDetailModal } from "./NodeDetailModal";
 import { NodeEditModal } from "./NodeEditModal";
+import { useOpsPanelMetrics } from "../../hooks/useOpsPanelMetrics";
 
 // ============================================================
 // Static reference data → 从 localStorage 读取 (可编辑)
@@ -231,6 +232,8 @@ export function Dashboard() {
   const { nodes, derived, addNode, updateNode, removeNode } = useNodeSlice(
     useShallow((s) => ({ nodes: s.nodes, derived: s.derived, addNode: s.addNode, updateNode: s.updateNode, removeNode: s.removeNode }))
   );
+  // 批6：OpsPanel 多节点真实指标轮询（端点在系统设置可编辑，即时生效）
+  useOpsPanelMetrics();
   // 批5：节点添加/编辑表单状态（替换硬编码占位添加）
   const [nodeEdit, setNodeEdit] = useState<{ mode: "add" } | { mode: "edit"; node: NodeData } | null>(null);
 

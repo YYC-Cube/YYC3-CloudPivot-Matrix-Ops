@@ -27,6 +27,7 @@ export interface EnvConfig {
   WS_ENDPOINT: string;
   OLLAMA_BASE_URL: string;
   OLLAMA_PROXY_PATH: string;       // 同源后端代理路径 (解决 CORS)
+  OPS_PANEL_BASE_URL: string;      // 批5：YYC3-OpsPanel 多节点指标源（可配置）
 
   // ── 存储键前缀 (不可逆 — 修改后旧数据丢失) ──
   STORAGE_PREFIX: string;
@@ -89,6 +90,7 @@ const DEFAULTS: EnvConfig = {
   WS_ENDPOINT: DEFAULT_WS_ENDPOINT,
   OLLAMA_BASE_URL: "http://localhost:11434",
   OLLAMA_PROXY_PATH: "/api/v1/llm/ollama",
+  OPS_PANEL_BASE_URL: "",
 
   STORAGE_PREFIX: "yyc3_",
   IDB_NAME: "yyc3_matrix",
@@ -160,6 +162,8 @@ function loadEnvOverrides(): Partial<EnvConfig> {
     if (apiBaseUrl) { overrides.API_BASE_URL = apiBaseUrl; }
     const wsEndpoint = pick("PMO_WS_ENDPOINT", "VITE_YYC3_WS_ENDPOINT");
     if (wsEndpoint) { overrides.WS_ENDPOINT = wsEndpoint; }
+    const opsPanelBase = pick("PMO_OPS_PANEL_BASE", "VITE_YYC3_OPS_PANEL_BASE");
+    if (opsPanelBase) { overrides.OPS_PANEL_BASE_URL = opsPanelBase; }
     const ollamaBaseUrl = pick("PMO_OLLAMA_BASE_URL", "VITE_YYC3_OLLAMA_BASE_URL");
     if (ollamaBaseUrl) { overrides.OLLAMA_BASE_URL = ollamaBaseUrl; }
     const ollamaProxyPath = pick("PMO_OLLAMA_PROXY_PATH", "VITE_YYC3_OLLAMA_PROXY_PATH");

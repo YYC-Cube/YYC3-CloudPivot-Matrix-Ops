@@ -143,6 +143,43 @@ function DemoModeToggle() {
 // 该字段读写 Settings SSOT，不经旧版 useSettingsStore。
 // ============================================================
 
+// OpsPanel Field (SSOT values.opsPanelBaseUrl + toggles.opsPanelEnabled)
+// YYC3-OpsPanel 多节点真实指标源地址：全节点真实数据接入的数据源配置，
+// 修改后 useOpsPanelMetrics 下一轮轮询即时生效（批5/6）。
+function OpsPanelField() {
+  const opsPanelBaseUrl = useSettingsSSOT((s) => s.values.opsPanelBaseUrl);
+  const opsPanelEnabled = useSettingsSSOT((s) => s.toggles.opsPanelEnabled);
+  const setToggle = useSettingsSSOT((s) => s.setToggle);
+  const updateValue = useSettingsSSOT((s) => s.updateValue);
+  return (
+    <div className="p-3 rounded-xl bg-[rgba(0,40,80,0.15)] border border-[rgba(0,180,255,0.06)]">
+      <p className="text-[#c0dcf0] mb-1" style={{ fontSize: "0.82rem" }}>OpsPanel 数据源地址</p>
+      <p className="text-[rgba(0,212,255,0.35)] mb-2" style={{ fontSize: "0.68rem" }}>
+        YYC3-OpsPanel 多节点真实指标源（/api/nodes、/api/metrics）；轮询 10s，修改即时生效
+      </p>
+      <input
+        className="w-full px-3 py-2 rounded-lg bg-[rgba(0,10,20,0.4)] border border-[rgba(0,180,255,0.15)] text-[#e0f0ff] font-mono focus:outline-none focus:border-[rgba(0,212,255,0.4)] transition-colors"
+        style={{ fontSize: "0.75rem" }}
+        value={opsPanelBaseUrl}
+        onChange={(e) => updateValue("opsPanelBaseUrl", e.target.value)}
+        placeholder="http://127.0.0.1:7864"
+      />
+      <label className="flex items-center gap-2 mt-2 cursor-pointer">
+        <input
+          type="checkbox"
+          checked={opsPanelEnabled}
+          onChange={(e) => setToggle("opsPanelEnabled", e.target.checked)}
+          className="accent-[#00d4ff]"
+        />
+        <span className="text-[rgba(224,240,255,0.5)]" style={{ fontSize: "0.68rem" }}>
+          启用全节点真实指标轮询（关闭后节点指标以面板维护值为准）
+        </span>
+      </label>
+    </div>
+  );
+}
+// ============================================================
+
 function WsTokenField() {
   const wsToken = useSettingsSSOT((s) => s.values.wsToken);
   const updateValue = useSettingsSSOT((s) => s.updateValue);
@@ -986,6 +1023,7 @@ export function SystemSettings() {
             <div className="space-y-3">
               <EditableField label="WebSocket 端点" value={values.wsEndpoint} onChange={v => updateValue("wsEndpoint", v)} mono description="实时数据推送 WebSocket 服务地址" />
               <WsTokenField />
+              <OpsPanelField />
               <div className="flex items-center justify-between p-3 rounded-xl bg-[rgba(0,40,80,0.15)] border border-[rgba(0,180,255,0.06)]">
                 <div>
                   <p className="text-[#c0dcf0]" style={{ fontSize: "0.82rem" }}>自动重连</p>

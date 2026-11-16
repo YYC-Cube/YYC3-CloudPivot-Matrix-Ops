@@ -135,7 +135,9 @@ export const useNodeSlice = create<NodeSlice>()(
               );
               const restored = userNodes
                 .filter((u) => !merged.some((m) => m.id === u.id))
-                .map((u) => ({ ...u, status: "inactive" as const }));
+                // 批6：user 节点状态由 OpsPanel 探针轮询驱动（useOpsPanelMetrics），
+                // WS 快照仅保存在性，不覆盖其真实状态（快照不含远端节点信息）
+                .map((u) => ({ ...u }));
               const nodes = [...merged, ...restored];
               state.nodes = nodes;
               state.lastSource = "websocket";

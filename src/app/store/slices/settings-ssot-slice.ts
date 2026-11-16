@@ -66,6 +66,8 @@ export interface SettingsToggles {
   corsEnabled: boolean;
   /** 演示模式：开启时各模块使用内置模拟数据；生产环境必须关闭（默认 false） */
   demoMode: boolean;
+  /** 批5：OpsPanel 多节点真实指标轮询开关 */
+  opsPanelEnabled: boolean;
 }
 
 export interface SettingsValues {
@@ -85,6 +87,8 @@ export interface SettingsValues {
   scaleDownThreshold: string;
   wsEndpoint: string;
   wsToken: string;
+  /** 批5：OpsPanel（YYC3-OpsPanel FastAPI）基地址——全节点真实指标源，UI 可编辑即时生效 */
+  opsPanelBaseUrl: string;
   wsReconnectInterval: string;
   wsMaxReconnect: string;
   wsHeartbeatInterval: string;
@@ -145,6 +149,7 @@ const DEFAULT_TOGGLES: SettingsToggles = {
   dataCompression: true,
   corsEnabled: true,
   demoMode: false,
+  opsPanelEnabled: true,
 };
 
 const DEFAULT_VALUES: SettingsValues = {
@@ -164,6 +169,7 @@ const DEFAULT_VALUES: SettingsValues = {
   scaleDownThreshold: "30",
   wsEndpoint: DEFAULT_WS_ENDPOINT,
   wsToken: "",
+  opsPanelBaseUrl: "http://127.0.0.1:7864",
   wsReconnectInterval: "5000",
   wsMaxReconnect: "10",
   wsHeartbeatInterval: "30000",
@@ -442,7 +448,10 @@ export const useSettingsSSOT = create<SettingsSSOTSlice>()(
       })),
       {
         name: 'yyc3-settings-ssot',
-        version: 2,
+        // 批6：v2→v3 触发 migrate 为旧 persist 补新字段默认值
+        // （zustand persist 在 version 相同时走浅合并，values/toggles 整体被旧结构
+        //  替换 → 新增字段运行时为 undefined——OpsPanel 端点/开关即因此失效）
+        version: 3,
         migrate: (persisted, version) => {
           let state = persisted as SettingsSSOTState;
           if (version < 1) {
@@ -453,6 +462,13 @@ export const useSettingsSSOT = create<SettingsSSOTSlice>()(
             // 品牌升级迁移（A1 主选命名落地）
             const values = (state as unknown as { values?: Partial<SettingsValues> }).values;
             if (values) { normalizeLegacyBrand(values); }
+          }
+          if (version < 3) {
+            // v2→v3：为旧结构补新增字段默认值（toggles 同理，保留用户已有设置）
+            if (!state.toggles) { state.toggles = { ...DEFAULT_TOGGLES }; }
+            else { state.toggles = { ...DEFAULT_TOGGLES, ...state.toggles }; }
+            if (!state.values) { state.values = { ...DEFAULT_VALUES }; }
+            else { state.values = { ...DEFAULT_VALUES, ...state.values }; }
           }
           return state;
         },
