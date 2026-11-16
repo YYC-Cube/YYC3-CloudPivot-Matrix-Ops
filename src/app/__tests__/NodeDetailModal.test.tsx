@@ -164,7 +164,7 @@ afterEach(() => {
     it("批5真实化：无真实历史数据时渲染诚实空态（不伪造负载曲线）", () => {
       render(<NodeDetailModal node={mockActiveNode} onClose={mockOnClose} />);
       expect(screen.getAllByTestId("history-empty")[0]).toBeInTheDocument();
-      expect(screen.getAllByText(/暂无历史负载数据/)[0]).toBeInTheDocument();
+      expect(screen.getAllByText(/暂无 OpsPanel 实测指标/)[0]).toBeInTheDocument();  // P4 文案
     });
   });
 

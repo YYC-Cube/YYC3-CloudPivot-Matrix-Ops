@@ -19,7 +19,7 @@ import { useSettingsSSOT } from "../store/slices/settings-ssot-slice";
 
 const fetchMock = vi.fn();
 
-function mockOpsPanel(opts: { n1Online: boolean; n1Gpu?: number; unreachable?: boolean }) {
+function mockOpsPanel(opts: { n1Online: boolean; n1Gpu?: number; unreachable?: boolean; richMetrics?: boolean }) {
   fetchMock.mockImplementation(async (url: string) => {
     if (String(url).includes("/api/nodes")) {
       if (opts.unreachable) { throw new Error("network down"); }
@@ -34,10 +34,30 @@ function mockOpsPanel(opts: { n1Online: boolean; n1Gpu?: number; unreachable?: b
     }
     if (String(url).includes("/api/metrics")) {
       if (opts.unreachable) { throw new Error("network down"); }
+      if (opts.richMetrics) {
+        // P4：扁平逐卡行 + vLLM 推理率（对齐 OpsPanel metrics.py 实测形态）
+        return {
+          json: async () => ({
+            ts: "2026-11-16T11:07:02+08:00",
+            rates_ready: true,
+            gpus: [
+              { node: "yyc3-n1", gpu: 0, model: "NVIDIA GB10", util_perc: 37.5, temp_c: 52, power_w: 12.2, sm_clock_mhz: 2405, xid_errors: 0 },
+              { node: "yyc3-n1", gpu: 1, model: "NVIDIA GB10", util_perc: 62.5, temp_c: 55, power_w: 14.1, sm_clock_mhz: 2400, xid_errors: 0 },
+            ],
+            inference: {
+              ok: true, node: "yyc3-n1", model: "nemotron-3.5-super-vl",
+              qps: 1.2, gen_tokens_per_s: 88.8, prompt_tokens_per_s: 120.5,
+              avg_latency_s: 43.9, ttft_avg_s: 3.5, prefix_cache_hit_ratio: 0.938,
+              kv_cache_usage_perc: 0.1, running: 1, waiting: 0,
+            },
+          }),
+        };
+      }
       return {
         json: async () => ({
           rates_ready: opts.n1Online,
-          gpus: [{ node: "yyc3-n1", gpus: [{ util: opts.n1Gpu ?? 42 }] }],
+          // P4：扁平逐卡行（与 OpsPanel 实测形态一致）
+          gpus: [{ node: "yyc3-n1", gpu: 0, model: "NVIDIA GB10", util_perc: opts.n1Gpu ?? 42, temp_c: 52, power_w: 12, sm_clock_mhz: 2400, xid_errors: 0 }],
           vllm: { ok: opts.n1Online, node: "yyc3-n1" },
         }),
       };
@@ -127,4 +147,25 @@ describe("useOpsPanelMetrics", () => {
       expect(fetchMock.mock.calls.some(([u]) => String(u).startsWith("http://ops-new.test/"))).toBe(true);
     }, { timeout: 13000 });
   }, 20000);
+
+  it("P4 深度接入：扁平逐卡行→metrics.gpus + 聚合 gpu 均值 + vLLM 推理率挂载", async () => {
+    mockOpsPanel({ n1Online: true, richMetrics: true });
+    renderHook(() => useOpsPanelMetrics());
+    await waitFor(() => {
+      const n1 = useNodeSlice.getState().nodes.find((n) => n.id === "yyc3-n1");
+      expect(n1?.metrics?.gpus?.length).toBe(2);
+    }, { timeout: 3000 });
+    const n1 = useNodeSlice.getState().nodes.find((n) => n.id === "yyc3-n1")!;
+    // 每卡明细
+    expect(n1.metrics!.gpus![0]).toMatchObject({ idx: 0, model: "NVIDIA GB10", util: 37.5, temp: 52 });
+    expect(n1.metrics!.gpus![1].util).toBe(62.5);
+    // 聚合均值 (37.5+62.5)/2 = 50
+    expect(n1.gpu).toBe(50);
+    // vLLM
+    expect(n1.metrics!.vllm).toMatchObject({ model: "nemotron-3.5-super-vl", qps: 1.2, genTokensPerS: 88.8 });
+    expect(n1.metrics!.updatedAt).toBe("2026-11-16T11:07:02+08:00");
+    // 未覆盖节点（yyc3-45）不写 metrics
+    const n45 = useNodeSlice.getState().nodes.find((n) => n.id === "yyc3-45")!;
+    expect(n45.metrics).toBeUndefined();
+  });
 });

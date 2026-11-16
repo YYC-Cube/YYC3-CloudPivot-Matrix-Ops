@@ -28,6 +28,11 @@ const toastStyle = {
   color: "#e0f0ff",
 };
 
+/** XID 错误计数 >0 时高亮提示 */
+function xidBad(xid: number): string {
+  return xid > 0 ? ` · XID:${xid}⚠` : "";
+}
+
 // 批5 真实化：删除 MOCK_LOGS 固定假日志与 historyData 固定假曲线——
 // 真实日志/历史指标待数据源接入（agent 日志通道 / OpsPanel history）后呈现，空态诚实提示
 
@@ -161,19 +166,75 @@ export function NodeDetailModal({ node, onClose, onNodeRemoved, onEdit }: NodeDe
         </div>
 
         {/* History Chart */}
-        <div>
-          <h4 className="text-[#e0f0ff] mb-3" style={{ fontSize: "0.85rem" }}>历史负载趋势</h4>
-          <div
-            className="h-[180px] rounded-xl flex items-center justify-center bg-[rgba(0,40,80,0.15)] border border-[rgba(0,180,255,0.08)]"
-            data-testid="history-empty"
-          >
-            <p className="text-[rgba(224,240,255,0.3)] text-center px-4" style={{ fontSize: "0.72rem", lineHeight: 1.8 }}>
-              暂无历史负载数据
-              <br />
-              真实指标历史将在数据源（agent / OpsPanel history）接入后自动呈现
-            </p>
+        {/* ── P4：OpsPanel 真实指标（每卡 DCGM + vLLM 推理率）；未覆盖节点保持诚实空态 ── */}
+        {node.metrics?.gpus?.length ? (
+          <div className="mb-4">
+            <h4 className="text-[#e0f0ff] mb-3 flex items-center gap-2" style={{ fontSize: "0.85rem" }}>
+              <Cpu className="w-3.5 h-3.5 text-[#00d4ff]" /> 每卡实测（DCGM）
+              {node.metrics.updatedAt && (
+                <span className="text-[rgba(224,240,255,0.3)] font-mono" style={{ fontSize: "0.55rem" }}>
+                  {node.metrics.updatedAt.slice(11, 19)}
+                </span>
+              )}
+            </h4>
+            <div className="space-y-2" data-testid="gpu-metrics">
+              {node.metrics.gpus.map((g, i) => (
+                <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg bg-[rgba(0,40,80,0.15)] border border-[rgba(0,180,255,0.08)]">
+                  <span className="font-mono text-[rgba(224,240,255,0.5)] shrink-0" style={{ fontSize: "0.62rem" }}>GPU{g.idx}</span>
+                  <span className="text-[rgba(224,240,255,0.7)] shrink-0" style={{ fontSize: "0.68rem" }}>{g.model}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="h-1.5 rounded-full bg-[rgba(0,40,80,0.3)] overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width: `${Math.min(100, g.util)}%`, background: g.util > 80 ? "#ff6600" : "#00d4ff" }} />
+                    </div>
+                  </div>
+                  <span className="shrink-0 font-mono" style={{ fontSize: "0.65rem", color: g.util > 80 ? "#ff6600" : "#00d4ff" }}>{g.util.toFixed(0)}%</span>
+                  <span className="shrink-0 text-[rgba(224,240,255,0.4)] font-mono" style={{ fontSize: "0.6rem" }}>{g.temp.toFixed(0)}°C · {g.powerW.toFixed(1)}W · {g.clockMhz.toFixed(0)}MHz{xidBad(g.xid)}</span>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        ) : null}
+
+        {node.metrics?.vllm ? (
+          <div className="mb-4">
+            <h4 className="text-[#e0f0ff] mb-3 flex items-center gap-2" style={{ fontSize: "0.85rem" }}>
+              <Activity className="w-3.5 h-3.5 text-[#00ff88]" /> vLLM 推理实测
+            </h4>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2" data-testid="vllm-metrics">
+              {[
+                { label: "模型", value: node.metrics.vllm.model },
+                { label: "QPS", value: node.metrics.vllm.qps.toFixed(1) },
+                { label: "生成 tokens/s", value: node.metrics.vllm.genTokensPerS.toFixed(1) },
+                { label: "前缀缓存命中", value: `${(node.metrics.vllm.prefixHit * 100).toFixed(1)}%` },
+                { label: "平均延迟", value: `${node.metrics.vllm.avgLatencyS.toFixed(2)}s` },
+                { label: "TTFT", value: `${node.metrics.vllm.ttftS.toFixed(2)}s` },
+                { label: "运行/排队", value: `${node.metrics.vllm.running}/${node.metrics.vllm.waiting}` },
+                { label: "KV Cache", value: `${(node.metrics.vllm.kvCache * 100).toFixed(1)}%` },
+              ].map((kv) => (
+                <div key={kv.label} className="p-2 rounded-lg bg-[rgba(0,40,80,0.15)] border border-[rgba(0,180,255,0.08)]">
+                  <p className="text-[rgba(224,240,255,0.35)] truncate" style={{ fontSize: "0.58rem" }}>{kv.label}</p>
+                  <p className="text-[#e0f0ff] truncate font-mono" style={{ fontSize: "0.72rem" }}>{kv.value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {!node.metrics?.gpus?.length && !node.metrics?.vllm && (
+          <div>
+            <h4 className="text-[#e0f0ff] mb-3" style={{ fontSize: "0.85rem" }}>历史负载趋势</h4>
+            <div
+              className="h-[120px] rounded-xl flex items-center justify-center bg-[rgba(0,40,80,0.15)] border border-[rgba(0,180,255,0.08)]"
+              data-testid="history-empty"
+            >
+              <p className="text-[rgba(224,240,255,0.3)] text-center px-4" style={{ fontSize: "0.72rem", lineHeight: 1.8 }}>
+                该节点暂无 OpsPanel 实测指标
+                <br />
+                （数据源未覆盖或探针离线时如实为空）
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* ── 日志面板 ── */}
         {showLogs && (

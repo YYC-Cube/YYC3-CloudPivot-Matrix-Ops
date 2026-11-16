@@ -16,6 +16,38 @@ export type NodeStatusType = "active" | "warning" | "inactive";
  * 实时节点数据（WebSocket 推送 / 前端展示）
  * 字段使用 camelCase 短名，适合高频 UI 渲染
  */
+/** 每卡 DCGM 实测明细（OpsPanel /api/metrics gpus[] 行）——P4 深度接入 */
+export interface NodeGpuMetric {
+  idx: number;        // 卡序号
+  model: string;      // GPU 型号（如 NVIDIA GB10）
+  util: number;       // 利用率 %
+  temp: number;       // 温度 °C
+  powerW: number;     // 功耗 W
+  clockMhz: number;   // SM 频率 MHz
+  xid: number;        // XID 错误计数
+}
+
+/** vLLM 推理实测（OpsPanel /api/metrics inference）——P4 深度接入 */
+export interface NodeVllmMetric {
+  model: string;
+  qps: number;
+  genTokensPerS: number;
+  promptTokensPerS: number;
+  avgLatencyS: number;
+  ttftS: number;
+  prefixHit: number;   // 前缀缓存命中率 0-1
+  kvCache: number;     // KV Cache 使用率 0-1
+  running: number;
+  waiting: number;
+}
+
+/** 节点实时指标聚合（OpsPanel 轮询挂载） */
+export interface NodeLiveMetrics {
+  gpus?: NodeGpuMetric[];
+  vllm?: NodeVllmMetric;
+  updatedAt?: string;
+}
+
 export interface NodeData {
   id: string;
   status: NodeStatusType;
@@ -30,6 +62,8 @@ export interface NodeData {
   host?: string;
   /** 数据来源：user=用户在面板维护的全节点清单（WS 权威快照不删除）；ws=agent 快照上报 */
   source?: "user" | "ws";
+  /** OpsPanel 真实指标（每卡 DCGM / vLLM 推理率）——P4；缺失=数据源未覆盖该节点 */
+  metrics?: NodeLiveMetrics;
 }
 
 /**

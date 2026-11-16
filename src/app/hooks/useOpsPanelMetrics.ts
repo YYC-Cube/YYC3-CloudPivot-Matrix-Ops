@@ -32,11 +32,20 @@ interface OpsNode {
   services?: { name: string; port: number; listening: boolean }[];
 }
 
-/** OpsPanel /api/metrics 载荷（仅需字段） */
+/** OpsPanel /api/metrics 载荷（字段名对齐 metrics.py 实测 · P4） */
 interface OpsMetrics {
-  gpus?: { node?: string; util?: number; gpus?: { util?: number }[] }[];
-  vllm?: { ok?: boolean; node?: string; error?: string };
+  ts?: string;
   rates_ready?: boolean;
+  /** 扁平逐卡 DCGM 行 */
+  gpus?: { node: string; gpu: number; model: string; util_perc: number; temp_c: number; power_w: number; sm_clock_mhz: number; xid_errors: number }[];
+  /** vLLM 推理率（挂宿主节点） */
+  inference?: {
+    ok: boolean; node: string; model: string;
+    qps: number; gen_tokens_per_s: number; prompt_tokens_per_s: number;
+    avg_latency_s: number; ttft_avg_s: number; prefix_cache_hit_ratio: number;
+    kv_cache_usage_perc: number; running: number; waiting: number;
+  };
+  vllm?: { ok?: boolean; node?: string; error?: string };
 }
 
 export function useOpsPanelMetrics(): void {
@@ -72,21 +81,52 @@ export function useOpsPanelMetrics(): void {
           statusById.set(n.id.toLowerCase(), online ? "active" : "inactive");
         }
 
-        // ── GPU 指标：/api/metrics gpus[].node → util（DCGM 聚合）
+        // ── GPU/vLLM 指标（P4：/api/metrics 扁平逐卡行 + 推理率）
+        const perGpuById = new Map<string, import("../types/node-types").NodeGpuMetric[]>();
         const gpuById = new Map<string, number>();
+        const vllmByNode = new Map<string, import("../types/node-types").NodeVllmMetric>();
+        let metricsUpdatedAt: string | undefined;
         try {
           const metricsRes = await fetch(`${base}/api/metrics`, { signal: AbortSignal.timeout(5000) });
-          const metrics = (await metricsRes.json()) as OpsMetrics;
-          const dcgm = (metrics.gpus || []) as { node?: string; util?: number; gpus?: { util?: number }[] }[];
-          for (const g of dcgm) {
-            if (!g.node) { continue; }
-            const utils = Array.isArray(g.gpus)
-              ? g.gpus.map((x) => Number(x.util) || 0)
-              : [Number(g.util) || 0];
-            const avg = utils.length
-              ? Math.round(utils.reduce((s, u) => s + u, 0) / utils.length)
-              : 0;
-            gpuById.set(g.node, avg);
+          const m = (await metricsRes.json()) as OpsMetrics & { ts?: string };
+          metricsUpdatedAt = m.ts;
+          // OpsPanel gpus[] = 扁平逐卡行（node/gpu/model/util_perc/temp_c/power_w/sm_clock_mhz/xid_errors）
+          for (const r of m.gpus ?? []) {
+            const row = r as unknown as Record<string, unknown>;
+            if (!("util_perc" in row)) { continue; } // 防御：非逐卡形态跳过
+            const node = String(row.node || "").toLowerCase();
+            if (!node) { continue; }
+            const list = perGpuById.get(node) || [];
+            list.push({
+              idx: Number(row.gpu) || 0,
+              model: String(row.model || "GPU"),
+              util: Number(row.util_perc) || 0,
+              temp: Number(row.temp_c) || 0,
+              powerW: Number(row.power_w) || 0,
+              clockMhz: Number(row.sm_clock_mhz) || 0,
+              xid: Number(row.xid_errors) || 0,
+            });
+            perGpuById.set(node, list);
+          }
+          // 聚合均值（卡片主指标）
+          for (const [node, cards] of perGpuById) {
+            gpuById.set(node, Math.round(cards.reduce((s, c) => s + c.util, 0) / cards.length));
+          }
+          // vLLM 推理率 → 宿主节点
+          const inf = m.inference;
+          if (inf?.ok && inf.node) {
+            vllmByNode.set(inf.node.toLowerCase(), {
+              model: inf.model,
+              qps: Number(inf.qps) || 0,
+              genTokensPerS: Number(inf.gen_tokens_per_s) || 0,
+              promptTokensPerS: Number(inf.prompt_tokens_per_s) || 0,
+              avgLatencyS: Number(inf.avg_latency_s) || 0,
+              ttftS: Number(inf.ttft_avg_s) || 0,
+              prefixHit: Number(inf.prefix_cache_hit_ratio) || 0,
+              kvCache: Number(inf.kv_cache_usage_perc) || 0,
+              running: Number(inf.running) || 0,
+              waiting: Number(inf.waiting) || 0,
+            });
           }
         } catch { /* metrics 拉取失败不影响探针状态 */ }
 
@@ -98,6 +138,15 @@ export function useOpsPanelMetrics(): void {
           const updates: Partial<typeof existing> = { status };
           if (status === "active" && gpuById.has(idLower)) {
             updates.gpu = Math.max(0, Math.min(100, gpuById.get(idLower)!));
+          }
+          // P4：每卡明细 + vLLM 推理率挂载（数据源未覆盖的节点不写入 metrics）
+          if (perGpuById.has(idLower) || vllmByNode.has(idLower)) {
+            updates.metrics = {
+              ...(existing.metrics || {}),
+              ...(perGpuById.has(idLower) ? { gpus: perGpuById.get(idLower)! } : {}),
+              ...(vllmByNode.has(idLower) ? { vllm: vllmByNode.get(idLower)! } : {}),
+              ...(metricsUpdatedAt ? { updatedAt: metricsUpdatedAt } : {}),
+            };
           }
           useNodeSlice.getState().updateNode(existing.id, updates);
         }
