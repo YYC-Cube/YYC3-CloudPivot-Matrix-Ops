@@ -26,6 +26,7 @@
  */
 
 import http from "node:http";
+import https from "node:https";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
@@ -61,6 +62,13 @@ const NAS_UPSTREAM = (() => {
   try { return new URL(process.env.PMO_NAS_URL || "http://100.65.172.88:8000"); }
   catch { return new URL("http://100.65.172.88:8000"); }
 })();
+
+/** 云端上游同源反代白名单（落档 44）：浏览器直连 bigmodel 被 CORS 阻断（实证），
+ *  deepseek 虽放行但统一走反代可规避 Electron/离线差异。仅允许固定上游，非开放代理。 */
+const UPSTREAMS = {
+  zhipu: { prefix: "/api/v1/llm/zhipu", url: process.env.PMO_ZHIPU_URL || "https://open.bigmodel.cn" },
+  deepseek: { prefix: "/api/v1/llm/deepseek", url: process.env.PMO_DEEPSEEK_URL || "https://api.deepseek.com" },
+};
 
 /** MIME 类型映射 */
 const MIME_TYPES = {
@@ -207,6 +215,36 @@ function proxyToNas(req, res, subPath) {
   req.pipe(proxyReq, { end: true });
 }
 
+/** 云端上游反代（落档 44）：固定白名单上游，https 直连，透传认证头 */
+function proxyToUpstream(req, res, upstreamUrl, subPath) {
+  const upstream = new URL(upstreamUrl);
+  const target = new URL(`/${subPath}`, upstream);
+  // URL 归一：//v1/... → /v1/...（前端可能拼出双斜杠）
+  const safePath = (target.pathname + target.search).replace(/^\/{2,}/, "/");
+  const headers = { ...req.headers, host: upstream.host };
+  delete headers["origin"];
+  delete headers["referer"];
+  const proxyOptions = {
+    hostname: upstream.hostname,
+    port: upstream.port || 443,
+    path: safePath,
+    method: req.method,
+    headers,
+  };
+  const proxyReq = https.request(proxyOptions, (proxyRes) => {
+    setCorsHeaders(res);
+    res.writeHead(proxyRes.statusCode || 200, proxyRes.headers);
+    proxyRes.pipe(res, { end: true });
+  });
+  proxyReq.on("error", (err) => {
+    console.error(`[PROXY ERROR] ${req.method} ${target.href} → ${err.message}`);
+    setCorsHeaders(res);
+    res.writeHead(502, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ error: "upstream proxy error", message: err.message, target: target.href }));
+  });
+  req.pipe(proxyReq, { end: true });
+}
+
 // ============================================================
 // 静态文件服务
 // ============================================================
@@ -302,6 +340,18 @@ const server = http.createServer((req, res) => {
     const ts = new Date().toISOString().slice(11, 19);
     console.log(`[${ts}] PROXY ${method} ${urlPath} → nas:${NAS_UPSTREAM.host}/${subPath}`);
     return;
+  }
+
+  // ── 云端上游反代（zhipu/deepseek 白名单，落档 44）──
+  for (const [name, up] of Object.entries(UPSTREAMS)) {
+    if (urlPath.startsWith(up.prefix)) {
+      const subPath = urlPath.slice(up.prefix.length).replace(/^\//, "");
+      setCorsHeaders(res);
+      proxyToUpstream(req, res, up.url, subPath);
+      const ts = new Date().toISOString().slice(11, 19);
+      console.log(`[${ts}] PROXY ${method} ${urlPath} → ${name}:${new URL(up.url).host}/${subPath}`);
+      return;
+    }
   }
 
   // ── 静态文件 ──

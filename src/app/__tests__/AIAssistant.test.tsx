@@ -13,8 +13,8 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-// Mock localStorage for settings state
-const createMockSettings = () => {
+// Mock settings state（vi.hoisted：供 vi.mock 工厂引用，同时保留可断言引用）
+const mockEnv = vi.hoisted(() => {
   const settings: Record<string, any> = {
     aiModel: "qwen-72b",
     aiApiKey: "",
@@ -22,16 +22,25 @@ const createMockSettings = () => {
     aiMaxTokens: "2048",
     aiTopP: "0.9",
   };
+  const updateValue = vi.fn((key: string, value: any) => { settings[key] = value; });
   return {
-    values: settings,
-    updateValue: vi.fn((key: string, value: any) => {
-      settings[key] = value;
-    }),
-    getSettings: () => settings,
+    settings,
+    updateValue,
+    state: {
+      values: settings,
+      updateValue,
+      toggles: { demoMode: false },
+      // useWebSocketData 读取 runtime.autoRefresh / refreshInterval
+      runtime: { autoRefresh: false, refreshInterval: 5000 },
+    },
   };
-};
+});
 
-const mockSettingsStore = createMockSettings();
+const mockSettingsStore = {
+  values: mockEnv.settings,
+  updateValue: mockEnv.updateValue,
+  getSettings: () => mockEnv.settings,
+};
 
 // Mock hooks BEFORE importing component
 vi.mock("../hooks/useModelProvider", () => ({
@@ -60,9 +69,21 @@ vi.mock("../store/slices/provider-slice", () => ({
   }),
 }));
 
-vi.mock("../hooks/useSettingsStore", () => ({
-  useSettingsStore: () => mockSettingsStore,
-}));
+// 落档 44：AIAssistant 已从旧 useSettingsStore 迁移到 settings-ssot 单一数据源，
+// mock 同步落到 ssot slice（useSettingsSSOT(selector) 形式，需同时支持选择器与无参调用）
+vi.mock("../store/slices/settings-ssot-slice", () => {
+  const hook = (selector?: (s: typeof mockEnv.state) => unknown) =>
+    selector ? selector(mockEnv.state) : mockEnv.state;
+  hook.getState = () => mockEnv.state;
+  // demo-mode helper 需要 setState（切换 toggles.demoMode）
+  hook.setState = (updater: unknown) => {
+    const next = typeof updater === "function" ? (updater as (s: typeof mockEnv.state) => Partial<typeof mockEnv.state>)(mockEnv.state) : (updater as Partial<typeof mockEnv.state>);
+    if (next?.toggles) { mockEnv.state.toggles = { ...mockEnv.state.toggles, ...next.toggles }; }
+    if (next?.values) { Object.assign(mockEnv.settings, next.values); }
+  };
+  hook.subscribe = () => () => {};
+  return { useSettingsSSOT: hook };
+});
 
 vi.mock("../modules/shared/YYC3LogoSvg", () => ({
   YYC3LogoSvg: () => <div data-testid="yyc3-logo-svg" />,

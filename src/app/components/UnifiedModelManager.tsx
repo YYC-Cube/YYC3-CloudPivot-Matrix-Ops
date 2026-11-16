@@ -94,6 +94,14 @@ export function UnifiedModelManager({ compact = false, showHeader = true }: Unif
   const [fApiKey, setFApiKey] = useState("");
   const [fBaseUrl, setFBaseUrl] = useState("");
   const [fProxyUrl, setFProxyUrl] = useState("");
+  // 高级设置（落档 44 图一）：API 格式 + 能力旗标 + 上下文/输出上限
+  const [fApiFormat, setFApiFormat] = useState<"openai" | "anthropic">("openai");
+  const [fAdvancedOpen, setFAdvancedOpen] = useState(false);
+  const [fTools, setFTools] = useState(false);
+  const [fVision, setFVision] = useState(false);
+  const [fReasoning, setFReasoning] = useState(false);
+  const [fContextWindow, setFContextWindow] = useState(0);
+  const [fMaxOutput, setFMaxOutput] = useState(0);
 
   const providerOptions = useMemo(() =>
     providers.map(p => ({
@@ -117,12 +125,21 @@ export function UnifiedModelManager({ compact = false, showHeader = true }: Unif
     unchecked: configuredModels.filter(m => m.status === "unchecked").length,
   }), [configuredModels]);
 
+  /** 高级设置默认值（新增/切换服务商时重置） */
+  const resetAdvanced = () => {
+    setFApiFormat("openai");
+    setFAdvancedOpen(false);
+    setFTools(false); setFVision(false); setFReasoning(false);
+    setFContextWindow(0); setFMaxOutput(0);
+  };
+
   const openAdd = () => {
     setEditModel(null);
     setIsAdding(true);
     setShowForm(true);
     setFProviderId(providerOptions[0]?.id || "");
     setFModel(""); setFApiKey(""); setFBaseUrl(""); setFProxyUrl("");
+    resetAdvanced();
   };
 
   /** 从服务商详情「添加模型」进入：预选服务商并带出其 Base URL / 服务商级 Key */
@@ -136,6 +153,8 @@ export function UnifiedModelManager({ compact = false, showHeader = true }: Unif
     setFApiKey(p?.apiKey || "");
     setFBaseUrl(p?.baseUrl || "");
     setFProxyUrl("");
+    resetAdvanced();
+    setFApiFormat(p?.apiFormat || ((p?.baseUrl || "").includes("/anthropic") ? "anthropic" : "openai"));
   };
 
   /** 系列快捷添加：已配置提示跳过；需要 Key 但服务商未存 → 打开预填表单；否则直建+激活 */
@@ -217,6 +236,10 @@ export function UnifiedModelManager({ compact = false, showHeader = true }: Unif
     setShowForm(true);
     setFProviderId(m.providerId);
     setFModel(m.model); setFApiKey(m.apiKey); setFBaseUrl(m.baseUrl); setFProxyUrl(m.proxyUrl || "");
+    setFApiFormat(m.apiFormat || ((m.baseUrl || "").includes("/anthropic") ? "anthropic" : "openai"));
+    setFAdvancedOpen(false);
+    setFTools(!!m.capabilities?.tools); setFVision(!!m.capabilities?.vision); setFReasoning(!!m.capabilities?.reasoning);
+    setFContextWindow(m.contextWindow || 0); setFMaxOutput(m.maxOutput || 0);
   };
 
   const closeForm = () => { setEditModel(null); setIsAdding(false); setShowForm(false); };
@@ -229,7 +252,12 @@ export function UnifiedModelManager({ compact = false, showHeader = true }: Unif
     const baseUrl = fBaseUrl.trim() || provider?.baseUrl || "";
 
     if (isAdding) {
-      const newModel = addModel(fProviderId as any, fModel.trim(), fApiKey.trim(), baseUrl || undefined, fProxyUrl.trim() || undefined);
+      const newModel = addModel(fProviderId as any, fModel.trim(), fApiKey.trim(), baseUrl || undefined, fProxyUrl.trim() || undefined, {
+        apiFormat: fApiFormat,
+        capabilities: { tools: fTools, vision: fVision, reasoning: fReasoning },
+        contextWindow: fContextWindow || undefined,
+        maxOutput: fMaxOutput || undefined,
+      });
       if (newModel) {
         toast.success(`模型 ${fModel} 已添加`, { style: { background: "rgba(8,25,55,0.95)", border: "1px solid rgba(0,255,136,0.3)", color: "#e0f0ff" } });
         closeForm();
@@ -240,11 +268,15 @@ export function UnifiedModelManager({ compact = false, showHeader = true }: Unif
         apiKey: fApiKey.trim(),
         baseUrl: baseUrl || editModel.baseUrl,
         proxyUrl: fProxyUrl.trim() || undefined,
+        apiFormat: fApiFormat,
+        capabilities: { tools: fTools, vision: fVision, reasoning: fReasoning },
+        contextWindow: fContextWindow || undefined,
+        maxOutput: fMaxOutput || undefined,
       });
       toast.success(`模型 ${fModel} 已更新`, { style: { background: "rgba(8,25,55,0.95)", border: "1px solid rgba(0,255,136,0.3)", color: "#e0f0ff" } });
       closeForm();
     }
-  }, [fProviderId, fModel, fApiKey, fBaseUrl, fProxyUrl, isAdding, editModel, providers, addModel, updateModel]);
+  }, [fProviderId, fModel, fApiKey, fBaseUrl, fProxyUrl, fApiFormat, fTools, fVision, fReasoning, fContextWindow, fMaxOutput, isAdding, editModel, providers, addModel, updateModel]);
 
   const handleTest = useCallback(async (id: string) => {
     try {
@@ -661,6 +693,82 @@ export function UnifiedModelManager({ compact = false, showHeader = true }: Unif
                 className="w-full px-3 py-2 rounded-lg bg-[rgba(0,40,80,0.4)] border border-[rgba(0,180,255,0.15)] text-[#e0f0ff] focus:outline-none focus:border-[rgba(0,212,255,0.4)]"
                 style={{ fontSize: "0.8rem" }} />
             </div>
+          </div>
+
+          {/* 高级设置（落档 44 图一）：API 格式 + 能力旗标 + 上下文/输出上限 */}
+          <div className="mt-3 pt-3 border-t border-[rgba(0,180,255,0.1)]">
+            <button type="button" onClick={() => setFAdvancedOpen(v => !v)}
+              className="flex items-center gap-1.5 text-[rgba(0,212,255,0.6)] hover:text-[#00d4ff] transition-all"
+              style={{ fontSize: "0.75rem" }}>
+              <span className={`transition-transform ${fAdvancedOpen ? "rotate-90" : ""}`}>▸</span>
+              高级设置
+            </button>
+
+            {fAdvancedOpen && (
+              <div className="mt-3 space-y-3">
+                <div>
+                  <label className="text-[rgba(0,212,255,0.5)] block mb-1" style={{ fontSize: "0.7rem" }}>API 格式</label>
+                  <select value={fApiFormat} onChange={e => setFApiFormat(e.target.value as "openai" | "anthropic")}
+                    className="w-full px-3 py-2 rounded-lg bg-[rgba(0,40,80,0.4)] border border-[rgba(0,180,255,0.15)] text-[#00d4ff] focus:outline-none"
+                    style={{ fontSize: "0.8rem" }} title="API 格式">
+                    <option value="openai" style={{ background: "#0a1830" }}>OpenAI 兼容 (/chat/completions)</option>
+                    <option value="anthropic" style={{ background: "#0a1830" }}>Anthropic Messages (/v1/messages)</option>
+                  </select>
+                  <p className="text-[rgba(0,212,255,0.3)] mt-1" style={{ fontSize: "0.62rem" }}>
+                    智谱 /api/anthropic 等 Anthropic 格式端点请选第二项；OpenAI 兼容端点保持默认
+                  </p>
+                </div>
+
+                <div>
+                  <label className="text-[rgba(0,212,255,0.5)] block mb-1.5" style={{ fontSize: "0.7rem" }}>模型能力</label>
+                  <div className="flex items-center gap-4 flex-wrap">
+                    {([
+                      { key: "tools", label: "工具调用", val: fTools, set: setFTools },
+                      { key: "vision", label: "图片输入", val: fVision, set: setFVision },
+                      { key: "reasoning", label: "推理", val: fReasoning, set: setFReasoning },
+                    ] as const).map(opt => (
+                      <label key={opt.key} className="flex items-center gap-1.5 text-[rgba(224,240,255,0.65)] cursor-pointer" style={{ fontSize: "0.72rem" }}>
+                        <input type="checkbox" checked={opt.val} onChange={e => opt.set(e.target.checked)} className="accent-[#00d4ff]" />
+                        {opt.label}
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[rgba(0,212,255,0.5)] block mb-1.5" style={{ fontSize: "0.7rem" }}>输入（上下文）</label>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {[32000, 64000, 128000, 256000].map(v => (
+                      <button key={v} type="button" onClick={() => setFContextWindow(fContextWindow === v ? 0 : v)}
+                        className={`px-2.5 py-1 rounded-md border transition-all ${fContextWindow === v
+                          ? "bg-[rgba(0,212,255,0.15)] border-[rgba(0,212,255,0.45)] text-[#00d4ff]"
+                          : "border-[rgba(0,180,255,0.15)] text-[rgba(224,240,255,0.5)] hover:border-[rgba(0,212,255,0.3)]"}`}
+                        style={{ fontSize: "0.68rem", fontFamily: "'JetBrains Mono', monospace" }}>
+                        {v / 1000}K
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[rgba(0,212,255,0.5)] block mb-1.5" style={{ fontSize: "0.7rem" }}>输出</label>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {[8000, 16000, 32000, 64000].map(v => (
+                      <button key={v} type="button" onClick={() => setFMaxOutput(fMaxOutput === v ? 0 : v)}
+                        className={`px-2.5 py-1 rounded-md border transition-all ${fMaxOutput === v
+                          ? "bg-[rgba(0,212,255,0.15)] border-[rgba(0,212,255,0.45)] text-[#00d4ff]"
+                          : "border-[rgba(0,180,255,0.15)] text-[rgba(224,240,255,0.5)] hover:border-[rgba(0,212,255,0.3)]"}`}
+                        style={{ fontSize: "0.68rem", fontFamily: "'JetBrains Mono', monospace" }}>
+                        {v / 1000}K
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[rgba(0,212,255,0.3)] mt-1" style={{ fontSize: "0.62rem" }}>
+                    输出上限即请求 max_tokens；留空＝默认 2048（推理型模型建议 ≥8K）
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
           <div className="flex gap-2 pt-3">
             <button onClick={closeForm}

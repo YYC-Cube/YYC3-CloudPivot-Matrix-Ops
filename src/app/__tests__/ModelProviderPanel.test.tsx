@@ -72,10 +72,11 @@ describe("ModelProviderPanel", () => {
     expect(screen.getByText("modelProvider.title")).toBeInTheDocument();
   });
 
-  it("should render add model button", () => {
+  it("should NOT render add model button（落档 44 只读纪律）", () => {
     render(React.createElement(ModelProviderPanel));
-    const addButtons = screen.getAllByText("modelProvider.addModel");
-    expect(addButtons.length).toBeGreaterThan(0);
+    // 增删改收敛到「系统管理 → 模型设置」：本页不得出现添加入口
+    expect(screen.queryByText("modelProvider.addModel")).toBeNull();
+    expect(screen.queryByTestId("open-add-model")).toBeNull();
   });
 
   it("should render ollama section", () => {
@@ -96,10 +97,11 @@ describe("ModelProviderPanel", () => {
     expect(exportButtons.length).toBeGreaterThan(0);
   });
 
-  it("should render import button", () => {
+  it("should render readonly banner（落档 44 只读纪律，导入已移除）", () => {
     render(React.createElement(ModelProviderPanel));
-    const importButtons = screen.getAllByText("导入");
-    expect(importButtons.length).toBeGreaterThan(0);
+    // 只读视图横幅存在；导入写操作已收敛到系统设置
+    expect(screen.getAllByText(/只读视图/).length).toBeGreaterThan(0);
+    expect(screen.queryByText("导入")).toBeNull();
   });
 
   it("should render stats section", () => {

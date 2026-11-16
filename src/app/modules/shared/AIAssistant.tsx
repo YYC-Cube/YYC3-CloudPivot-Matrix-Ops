@@ -50,7 +50,6 @@ import {
 } from "lucide-react";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useCopyFeedback } from "../../hooks/useCopyFeedback";
-import { useSettingsStore } from "../../hooks/useSettingsStore";
 import { useWebSocketData } from "../../hooks/useWebSocketData";
 import { runFullSystemDiagnostic, testAIConnection, type AIConnectionConfig, type SystemDiagnosticResult } from "../../lib/connection-test-engine";
 import { useNodeSlice } from "../../store/slices/node-slice";
@@ -206,8 +205,12 @@ export function AIAssistant({ isMobile }: AIAssistantProps) {
     return models.sort((a, b) => (a.isLocal === b.isLocal ? 0 : a.isLocal ? -1 : 1));
   }, [_configuredModels, ollamaModels]);
 
-  // ★ 从 useSettingsStore 获取全局 AI 配置 (设置页 = 唯一数据源)
-  const { values: settingsValues, updateValue: updateSettingsValue } = useSettingsStore();
+  // ★ 全局 AI 配置（落档 44：改读 settings-ssot 单一数据源——原 useSettingsStore
+  // 是旧版 localStorage hook（yyc3_system_settings），与 SSOT 双源导致浮窗
+  // 选中模型与设置页/发送链路不一致）
+  const ssotValues = useSettingsSSOT((s) => s.values);
+  const updateSettingsValue = useSettingsSSOT((s) => s.updateValue);
+  const settingsValues = ssotValues;
 
   // 派生自全局设置 — 修改即时同步到 Settings 页
   const apiKey = settingsValues.aiApiKey;
@@ -276,10 +279,22 @@ export function AIAssistant({ isMobile }: AIAssistantProps) {
       await new Promise(r => setTimeout(r, 800 + Math.random() * 1200));
     }
 
-    // 真实路径（落档 43 §十）：统一数据源 = provider-slice getActiveModel()，
-    // 调用层 = callConfiguredModel（与 Family 群聊/单聊同链路）。demoMode
-    // 开启且无激活模型时才走本地模拟；无激活模型如实引导，不编造回复。
-    const activeModel = useProviderSlice.getState().getActiveModel();
+    // 真实路径（落档 44 修正）：优先「浮窗配置里选中的模型」——此前只取全局
+    // getActiveModel()，导致头部显示 deepseek 而实发 GLM-5.3（选择与发送脱钩）。
+    // 解析顺序：选中 cm 实体 → ollama 在线模型临时构造 → 全局激活模型。
+    const pickedCm = _configuredModels.find(m => m.id === selectedModel);
+    let activeModel: typeof pickedCm | undefined = pickedCm;
+    if (!activeModel && typeof selectedModel === "string" && selectedModel.startsWith("ollama-live-")) {
+      const ollamaName = selectedModel.slice("ollama-live-".length);
+      const ollamaBase = typeof window !== "undefined"
+        ? `${window.location.protocol}//${window.location.hostname}:11434` : "http://localhost:11434";
+      activeModel = {
+        id: selectedModel, providerId: "ollama", providerLabel: "Ollama (本地)",
+        model: ollamaName, apiKey: "", baseUrl: ollamaBase,
+        createdAt: Date.now(), lastUsed: null, status: "active",
+      } as typeof pickedCm;
+    }
+    if (!activeModel) { activeModel = useProviderSlice.getState().getActiveModel(); }
     let response: string;
     if (activeModel) {
       const history = messages
@@ -316,7 +331,7 @@ export function AIAssistant({ isMobile }: AIAssistantProps) {
 
     setMessages(prev => [...prev, assistantMsg]);
     setIsTyping(false);
-  }, [demoMode, messages, systemPrompt]);
+  }, [demoMode, messages, systemPrompt, selectedModel, _configuredModels]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -402,14 +417,17 @@ export function AIAssistant({ isMobile }: AIAssistantProps) {
     setDiagResult(null);
     try {
       const model = availableModels.find(m => m.id === selectedModel);
+      const cm = _configuredModels.find(m => m.id === selectedModel);
       const aiConfigs: AIConnectionConfig[] = model ? [{
         providerId: model.provider || "unknown",
         providerLabel: model.provider || "Unknown",
-        baseUrl: model.isLocal
+        // 落档 44 修正：云端模型必须传 SSOT 真实 baseUrl——原实现传 ""，
+        // 网络可达性/CORS 检测退化为空 URL，产出 8ms「测通」假阳性
+        baseUrl: cm?.baseUrl || (model.isLocal
           ? (typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:11434` : "http://localhost:11434")
-          : "",
+          : ""),
         authType: "bearer",
-        apiKey: apiKey || "",
+        apiKey: cm?.apiKey || apiKey || "",
         modelId: model.id,
         modelName: model.name,
         isLocal: model.isLocal,
@@ -421,7 +439,7 @@ export function AIAssistant({ isMobile }: AIAssistantProps) {
     } finally {
       setDiagRunning(false);
     }
-  }, [selectedModel, availableModels, apiKey]);
+  }, [selectedModel, availableModels, apiKey, _configuredModels]);
 
   // Also upgrade single-model testConnection to use engine
   const testConnection = useCallback(async () => {
@@ -433,14 +451,16 @@ export function AIAssistant({ isMobile }: AIAssistantProps) {
     setConnTestSteps([]);
     const t0 = Date.now();
     try {
+      const cm = _configuredModels.find(m => m.id === selectedModel);
       const config: AIConnectionConfig = {
         providerId: model.provider || "unknown",
         providerLabel: model.provider || "Unknown",
-        baseUrl: model.isLocal
+        // 落档 44 修正：同诊断——传 SSOT 真实 baseUrl，消除空 URL 假阳性
+        baseUrl: cm?.baseUrl || (model.isLocal
           ? (typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}:11434` : "http://localhost:11434")
-          : "",
+          : ""),
         authType: "bearer",
-        apiKey: apiKey || "",
+        apiKey: cm?.apiKey || apiKey || "",
         modelId: model.id,
         modelName: model.name,
         isLocal: model.isLocal,
@@ -456,7 +476,7 @@ export function AIAssistant({ isMobile }: AIAssistantProps) {
       setConnTestResult(msg.includes("timeout") ? "连接超时，请检查网络或服务地址" : msg);
       setConnTestTime(Date.now() - t0);
     }
-  }, [selectedModel, availableModels, apiKey]);
+  }, [selectedModel, availableModels, apiKey, _configuredModels]);
 
   const cmdCategories = [
     { key: "all", label: "全部" },

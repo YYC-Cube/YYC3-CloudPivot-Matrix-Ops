@@ -22,6 +22,8 @@ export interface ModelProviderDef {
   requiresApiKey: boolean;
   /** 服务商级 API Key（落档 43 §八：详情面板管理；cm 创建时自动带出，仅 persist 本地） */
   apiKey?: string;
+  /** 服务商默认 API 格式（模型未单独指定时继承） */
+  apiFormat?: "openai" | "anthropic";
   isLocal: boolean;
   isBuiltin?: boolean;
   isCustom?: boolean;
@@ -38,6 +40,18 @@ export interface ConfiguredModel {
   apiKey: string;
   baseUrl: string;
   proxyUrl?: string;
+  /** API 格式（落档 44）：openai=OpenAI 兼容 /chat/completions；anthropic=Messages /v1/messages */
+  apiFormat?: "openai" | "anthropic";
+  /** 高级设置：能力旗标（仅声明，供选型/提示，不改变协议） */
+  capabilities?: {
+    tools?: boolean;
+    vision?: boolean;
+    reasoning?: boolean;
+  };
+  /** 上下文窗口（tokens，如 128000） */
+  contextWindow?: number;
+  /** 单次最大输出 tokens（请求 max_tokens 上界） */
+  maxOutput?: number;
   createdAt: number;
   lastUsed: number | null;
   status: "active" | "error" | "unchecked";

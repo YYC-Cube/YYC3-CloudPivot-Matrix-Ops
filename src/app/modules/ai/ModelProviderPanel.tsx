@@ -15,24 +15,18 @@ import {
   ChevronDown, ChevronUp,
   Cpu,
   Download,
-  Edit3,
   Globe,
   HelpCircle,
   Plug,
-  Plus,
   RefreshCw,
   Server,
-  Trash2,
   Upload,
 } from "lucide-react";
 import React, { useContext, useState } from "react";
-import { toast } from "sonner";
 import { useI18n } from "../../hooks/useI18n";
 import { useModelProvider } from "../../hooks/useModelProvider";
 import { ViewContext } from "../../lib/view-context";
-import { AddModelModal } from "./AddModelModal";
 import { GlassCard } from "../shared/GlassCard";
-import { ProviderEditorModal } from "./ProviderEditorModal";
 
 function formatSize(bytes: number): string {
   if (bytes >= 1e9) { return `${(bytes / 1e9).toFixed(1)}GB`; }
@@ -52,27 +46,12 @@ export function ModelProviderPanel() {
     ollamaLoading,
     ollamaError,
     stats,
-    modalOpen,
-    openModal,
-    closeModal,
-    addModel,
-    removeModel,
+    removeModel: _removeModel,
     testConnection,
     fetchOllamaModels,
-    presetModels,
-    addProvider,
-    updateProvider,
-    removeProvider,
-    resetProvider,
-    addModelToProvider,
-    removeModelFromProvider: _removeModelFromProvider,
     exportConfig,
     importConfig,
   } = useModelProvider();
-
-  // Provider editor modal state
-  const [providerEditorOpen, setProviderEditorOpen] = useState(false);
-  const [editingProvider, setEditingProvider] = useState<typeof providers[0] | null>(null);
 
   // Provider list expand
   const [showProviderList, setShowProviderList] = useState(false);
@@ -138,46 +117,22 @@ export function ModelProviderPanel() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          {/* 导入/导出 */}
+          {/* 落档 44 只读纪律：本页仅保留 导出（只读快照）——增删改/导入/预设
+              全部收敛到「系统管理 → 模型设置」（模型 SSOT 唯一编辑面） */}
           <button
             onClick={handleExport}
             className="flex items-center gap-1 px-2.5 py-2 rounded-xl bg-[rgba(0,100,150,0.1)] border border-[rgba(0,180,255,0.15)] text-[rgba(0,212,255,0.5)] hover:text-[#00d4ff] hover:bg-[rgba(0,140,200,0.15)] transition-all"
             style={{ fontSize: "0.72rem" }}
-            title="导出配置"
+            title="导出配置（只读快照）"
           >
             <Download className="w-3.5 h-3.5" />
             导出
           </button>
-          <button
-            onClick={() => setShowImport(!showImport)}
-            className="flex items-center gap-1 px-2.5 py-2 rounded-xl bg-[rgba(0,100,150,0.1)] border border-[rgba(0,180,255,0.15)] text-[rgba(0,212,255,0.5)] hover:text-[#00d4ff] hover:bg-[rgba(0,140,200,0.15)] transition-all"
-            style={{ fontSize: "0.72rem" }}
-            title="导入配置"
-          >
-            <Upload className="w-3.5 h-3.5" />
-            导入
-          </button>
-
-          {/* 添加自定义服务商 */}
-          <button
-            onClick={() => { setEditingProvider(null); setProviderEditorOpen(true); }}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[rgba(120,80,255,0.1)] border border-[rgba(120,80,255,0.25)] text-[#aa77ff] hover:bg-[rgba(120,80,255,0.18)] transition-all"
-            style={{ fontSize: "0.78rem" }}
-          >
-            <Server className="w-4 h-4" />
-            自定义服务商
-          </button>
-
-          {/* 添加模型 */}
-          <button
-            onClick={openModal}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[rgba(0,140,200,0.15)] border border-[rgba(0,180,255,0.3)] text-[#00d4ff] hover:bg-[rgba(0,140,200,0.25)] transition-all"
-            style={{ fontSize: "0.78rem" }}
-            data-testid="open-add-model"
-          >
-            <Plus className="w-4 h-4" />
-            {t("modelProvider.addModel")}
-          </button>
+          <span className="px-2.5 py-2 rounded-xl bg-[rgba(255,221,0,0.06)] border border-[rgba(255,221,0,0.18)] text-[rgba(255,221,0,0.65)]"
+            style={{ fontSize: "0.68rem" }}
+            title="模型增删改统一在「系统管理 → 模型设置」进行">
+            🔒 只读视图 · 编辑请前往「系统管理 → 模型设置」
+          </span>
         </div>
       </div>
 
@@ -320,26 +275,11 @@ export function ModelProviderPanel() {
                   </div>
                 </div>
 
-                {/* 操作按钮 */}
+                {/* 操作按钮（落档 44 只读：服务商编辑/删除收敛到系统设置） */}
                 <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={() => { setEditingProvider(p); setProviderEditorOpen(true); }}
-                    className="p-1.5 rounded-lg hover:bg-[rgba(0,180,255,0.08)] transition-all"
-                    title="编辑服务商"
-                  >
-                    <Edit3 className="w-3.5 h-3.5 text-[rgba(0,212,255,0.4)]" />
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (confirm(`确定要删除服务商「${p.label}」吗？\n删除后可在「自定义服务商」中重新添加。`)) {
-                        removeProvider(p.id);
-                      }
-                    }}
-                    className="p-1.5 rounded-lg hover:bg-[rgba(255,51,102,0.08)] transition-all"
-                    title="删除服务商"
-                  >
-                    <Trash2 className="w-3.5 h-3.5 text-[rgba(255,51,102,0.5)]" />
-                  </button>
+                  <span className="px-1.5 py-0.5 rounded text-[rgba(255,221,0,0.5)]" style={{ fontSize: "0.6rem" }} title="只读——编辑请前往「系统管理 → 模型设置」">
+                    🔒
+                  </span>
                 </div>
               </div>
             ))}
@@ -349,11 +289,11 @@ export function ModelProviderPanel() {
         {!showProviderList && (
           <div className="flex items-center gap-2 flex-wrap">
             {providers.map((p) => (
-              <button
+              <span
                 key={p.id}
-                onClick={() => { setEditingProvider(p); setProviderEditorOpen(true); }}
-                className="px-2.5 py-1.5 rounded-lg bg-[rgba(0,40,80,0.1)] border border-[rgba(0,180,255,0.08)] hover:border-[rgba(0,180,255,0.2)] text-[rgba(0,212,255,0.5)] hover:text-[#00d4ff] transition-all flex items-center gap-1.5"
+                className="px-2.5 py-1.5 rounded-lg bg-[rgba(0,40,80,0.1)] border border-[rgba(0,180,255,0.08)] text-[rgba(0,212,255,0.45)] flex items-center gap-1.5"
                 style={{ fontSize: "0.68rem" }}
+                title="只读——编辑请前往「系统管理 → 模型设置」"
               >
                 {p.isLocal ? (
                   <Server className="w-3 h-3 text-[#00ff88]" />
@@ -362,7 +302,7 @@ export function ModelProviderPanel() {
                 )}
                 {p.label}
                 {p.isCustom && <span className="text-[#aa77ff]">*</span>}
-              </button>
+              </span>
             ))}
           </div>
         )}
@@ -431,19 +371,11 @@ export function ModelProviderPanel() {
           <h3 className="text-[#e0f0ff]" style={{ fontSize: "0.88rem" }}>
             {t("modelProvider.configuredModels")}
           </h3>
-          <button
-            onClick={() => {
-              const r = presetModels();
-              if (r.added > 0) { toast.success(`已预设 ${r.added} 个模型（未检测态，请测试后使用）`); }
-              else if (r.skipped.length > 0) { toast.info(`无可预设项——以下服务商缺 API Key：${r.skipped.join("、")}`); }
-              else { toast.info("系列模型均已配置"); }
-            }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[rgba(0,212,255,0.08)] border border-[rgba(0,212,255,0.15)] text-cyan-300 hover:bg-[rgba(0,212,255,0.15)] transition-all"
-            style={{ fontSize: "0.7rem" }}
-          >
-            <Download className="w-3 h-3" />
-            一键预设模型
-          </button>
+          <span className="px-2 py-1 rounded-lg bg-[rgba(255,221,0,0.06)] border border-[rgba(255,221,0,0.18)] text-[rgba(255,221,0,0.65)]"
+            style={{ fontSize: "0.65rem" }}
+            title="一键预设/增删改统一在「系统管理 → 模型设置」">
+            🔒 只读
+          </span>
         </div>
 
         {configuredModels.length > 0 ? (
@@ -483,13 +415,6 @@ export function ModelProviderPanel() {
                         title={t("modelProvider.testConnection")}
                       >
                         <Plug className="w-3.5 h-3.5 text-[rgba(0,212,255,0.4)]" />
-                      </button>
-                      <button
-                        onClick={() => removeModel(cm.id)}
-                        className="p-1.5 rounded-lg hover:bg-[rgba(255,51,102,0.08)] transition-all"
-                        title={t("common.delete")}
-                      >
-                        <Trash2 className="w-3.5 h-3.5 text-[rgba(255,51,102,0.5)]" />
                       </button>
                     </div>
                   </div>
@@ -536,28 +461,8 @@ export function ModelProviderPanel() {
         )}
       </GlassCard>
 
-      {/* ======== AddModelModal ======== */}
-      <AddModelModal
-        isOpen={modalOpen}
-        onClose={closeModal}
-        providers={providers}
-        ollamaModels={ollamaModels}
-        ollamaLoading={ollamaLoading}
-        ollamaError={ollamaError}
-        onFetchOllama={fetchOllamaModels}
-        onAdd={addModel}
-        onAddModelToProvider={addModelToProvider}
-      />
-
-      {/* ======== ProviderEditorModal ======== */}
-      <ProviderEditorModal
-        isOpen={providerEditorOpen}
-        onClose={() => { setProviderEditorOpen(false); setEditingProvider(null); }}
-        editingProvider={editingProvider}
-        onSave={addProvider}
-        onUpdate={updateProvider}
-        onReset={resetProvider}
-      />
+      {/* 落档 44 只读纪律：AddModelModal / ProviderEditorModal 已从本页移除，
+          模型与服务商的增删改统一收敛到「系统管理 → 模型设置」 */}
     </div>
   );
 }

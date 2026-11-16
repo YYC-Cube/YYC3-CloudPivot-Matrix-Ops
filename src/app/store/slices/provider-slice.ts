@@ -120,6 +120,14 @@ function migrateModels(): ConfiguredModel[] {
 // Slice State & Actions
 // ============================================================
 
+/** 模型创建附加项（落档 44 高级设置） */
+export interface ModelExtras {
+  apiFormat?: "openai" | "anthropic";
+  capabilities?: { tools?: boolean; vision?: boolean; reasoning?: boolean };
+  contextWindow?: number;
+  maxOutput?: number;
+}
+
 export interface ProviderSlice {
   // State
   providers: ModelProviderDef[];
@@ -141,7 +149,7 @@ export interface ProviderSlice {
   removeModelFromProvider: (providerId: ModelProviderId, modelName: string) => void;
 
   // Configured Model CRUD
-  addModel: (providerId: ModelProviderId, model: string, apiKey: string, customBaseUrl?: string, proxyUrl?: string) => ConfiguredModel | undefined;
+  addModel: (providerId: ModelProviderId, model: string, apiKey: string, customBaseUrl?: string, proxyUrl?: string, extras?: ModelExtras) => ConfiguredModel | undefined;
   updateModel: (id: string, updates: Partial<ConfiguredModel>) => void;
   removeModel: (id: string) => void;
   testConnection: (id: string) => Promise<void>;
@@ -256,7 +264,7 @@ export const useProviderSlice = create<ProviderSlice>()(
 
       // ── Configured Model CRUD ──
 
-      addModel: (providerId, model, apiKey, customBaseUrl, proxyUrl) => {
+      addModel: (providerId, model, apiKey, customBaseUrl, proxyUrl, extras) => {
         const provider = get().providers.find((p) => p.id === providerId);
         if (!provider) { return undefined; }
 
@@ -268,6 +276,13 @@ export const useProviderSlice = create<ProviderSlice>()(
           apiKey,
           baseUrl: customBaseUrl || provider.baseUrl,
           proxyUrl: proxyUrl || undefined,
+          // 格式继承：显式 extras 优先 → 服务商默认 → 按 baseUrl 启发（/anthropic 路径）
+          apiFormat: extras?.apiFormat
+            ?? provider.apiFormat
+            ?? ((customBaseUrl || provider.baseUrl || "").includes("/anthropic") ? "anthropic" : "openai"),
+          capabilities: extras?.capabilities,
+          contextWindow: extras?.contextWindow,
+          maxOutput: extras?.maxOutput,
           createdAt: Date.now(),
           lastUsed: null,
           status: "unchecked",
