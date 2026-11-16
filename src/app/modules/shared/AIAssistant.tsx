@@ -465,12 +465,13 @@ export function AIAssistant({ isMobile }: AIAssistantProps) {
           right: isMobile ? 16 : 24,
         }}
       >
-        <div className="relative rounded-2xl bg-gradient-to-br from-[#00d4ff] to-[#7b2ff7] flex items-center justify-center shadow-[0_0_30px_rgba(0,180,255,0.4)] hover:shadow-[0_0_40px_rgba(0,180,255,0.6)] transition-all hover:scale-105 active:scale-95"
+        {/* 主控指令（落档 43 后）：按钮不带底色——logo 本体即按钮 */}
+        <div className="relative flex items-center justify-center transition-all hover:scale-110 active:scale-95"
           style={{ width: isMobile ? 48 : 56, height: isMobile ? 48 : 56 }}
         >
-          <YYC3LogoSvg size={isMobile ? 24 : 28} showText={false} className="rounded-md" />
-          {/* Pulse ring */}
-          <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#00d4ff] to-[#7b2ff7] animate-ping opacity-20" />
+          <YYC3LogoSvg size={isMobile ? 40 : 48} showText={false} />
+          {/* Pulse ring（无底色，细光圈呼吸） */}
+          <div className="absolute inset-0 rounded-full border border-[rgba(0,212,255,0.45)] animate-ping opacity-30" />
           {/* Badge */}
           <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-[#00ff88] flex items-center justify-center shadow-[0_0_8px_rgba(0,255,136,0.5)]">
             <Sparkles className="w-3 h-3 text-[#060e1f]" />

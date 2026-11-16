@@ -169,7 +169,11 @@ export function Layout() {
                     : view.isMobile ? "px-3 pt-2 pb-[72px]" : view.isTablet ? "px-4 pt-3 pb-[72px]" : "p-4"
                 )
               }`}>
-                <div className={maxWidthCls ? `${maxWidthCls} mx-auto w-full` : "w-full"}>
+                {/* 主控指令（落档 43 后）：画布型页面（ai-family 族）撑满视口高——
+                    h-full 链在此接通，其余流式页面保持 auto 高不受影响 */}
+                <div className={`${maxWidthCls ? `${maxWidthCls} mx-auto w-full` : "w-full"} ${
+                  location.pathname.startsWith("/ai-family") ? "h-full" : ""
+                }`}>
                   <ErrorBoundary level="module" source="PageContent">
                     <Suspense fallback={<RouteFallback />}>
                       <Outlet />
