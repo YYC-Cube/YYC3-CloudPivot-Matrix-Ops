@@ -47,8 +47,8 @@ const COMMANDS: Record<string, string[]> = {
   config: ["set", "get", "list", "patrol.interval", "notification.email"],
   env: ["list", "get", "set", "reset", "export"],
   help: [],
-  goto: ["/", "/follow-up", "/patrol", "/operations", "/files", "/ai", "/loop", "/pwa", "/design-system", "/dev-guide", "/models", "/theme", "/terminal", "/ide", "/audit", "/users", "/settings", "/security", "/alerts", "/reports", "/ai-diagnosis", "/data-editor", "/performance", "/env-config", "/host-files", "/database", "/refactoring"],
-  open: ["/", "/follow-up", "/patrol", "/operations", "/files", "/ai", "/loop", "/pwa", "/design-system", "/dev-guide", "/models", "/theme", "/terminal", "/ide", "/audit", "/users", "/settings", "/security", "/alerts", "/reports", "/ai-diagnosis", "/data-editor", "/performance", "/env-config", "/host-files", "/database", "/refactoring"],
+  goto: ["/", "/follow-up", "/patrol", "/operations", "/files", "/ai", "/loop", "/pwa", "/design-system", "/dev-guide", "/models", "/theme", "/terminal", "/audit", "/users", "/settings", "/security", "/alerts", "/reports", "/ai-diagnosis", "/data-editor", "/performance", "/env-config", "/host-files", "/database", "/refactoring"],
+  open: ["/", "/follow-up", "/patrol", "/operations", "/files", "/ai", "/loop", "/pwa", "/design-system", "/dev-guide", "/models", "/theme", "/terminal", "/audit", "/users", "/settings", "/security", "/alerts", "/reports", "/ai-diagnosis", "/data-editor", "/performance", "/env-config", "/host-files", "/database", "/refactoring"],
   ai: [],
   kb: ["search", "list", "stats", "categories"],
 };

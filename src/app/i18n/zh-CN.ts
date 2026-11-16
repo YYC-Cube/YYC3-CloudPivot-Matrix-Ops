@@ -68,7 +68,6 @@ const zhCN = {
     devGuide: "开发指南",
     theme: "主题定制",
     terminal: "终端",
-    ide: "IDE",
     audit: "操作审计",
     userMgmt: "用户管理",
     settings: "系统设置",

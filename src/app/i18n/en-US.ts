@@ -70,7 +70,6 @@ const enUS: TranslationKeys = {
     devGuide: "Dev Guide",
     theme: "Theme",
     terminal: "Terminal",
-    ide: "IDE",
     audit: "Audit",
     userMgmt: "Users",
     settings: "Settings",

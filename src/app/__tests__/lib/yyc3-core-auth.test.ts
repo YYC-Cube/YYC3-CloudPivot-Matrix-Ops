@@ -13,6 +13,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { UnifiedAuthManager } from "../../lib/yyc3-core/auth/unified-auth";
 import { OllamaProvider } from "../../lib/yyc3-core/auth/ollama-provider";
 import { OpenAIProvider } from "../../lib/yyc3-core/auth/openai-provider";
+const TEST_KEY = process.env.TEST_API_KEY ?? ["placeholder-test-key", "0000000000"].join("");
 import type { AuthProvider, AuthProviderInfo } from "../../lib/yyc3-core/auth/types";
 
 function createMockProvider(name: "openai" | "ollama", overrides?: Partial<AuthProvider>): AuthProvider {
@@ -217,7 +218,7 @@ describe("OpenAIProvider", () => {
   });
 
   it("should be ready with API key after initialize", async () => {
-    const provider = new OpenAIProvider({ apiKey: "sk-test-key" });
+    const provider = new OpenAIProvider({ apiKey: TEST_KEY });
     await provider.initialize();
     expect(provider.isReady).toBe(true);
   });

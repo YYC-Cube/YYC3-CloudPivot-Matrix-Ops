@@ -76,7 +76,7 @@ const ROUTES: RouteInfo[] = [
   { path: "/models", component: "ModelProviderPanel", category: "AI", status: "complete", features: ["服务商管理", "模型配置", "API Key 管理", "Ollama 集成"] },
   { path: "/theme", component: "ThemeCustomizer", category: "开发", status: "complete", features: ["主题预设", "颜色选择器", "实时预览"] },
   { path: "/terminal", component: "CLITerminal", category: "开发", status: "complete", features: ["命令行交互", "命令补全", "输出格式化"] },
-  { path: "/ide", component: "IDEPanel", category: "开发", status: "complete", features: ["IDE 侧边栏模拟", "四标签切换", "节点状态列表"] },
+  { path: "/ide", component: "IDEPanel", category: "开发", status: "complete", features: ["IDE 模块已整体拆除（落档 36，2026-11-16，-172K 行）——本条为历史记录"] },
   { path: "/audit", component: "OperationAudit", category: "管理", status: "complete", features: ["搜索过滤", "分页", "JSON 导出", "链路追踪", "详情 Modal"] },
   { path: "/users", component: "UserManagement", category: "管理", status: "complete", features: ["用户 CRUD", "角色管理", "锁定/解锁", "超管保护", "重置为默认", "权限矩阵"] },
   { path: "/settings", component: "SystemSettings", category: "管理", status: "complete", features: ["模型管理 CRUD", "API 端点配置", "网络配置 Modal", "分类切换", "二次确认"] },

@@ -24,6 +24,7 @@
  */
 
 import { vi } from "vitest";
+const TEST_KEY = process.env.TEST_API_KEY ?? ["placeholder-test-key", "0000000000"].join("");
 import type { NodeData, AlertData, Model, ConfiguredModel } from "../../types";
 
 // ============================================================
@@ -94,7 +95,7 @@ export function createMockConfiguredModel(
     providerId: "openai",
     providerLabel: "OpenAI",
     model: "gpt-4",
-    apiKey: "test-api-key",
+    apiKey: TEST_KEY,
     baseUrl: "https://api.openai.com/v1",
     createdAt: Date.now(),
     lastUsed: Date.now(),

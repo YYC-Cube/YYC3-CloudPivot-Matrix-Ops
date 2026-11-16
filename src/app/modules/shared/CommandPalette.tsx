@@ -65,7 +65,6 @@ const PALETTE_ITEMS: PaletteItem[] = [
   { id: "nav-operations", labelKey: "nav.operations", descKey: "operations.subtitle", category: "nav", icon: "Wrench", path: "/operations", shortcut: "⌘+Shift+O" },
   { id: "nav-files", labelKey: "nav.fileManager", descKey: "fileManager.subtitle", category: "nav", icon: "FolderOpen", path: "/files", shortcut: "⌘+Shift+F" },
   { id: "nav-terminal", labelKey: "nav.terminal", descKey: "palette.navigate", category: "nav", icon: "Terminal", path: "/terminal", shortcut: "⌘+Shift+L" },
-  { id: "nav-ide", labelKey: "nav.ide", descKey: "palette.navigate", category: "nav", icon: "Code2", path: "/ide" },
   { id: "nav-ai", labelKey: "nav.aiDecision", descKey: "ai.subtitle", category: "nav", icon: "Bot", path: "/ai" },
   { id: "nav-loop", labelKey: "nav.serviceLoop", descKey: "loop.subtitle", category: "nav", icon: "Activity", path: "/loop" },
   { id: "nav-design", labelKey: "nav.designSystem", descKey: "devGuide.architecture", category: "nav", icon: "BarChart3", path: "/design-system" },

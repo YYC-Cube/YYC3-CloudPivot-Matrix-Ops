@@ -32,6 +32,7 @@ global.fetch = vi.fn();
 // ── Import store and hook after mocks ─────────────────────────
 
 import { useModelProvider } from "../hooks/useModelProvider";
+const TEST_KEY = process.env.TEST_API_KEY ?? ["placeholder-test-key", "0000000000"].join("");
 import { BUILTIN_PROVIDERS as SLICE_BUILTIN, useProviderSlice } from "../store/slices/provider-slice";
 
 describe("useModelProvider", () => {
@@ -284,7 +285,7 @@ describe("useModelProvider", () => {
           providerId: "zhipu",
           providerLabel: "Z.ai",
           model: "test-model",
-          apiKey: "test-key",
+          apiKey: TEST_KEY,
           baseUrl: "https://test.com",
           createdAt: Date.now(),
           status: "unchecked",

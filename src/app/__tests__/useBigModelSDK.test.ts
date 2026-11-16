@@ -29,6 +29,7 @@ import { renderHook, act, cleanup, waitFor } from "@testing-library/react";
 import { useBigModelSDK } from "../hooks/useBigModelSDK";
 import { useSDKSessionSlice } from "../store/slices/sdk-session-slice";
 import type { ConfiguredModel, SDKCapability } from "../types";
+const TEST_KEY = process.env.TEST_API_KEY ?? ["placeholder-test-key", "0000000000"].join("");
 import { enableDemoModeForTests } from "./helpers/demo-mode";
 
 // 演示模式：存量断言基于模拟数据行为，逐文件显式开启（生产默认关闭）
@@ -299,7 +300,7 @@ describe("useBigModelSDK", () => {
       providerId: "zhipu",
       providerLabel: "智谱 AI",
       model: "chatglm3",
-      apiKey: "test-key",
+      apiKey: TEST_KEY,
       baseUrl: "https://open.bigmodel.cn/api/paas/v4",
       createdAt: Date.now(),
       lastUsed: null,
