@@ -1,5 +1,8 @@
 packages:
   - "."
+# 供应链策略对齐：CI 使用 pnpm 11（默认 24h 最短发布时间），本机 pnpm 10.17 需显式声明，
+# 否则本地重算锁文件可能引入发布不足 24h 的包，导致 CI ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION。
+minimumReleaseAge: 1440
 allowBuilds:
   electron: true
   electron-winstaller: true
@@ -11,6 +14,8 @@ onlyBuiltDependencies:
   - esbuild
   - electron-winstaller
 overrides:
+  # style-mod@4.1.5 于 2026-11-17 当日发布，未过 24h 供应链观察期，钉回 4.1.4。
+  style-mod: "4.1.4"
   # @electron/rebuild@3.7.2 上游以 git+ssh 形式声明 @electron/node-gyp，
   # pnpm 11 再生成锁文件时改走 SSH clone，CI（无 SSH 密钥）安装失败。
   # 钉回同 commit 的 codeload tarball（匿名 HTTPS 可达），与历史锁文件等价。
