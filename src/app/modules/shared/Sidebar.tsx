@@ -39,7 +39,6 @@ import {
   House,
   Layers,
   MessageCircle,
-  Monitor,
   Package,
   Paintbrush,
   Palette,
@@ -88,8 +87,9 @@ const NAV_CATEGORIES: NavCategory[] = [
     labelKey: "nav.catMonitor",
     icon: Activity,
     children: [
-      { key: "nav.devicePerformance", path: "/device-performance", icon: Gauge },
+      // 落档 50 v1.1：数据监控（项目首页 /）置首位，性能监控居次
       { key: "nav.dataMonitor", path: "/", icon: BarChart3 },
+      { key: "nav.devicePerformance", path: "/device-performance", icon: Gauge },
       { key: "nav.followUp", path: "/follow-up", icon: AlertTriangle },
       { key: "nav.followUpManager", path: "/follow-up-manager", icon: ClipboardList },
       { key: "nav.patrol", path: "/patrol", icon: Radar },
