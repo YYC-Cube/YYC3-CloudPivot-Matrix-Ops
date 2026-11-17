@@ -762,6 +762,24 @@
    "related_docs": [
     "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/50-设备矩阵性能监控页-Family设置空格修正-mock节点净化-20261117.md"
    ]
+  },
+  {
+   "trace_id": "TRC-20261117011",
+   "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/52-AIFamilyHub分离立项-布局自适应修复-下会话衔接-20261117.md",
+   "action": "create",
+   "timestamp": "2026-11-17T16:10:00+08:00",
+   "version": "v1.0.0",
+   "checksum": "4b04a58b5d1666f5",
+   "author": "YYC³ Team",
+   "changes": [
+    {
+     "field": "content",
+     "summary": "YYC3-AI-Family-HUB 分离立项（69b3054/36d6769）+ Family中枢布局自适应修复 + 下会话衔接主项目路线"
+    }
+   ],
+   "related_docs": [
+    "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/51-性能监控趋势区-会话级时序采样-探针历史实测卡-20261117.md"
+   ]
   }
  ]
 }
