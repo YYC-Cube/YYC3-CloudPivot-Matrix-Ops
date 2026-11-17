@@ -68,7 +68,8 @@ export const useAppSlice = create<AppSlice>()((set) => ({
   clearAlerts: () => set({ alerts: [] }),
   setFps: (fps) => set({ fps }),
   setMemoryUsage: (usage) => set({ memoryUsage: usage }),
+  // 同一事件 id 重放（WS 重连/重复推送）按 id 去重并前置：避免 recentOps 出现重复 key
   addRecentOp: (op) =>
-    set((s) => ({ recentOps: [op, ...s.recentOps].slice(0, 50) })),
+    set((s) => ({ recentOps: [op, ...s.recentOps.filter((o) => o.id !== op.id)].slice(0, 50) })),
   clearRecentOps: () => set({ recentOps: [] }),
 }));

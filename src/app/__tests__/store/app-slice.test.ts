@@ -169,6 +169,21 @@ describe('useAppSlice', () => {
         }
         expect(useAppSlice.getState().recentOps.length).toBe(50);
       });
+
+      it('同一 id 重放应去重并保留最新内容', () => {
+        const first: RecentOpEntry = {
+          id: 'OP-ALERT-node-a100-03-alert-001', action: '系统告警', target: '首次推送',
+          user: 'node-a100-03', time: '10:00:00', status: 'warning',
+        };
+        const replay: RecentOpEntry = { ...first, target: '重复推送', time: '10:00:05' };
+
+        useAppSlice.getState().addRecentOp(first);
+        useAppSlice.getState().addRecentOp(replay);
+
+        const ops = useAppSlice.getState().recentOps;
+        expect(ops).toHaveLength(1);
+        expect(ops[0].target).toBe('重复推送');
+      });
     });
 
     describe('clearRecentOps', () => {
