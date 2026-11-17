@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-  YYC³ PivotMatrix Ops — 节点采集代理 macOS LaunchAgent（开机自启 · 崩溃自愈）
+  YYC³ CloudPivot Matrix Ops — 节点采集代理 macOS LaunchAgent（开机自启 · 崩溃自愈）
 
   功能：ws://0.0.0.0:3113/ws 推送本机真实指标（CPU/内存/磁盘/Ollama），
         前端数据看盘连接后自动从「模拟数据」切换为真实数据。

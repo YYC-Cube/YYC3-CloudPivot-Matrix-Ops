@@ -310,7 +310,7 @@ export const appControlClient = {
     const bridge = getBridgeAPI();
     if (!bridge) {
       return {
-        name: "YYC3-Cloud-Intelli-Matrix",
+        name: "YYC3-CloudPivot-Matrix-Ops",
         version: "web",
         locale: "zh-CN",
         isPackaged: false,

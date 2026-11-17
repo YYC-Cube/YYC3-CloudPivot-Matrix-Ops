@@ -12,7 +12,7 @@
 #   2. test     → Vitest 单元测试 + 覆盖率报告
 #   3. build    → Vite 生产构建（Pages 就绪包，供 pages-deploy.yml 复用发布）
 #
-# 部署链路: CI 全绿 → pages-deploy.yml（workflow_run 门禁触发）→ matrix.yyc3.vip
+# 部署链路: CI 全绿 → pages-deploy.yml（workflow_run 门禁触发）→ ops.yyc3.vip
 #
 # 覆盖率门槛: 棘轮基线 45/44/31/44 (lines/functions/branches/statements)，
 #   随测试补齐逐步上调至 80/70/80/80（见 vitest.config.ts）
@@ -64,6 +64,24 @@ jobs:
       # P7：文档日志体系门禁（0307 台帐区标头规范）
       - name: Docs headers check
         run: pnpm docs:check
+
+      # 命名规范门禁：页签 Title / 历史品牌残留 / public/CNAME 与 APP_BRAND.domain 一致
+      - name: Brand & domain guard
+        run: |
+          grep -q "<title>言语云枢·智能矩阵</title>" index.html \
+            || { echo "❌ 页签 Title 不合规"; exit 1; }
+          if grep -rnE "(^|[^A-Za-z0-9_])PivotMatrix([^A-Za-z0-9_]|$)|Cloud Intelli-Matrix" \
+               --include="*.ts" --include="*.tsx" --include="*.html" --include="*.json" \
+               --exclude-dir=node_modules --exclude-dir=dist --exclude-dir=dist-electron \
+               --exclude-dir=coverage --exclude-dir=test-results --exclude-dir=docs \
+               --exclude="*.test.ts" --exclude="*.test.tsx" \
+               --exclude=settings-ssot-slice.ts . ; then
+            echo "❌ 检测到历史品牌名残留（PivotMatrix / Cloud Intelli-Matrix）"; exit 1
+          fi
+          domain="$(tr -d '[:space:]' < public/CNAME)"
+          grep -q "domain: \"$domain\"" src/app/config/app-brand.ts \
+            || { echo "❌ public/CNAME 与 APP_BRAND.domain 不一致（$domain）"; exit 1; }
+          echo "✅ 品牌命名与域名校验通过（$domain）"
 
       - name: Type check
         run: pnpm type-check

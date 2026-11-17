@@ -298,7 +298,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
               <div className="flex items-center gap-2">
                 <YYC3LogoSvg size={16} showText={false} />
                 <span className="text-[rgba(0,212,255,0.2)]" style={{ fontSize: "0.65rem" }}>
-                  PivotMatrix Ops ErrorBoundary v1.0
+                  CloudPivot Matrix Ops ErrorBoundary v1.0
                 </span>
               </div>
               <span className="text-[rgba(0,212,255,0.2)]" style={{ fontSize: "0.65rem" }}>

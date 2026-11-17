@@ -89,7 +89,7 @@ export function useYYC3Head() {
     // SEO / OG 基础 (本地系统用不上, 但规范化)
     // ----------------------------------------------------------
     upsertMeta("description", `${APP_BRAND.fullNameZh}，统一纳管 Apple M 系列、DGX GPU、NAS 与 BMC 节点，覆盖实时监控、巡检、告警、权限审计与工单运维`);
-    upsertMeta("og:title", `${APP_BRAND.nameZh} | YYC³ PivotMatrix Ops`);
+    upsertMeta("og:title", `${APP_BRAND.nameZh} | YYC³ CloudPivot Matrix Ops`);
     upsertMeta("og:site_name", APP_BRAND.nameZh);
     upsertMeta("og:description", APP_BRAND.sloganOpsZh);
     upsertMeta("og:image", icons.webAppChrome512);

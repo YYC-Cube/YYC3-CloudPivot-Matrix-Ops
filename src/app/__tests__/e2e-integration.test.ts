@@ -111,7 +111,7 @@ describe("E2E: env-config 配置闭环", () => {
     const { env, getEnvConfig, setEnvConfig, resetEnvConfig } = await import("../lib/env-config");
 
     // 1. 默认值
-    expect(env("SYSTEM_NAME")).toBe("言语云枢 · YYC³ PivotMatrix Ops 异构算力矩阵运维面板 v3.4.1");
+    expect(env("SYSTEM_NAME")).toBe("言语云枢 · YYC³ CloudPivot Matrix Ops 异构算力矩阵运维面板 v3.4.1");
     expect(env("SYSTEM_VERSION")).toBe("3.4.1");
     expect(env("ENABLE_MOCK_MODE")).toBe(true);
 
@@ -129,7 +129,7 @@ describe("E2E: env-config 配置闭环", () => {
     resetEnvConfig();
     // 重新读取（需要 re-import 才能清除缓存，但 resetEnvConfig 内部已清除）
     const config = getEnvConfig();
-    expect(config.SYSTEM_NAME).toBe("言语云枢 · YYC³ PivotMatrix Ops 异构算力矩阵运维面板 v3.4.1");
+    expect(config.SYSTEM_NAME).toBe("言语云枢 · YYC³ CloudPivot Matrix Ops 异构算力矩阵运维面板 v3.4.1");
   });
 
   it("所有 31 个环境变量都有默认值", async () => {

@@ -1,6 +1,6 @@
 ---
 file: CHANGELOG.md
-description: YYC³ Cloud Intelli-Matrix 版本更新日志 · 记录所有重要变更
+description: YYC³ CloudPivot Matrix Ops 版本更新日志 · 记录所有重要变更
 author: YanYuCloudCube Team <admin@0379.email>
 version: v1.0.0
 created: 2026-02-26
@@ -21,7 +21,7 @@ language: zh-CN
 
 # 更新日志 (CHANGELOG)
 
-本文件记录 YYC³ Cloud Intelli-Matrix 项目的所有重要更改。
+本文件记录 YYC³ CloudPivot Matrix Ops 项目的所有重要更改。
 
 格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.0.0/)，项目遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
@@ -31,7 +31,7 @@ language: zh-CN
 
 ### Added
 
-- 🚀 GitHub Pages 门禁式部署链路: CI 全绿后经 `workflow_run` 触发 `pages-deploy.yml`，复用 CI 构建工件发布至 https://matrix.yyc3.vip
+- 🚀 GitHub Pages 门禁式部署链路: CI 全绿后经 `workflow_run` 触发 `pages-deploy.yml`，复用 CI 构建工件发布至 https://ops.yyc3.vip
 - CI 构建任务 Pages 就绪化: `vite build --base=/` + `404.html` SPA 深链回退 + `.nojekyll` + 部署完整性校验门禁（index/404/CNAME/manifest/资产 五要素缺一即失败）
 - `pnpm build:pages` 脚本: 自定义域名根路径构建（资产绝对路径，深链回退不破链）
 - 部署 concurrency 串行化: `group: pages` 排队不取消，避免半途丢站点
@@ -362,16 +362,16 @@ language: zh-CN
 
 ## 贡献者
 
-感谢所有为 YYC³ Cloud Intelli-Matrix 做出贡献的开发者！
+感谢所有为 YYC³ CloudPivot Matrix Ops 做出贡献的开发者！
 
-[贡献者列表](https://github.com/YYC-Cube/YYC3-Cloud-Intelli-Matrix/graphs/contributors)
+[贡献者列表](https://github.com/YYC-Cube/YYC3-CloudPivot-Matrix-Ops/graphs/contributors)
 
 ---
 
 ## 链接
 
-- [GitHub Releases](https://github.com/YYC-Cube/YYC3-Cloud-Intelli-Matrix/releases)
-- [提交历史](https://github.com/YYC-Cube/YYC3-Cloud-Intelli-Matrix/commits/main)
+- [GitHub Releases](https://github.com/YYC-Cube/YYC3-CloudPivot-Matrix-Ops/releases)
+- [提交历史](https://github.com/YYC-Cube/YYC3-CloudPivot-Matrix-Ops/commits/main)
 - [项目看板](https://github.com/orgs/YYC-Cube/projects/1)
 
 ---
@@ -380,6 +380,6 @@ language: zh-CN
 
 **YanYuCloudCube Team**
 
-[Words Initiate Quadrants, Language Serves as Core for Future](https://github.com/YYC-Cube/YYC3-Cloud-Intelli-Matrix)
+[Words Initiate Quadrants, Language Serves as Core for Future](https://github.com/YYC-Cube/YYC3-CloudPivot-Matrix-Ops)
 
 </div>

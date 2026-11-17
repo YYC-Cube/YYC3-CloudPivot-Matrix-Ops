@@ -21,7 +21,7 @@ function createWindow() {
     height: 900,
     minWidth: 1200,
     minHeight: 700,
-    title: 'YYC³ Cloud Intelli-Matrix',
+    title: '言语云枢·智能矩阵',
     icon: path.join(__dirname, '../public/icons/icon-512.png'),
     webPreferences: {
       nodeIntegration: false,

@@ -1,6 +1,6 @@
 ---
 file: CODE_OF_CONDUCT.md
-description: YYC³ Cloud Intelli-Matrix 行为准则 · 社区行为规范
+description: YYC³ CloudPivot Matrix Ops 行为准则 · 社区行为规范
 author: YanYuCloudCube Team <admin@0379.email>
 version: v1.0.0
 created: 2026-02-26
@@ -103,6 +103,6 @@ complexity: basic
 
 **YanYuCloudCube Team**
 
-[Words Initiate Quadrants, Language Serves as Core for Future](https://github.com/YYC-Cube/YYC3-Cloud-Intelli-Matrix)
+[Words Initiate Quadrants, Language Serves as Core for Future](https://github.com/YYC-Cube/YYC3-CloudPivot-Matrix-Ops)
 
 </div>

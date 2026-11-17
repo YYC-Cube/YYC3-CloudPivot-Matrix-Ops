@@ -1,10 +1,30 @@
 {
-  "name": "yyc3-pivotmatrix-ops-panel",
+  "name": "yyc3-cloudpivot-matrix-ops",
   "version": "3.4.1",
-  "description": "言语云枢·智能矩阵（YYC³ PivotMatrix Ops）异构算力矩阵运维面板 — 监控、巡检、告警、审计、工单闭环",
+  "description": "言语云枢·智能矩阵（YYC³ CloudPivot Matrix Ops）异构算力矩阵运维面板 — 监控、巡检、告警、审计、工单闭环",
   "main": "dist-electron/electron/main.js",
   "author": "YanYuCloudCube Team <admin@0379.email>",
   "license": "MIT",
+  "keywords": [
+    "yyc3",
+    "cloudpivot",
+    "cloudpivot-matrix-ops",
+    "matrix-ops",
+    "ops-panel",
+    "heterogeneous-compute",
+    "gpu-monitoring",
+    "dgx",
+    "nas",
+    "bmc",
+    "observability",
+    "ai-ops",
+    "pwa",
+    "electron",
+    "react",
+    "typescript",
+    "算力矩阵",
+    "运维面板"
+  ],
   "scripts": {
     "dev": "vite",
     "agent": "node agent/yyc3-agent.mjs",
@@ -163,8 +183,8 @@
     "wait-on": "^7.2.0"
   },
   "build": {
-    "appId": "com.yyc3.pivotmatrix.ops",
-    "productName": "YYC3 PivotMatrix Ops",
+    "appId": "com.yyc3.cloudpivot.matrix",
+    "productName": "CloudPivot Matrix Ops",
     "directories": {
       "output": "dist-electron",
       "buildResources": "resources"
@@ -195,7 +215,7 @@
         }
       ],
       "icon": "public/yyc3-icons/macOS/1024.png",
-      "artifactName": "YYC3-PivotMatrixOps-${version}-mac-${arch}.${ext}",
+      "artifactName": "YYC3-CloudPivotMatrix-${version}-mac-${arch}.${ext}",
       "hardenedRuntime": true,
       "gatekeeperAssess": false,
       "entitlements": "resources/entitlements.mac.plist",
@@ -218,7 +238,7 @@
         }
       ],
       "icon": "public/yyc3-icons/macOS/512.png",
-      "artifactName": "YYC3-PivotMatrixOps-${version}-win-${arch}.${ext}",
+      "artifactName": "YYC3-CloudPivotMatrix-${version}-win-${arch}.${ext}",
       "requestedExecutionLevel": "asInvoker"
     },
     "linux": {
@@ -237,7 +257,7 @@
         }
       ],
       "icon": "public/yyc3-icons/macOS/512.png",
-      "artifactName": "YYC3-PivotMatrixOps-${version}-linux-${arch}.${ext}",
+      "artifactName": "YYC3-CloudPivotMatrix-${version}-linux-${arch}.${ext}",
       "category": "Utility"
     },
     "nsis": {
@@ -256,8 +276,8 @@
     },
     "publish": {
       "provider": "github",
-      "owner": "YanYuCloudCube",
-      "repo": "YYC3-Cloud-Intelli-Matrix",
+      "owner": "YYC-Cube",
+      "repo": "YYC3-CloudPivot-Matrix-Ops",
       "private": false
     }
   }

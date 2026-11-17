@@ -88,6 +88,7 @@ const NAV_CATEGORIES: NavCategory[] = [
     labelKey: "nav.catMonitor",
     icon: Activity,
     children: [
+      { key: "nav.devicePerformance", path: "/device-performance", icon: Gauge },
       { key: "nav.dataMonitor", path: "/", icon: BarChart3 },
       { key: "nav.followUp", path: "/follow-up", icon: AlertTriangle },
       { key: "nav.followUpManager", path: "/follow-up-manager", icon: ClipboardList },

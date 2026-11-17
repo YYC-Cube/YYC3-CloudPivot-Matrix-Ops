@@ -155,6 +155,9 @@ const AIFamilyRouter = lazy(() =>
 const ServiceConnectionTest = lazy(() =>
   import("./modules/ops/ServiceConnectionTest").then((m) => ({ default: m.ServiceConnectionTest })),
 );
+const DevicePerformance = lazy(() =>
+  import("./modules/monitor/DevicePerformance").then((m) => ({ default: m.DevicePerformance })),
+);
 const FollowUpManager = lazy(() =>
   import("./modules/monitor/FollowUpManager").then((m) => ({ default: m.FollowUpManager })),
 );
@@ -228,6 +231,7 @@ export const router = createHashRouter([
       { path: "config-center", Component: withSuspense(ConfigCenter) },
       { path: "variables", Component: withSuspense(VariableCenter) },
       { path: "unified-settings", Component: withSuspense(UnifiedSettingsPanel) },
+      { path: "device-performance", Component: withSuspense(DevicePerformance) },
       { path: "hotel-dashboard", Component: withSuspense(HotelDashboard) },
       { path: "hotel", Component: withSuspense(HotelDashboard) },
       { path: "comm-station", Component: withSuspense(CommStationPanel) },

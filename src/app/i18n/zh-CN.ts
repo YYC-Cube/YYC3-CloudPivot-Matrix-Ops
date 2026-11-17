@@ -14,7 +14,7 @@ const zhCN = {
   common: {
     // ── 品牌基础词条（命名规范 §5.3，单一真源见 config/app-brand.ts） ──
     appName: "言语云枢·智能矩阵",
-    appFullName: "言语云枢 · YYC³ PivotMatrix Ops 异构算力矩阵运维面板",
+    appFullName: "言语云枢 · YYC³ CloudPivot Matrix Ops 异构算力矩阵运维面板",
     appSlogan: "万源汇枢，阵驭算力",
     appSloganOps: "矩阵统一管控，算力可视可管",
     loading: "加载中...",
@@ -72,7 +72,8 @@ const zhCN = {
     userMgmt: "用户管理",
     settings: "系统设置",
     unifiedSettings: "统一设置",
-    catMonitor: "监控中心",
+    catMonitor: "设备矩阵",
+    devicePerformance: "性能监控",
     catOps: "运维管理",
     catAI: "智能引擎",
     catDev: "开发工具",
@@ -115,7 +116,7 @@ const zhCN = {
     variableCenter: "变量中心",
     connectionMonitor: "连接监控",
     aiFamily: "Family中枢",
-    aiFamilySettings: "Family 设置",
+    aiFamilySettings: "Family设置",
     aiFamilyHotel: "智慧酒店",
     aiFamilyCluster: "通信基站",
     aiFamilyHome: "Family首页",

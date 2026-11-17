@@ -1,6 +1,6 @@
 ---
 file: CONTRIBUTING.md
-description: YYC³ Cloud Intelli-Matrix 贡献指南 · 如何参与项目开发
+description: YYC³ CloudPivot Matrix Ops 贡献指南 · 如何参与项目开发
 author: YanYuCloudCube Team <admin@0379.email>
 version: v1.0.0
 created: 2026-02-26
@@ -23,7 +23,7 @@ complexity: intermediate
 
 # 贡献指南
 
-首先，感谢您考虑为 YYC³ Cloud Intelli-Matrix 做出贡献！
+首先，感谢您考虑为 YYC³ CloudPivot Matrix Ops 做出贡献！
 
 本指南旨在帮助您了解如何高效地参与项目开发，无论您是经验丰富的开发者还是第一次参与开源项目。
 
@@ -53,7 +53,7 @@ complexity: intermediate
 
 ### 🐛 报告 Bug
 
-- 在 [Issues](https://github.com/YYC-Cube/YYC3-Cloud-Intelli-Matrix/issues) 中创建 Bug 报告
+- 在 [Issues](https://github.com/YYC-Cube/YYC3-CloudPivot-Matrix-Ops/issues) 中创建 Bug 报告
 - 提供详细的复现步骤和环境信息
 - 附上截图或错误日志
 
@@ -99,8 +99,8 @@ complexity: intermediate
 
 查看标记为以下标签的 Issues：
 
-- [`good first issue`](https://github.com/YYC-Cube/YYC3-Cloud-Intelli-Matrix/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) - 适合新手
-- [`help wanted`](https://github.com/YYC-Cube/YYC3-Cloud-Intelli-Matrix/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) - 需要帮助
+- [`good first issue`](https://github.com/YYC-Cube/YYC3-CloudPivot-Matrix-Ops/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22) - 适合新手
+- [`help wanted`](https://github.com/YYC-Cube/YYC3-CloudPivot-Matrix-Ops/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) - 需要帮助
 
 ### 2️⃣ Fork 仓库
 
@@ -109,8 +109,8 @@ complexity: intermediate
 ### 3️⃣ 克隆仓库
 
 ```bash
-git clone https://github.com/YYC-Cube/YYC3-Cloud-Intelli-Matrix.git
-cd YYC3-Cloud-Intelli-Matrix
+git clone https://github.com/YYC-Cube/YYC3-CloudPivot-Matrix-Ops.git
+cd YYC3-CloudPivot-Matrix-Ops
 ```
 
 ### 4️⃣ 创建分支
@@ -145,8 +145,8 @@ git checkout -b feature/your-feature-name
 
 ```bash
 # 1. 克隆仓库
-git clone https://github.com/YYC-Cube/YYC3-Cloud-Intelli-Matrix.git
-cd YYC3-Cloud-Intelli-Matrix
+git clone https://github.com/YYC-Cube/YYC3-CloudPivot-Matrix-Ops.git
+cd YYC3-CloudPivot-Matrix-Ops
 
 # 2. 安装依赖
 pnpm install
@@ -381,7 +381,7 @@ Closes #123
 ### 联系方式
 
 - **Email**: <admin@0379.email>
-- **GitHub Issues**: [提问与讨论](https://github.com/YYC-Cube/YYC3-Cloud-Intelli-Matrix/issues)
+- **GitHub Issues**: [提问与讨论](https://github.com/YYC-Cube/YYC3-CloudPivot-Matrix-Ops/issues)
 
 ### 常见问题
 
@@ -398,7 +398,7 @@ Closes #123
 
 ## 🙏 致谢
 
-感谢所有为 YYC³ Cloud Intelli-Matrix 做出贡献的开发者！
+感谢所有为 YYC³ CloudPivot Matrix Ops 做出贡献的开发者！
 
 您的每一份贡献，都让这个项目变得更好。✨
 
@@ -408,6 +408,6 @@ Closes #123
 
 **YanYuCloudCube Team**
 
-[Words Initiate Quadrants, Language Serves as Core for Future](https://github.com/YYC-Cube/YYC3-Cloud-Intelli-Matrix)
+[Words Initiate Quadrants, Language Serves as Core for Future](https://github.com/YYC-Cube/YYC3-CloudPivot-Matrix-Ops)
 
 </div>

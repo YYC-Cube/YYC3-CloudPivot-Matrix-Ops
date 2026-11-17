@@ -1,6 +1,6 @@
 /**
  * @file: settings-ssot-brand-migration.test.ts
- * @description: 设置 SSOT 持久层品牌迁移测试（persist v1 → v2，A1 主选命名落地）
+ * @description: 设置 SSOT 持久层品牌迁移测试（persist v1 → v2，双轨命名落地）
  * @author: YYC³ Team
  * @version: v1.0.0
  * @created: 2026-11-10
@@ -14,7 +14,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const STORAGE_KEY = "yyc3-settings-ssot";
-const NEW_FULL_NAME = "言语云枢 · YYC³ PivotMatrix Ops 异构算力矩阵运维面板 v3.4.1";
+const NEW_FULL_NAME = "言语云枢 · YYC³ CloudPivot Matrix Ops 异构算力矩阵运维面板 v3.4.1";
 const NEW_BRAND = "言语云枢·智能矩阵";
 
 /** 向 localStorage 播种一份 v1 持久化状态，然后重新引入 store 触发 rehydrate + migrate

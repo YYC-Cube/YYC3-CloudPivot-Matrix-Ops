@@ -135,7 +135,7 @@ describe("桥接客户端测试", () => {
     it("应该在非 Electron 环境中返回默认配置", async () => {
       const config = await appControlClient.getConfig();
       expect(config).toEqual({
-        name: "YYC3-Cloud-Intelli-Matrix",
+        name: "YYC3-CloudPivot-Matrix-Ops",
         version: "web",
         locale: "zh-CN",
         isPackaged: false,

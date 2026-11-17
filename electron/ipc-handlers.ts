@@ -338,7 +338,7 @@ export function registerSystemMonitorHandlers(): void {
       return createSuccessResponse([
         {
           pid: process.pid,
-          name: "YYC3-Cloud-Intelli-Matrix",
+          name: "YYC3-CloudPivot-Matrix-Ops",
           cpu: 0,
           memory: process.memoryUsage().heapUsed,
           status: "running",

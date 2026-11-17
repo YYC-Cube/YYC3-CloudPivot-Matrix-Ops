@@ -287,19 +287,19 @@ describe("TopBar Component", () => {
   it("should render version badge extracted from settings SSOT systemName", () => {
     renderWithRouter(<TopBar {...desktopProps} />);
 
-    // 默认系统名 "言语云枢 · YYC³ PivotMatrix Ops 异构算力矩阵运维面板 v3.4.1" → 提取版本号徽标
+    // 默认系统名 "言语云枢 · YYC³ CloudPivot Matrix Ops 异构算力矩阵运维面板 v3.4.1" → 提取版本号徽标
     const badge = screen.getByTestId("version-badge");
     expect(badge).toHaveTextContent("v3.4.1");
 
     // 编辑即生效：修改系统名，版本徽标无刷新即时更新
     React.act(() => {
-      useSettingsSSOT.getState().updateValue("systemName", "言语云枢 · YYC³ PivotMatrix Ops v9.9");
+      useSettingsSSOT.getState().updateValue("systemName", "言语云枢 · YYC³ CloudPivot Matrix Ops v9.9");
     });
     expect(badge).toHaveTextContent("v9.9");
 
     // 还原，避免污染同文件其他用例
     React.act(() => {
-      useSettingsSSOT.getState().updateValue("systemName", "言语云枢 · YYC³ PivotMatrix Ops 异构算力矩阵运维面板 v3.4.1");
+      useSettingsSSOT.getState().updateValue("systemName", "言语云枢 · YYC³ CloudPivot Matrix Ops 异构算力矩阵运维面板 v3.4.1");
     });
   });
 

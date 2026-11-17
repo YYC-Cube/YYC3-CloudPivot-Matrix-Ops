@@ -1,6 +1,6 @@
 ---
 file: SECURITY.md
-description: YYC³ Cloud Intelli-Matrix · 安全策略与漏洞报告
+description: YYC³ CloudPivot Matrix Ops · 安全策略与漏洞报告
 author: YanYuCloudCube Team
 version: 1.0.0
 created: 2026-02-27
@@ -17,11 +17,11 @@ tags: [security, vulnerability-reporting, best-practices]
 
 ---
 
-# YYC³ Cloud Intelli-Matrix · 安全策略
+# YYC³ CloudPivot Matrix Ops · 安全策略
 
 ## 📋 概述
 
-YYC³ Cloud Intelli-Matrix 非常重视安全性。本文档说明了项目的安全实践、漏洞报告流程以及安全相关的注意事项。
+YYC³ CloudPivot Matrix Ops 非常重视安全性。本文档说明了项目的安全实践、漏洞报告流程以及安全相关的注意事项。
 
 **如果您发现安全漏洞，请通过下述方式负责任地报告。**
 
@@ -35,7 +35,7 @@ YYC³ Cloud Intelli-Matrix 非常重视安全性。本文档说明了项目的�
 |------|------|
 | **加密邮箱** | security@0379.email |
 | **GitHub Security** | 使用 GitHub 的安全功能（如适用于私有仓库） |
-| **项目 Issues** | 在 [GitHub Issues](https://github.com/YYC-Cube/YYC3-Cloud-Intelli-Matrix/issues) 提交时标注 `[security]` |
+| **项目 Issues** | 在 [GitHub Issues](https://github.com/YYC-Cube/YYC3-CloudPivot-Matrix-Ops/issues) 提交时标注 `[security]` |
 
 ### 报告模板
 
@@ -477,14 +477,14 @@ VITE_GHOST_MODE=false
 | 方式 | 信息 |
 |------|------|
 | **加密邮箱** | security@0379.email |
-| **GitHub Issues** | [提交安全 Issue](https://github.com/YYC-Cube/YYC3-Cloud-Intelli-Matrix/issues) |
+| **GitHub Issues** | [提交安全 Issue](https://github.com/YYC-Cube/YYC3-CloudPivot-Matrix-Ops/issues) |
 
 ### 一般咨询
 
 对于非安全问题，请通过常规渠道联系：
 
-- [GitHub Discussions](https://github.com/YYC-Cube/YYC3-Cloud-Intelli-Matrix/discussions)
-- [项目 Issues](https://github.com/YYC-Cube/YYC3-Cloud-Intelli-Matrix/issues)
+- [GitHub Discussions](https://github.com/YYC-Cube/YYC3-CloudPivot-Matrix-Ops/discussions)
+- [项目 Issues](https://github.com/YYC-Cube/YYC3-CloudPivot-Matrix-Ops/issues)
 
 ---
 

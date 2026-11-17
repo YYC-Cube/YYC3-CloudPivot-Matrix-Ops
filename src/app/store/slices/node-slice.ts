@@ -31,6 +31,12 @@ import { dataBus, type DataSource } from '../../lib/data-bus';
 const DEFAULT_NODES: NodeData[] = [];
 
 /** 历史假节点 ID — persist 迁移时一次性清除 */
+/** 落档 50：历史 mock 节点（旧版浏览器持久化残留）——迁移时按 id 模式剔除 */
+const LEGACY_FAKE_NODE_PATTERNS: RegExp[] = [
+  /^node-a100-\d+$/i,
+  /^node-local-mac$/i,
+];
+
 const LEGACY_FAKE_NODE_IDS = new Set([
   "GPU-A100-01", "GPU-A100-02", "GPU-A100-03", "GPU-A100-04",
   "GPU-A100-05", "GPU-A100-06", "GPU-A100-07", "GPU-A100-08",
@@ -207,12 +213,16 @@ export const useNodeSlice = create<NodeSlice>()(
       {
         name: 'yyc3-node-slice',
         partialize: (state) => ({ nodes: state.nodes }),
-        version: 1,
+        version: 2,
         migrate: (persisted, version) => {
-          // v0→v1：清除历史 DEFAULT_NODES 假节点种子（按 ID 精确识别，保留用户真实添加）
+          // v0→v1：清除历史 DEFAULT_NODES 假节点种子（按 ID 精确识别）
+          // v1→v2：清除 node-a100-* / node-local-mac 等旧版持久化 mock 残留（落档 50）
           const state = persisted as { nodes?: NodeData[] };
-          if (version < 1 && Array.isArray(state.nodes)) {
-            state.nodes = state.nodes.filter((n) => !LEGACY_FAKE_NODE_IDS.has(n.id));
+          if (version < 2 && Array.isArray(state.nodes)) {
+            state.nodes = state.nodes.filter((n) =>
+              !LEGACY_FAKE_NODE_IDS.has(n.id)
+              && !LEGACY_FAKE_NODE_PATTERNS.some((re) => re.test(n.id)),
+            );
           }
           return state;
         },
@@ -230,3 +240,23 @@ export const useNodeSlice = create<NodeSlice>()(
     }
   )
 );
+
+// ============================================================
+// 落档 50 · 历史 mock 节点防御性净化
+// 背景：用户环境中仍出现 node-a100-* / node-local-mac（旧版持久化或历史 seed 注入，
+// 当前源码已无生成点）。无论来源，运行时统一剔除，保证面板零假数据。
+// 幂等：无命中时不触发 setState。
+// ============================================================
+const MOCK_NODE_ID_RE = /^(node-a100-\d+|node-local-mac)$/i;
+
+function purgeMockNodes(nodes: NodeData[]): NodeData[] {
+  if (!nodes.some((n) => MOCK_NODE_ID_RE.test(n.id))) { return nodes; }
+  return nodes.filter((n) => !MOCK_NODE_ID_RE.test(n.id));
+}
+
+useNodeSlice.subscribe((state) => {
+  const kept = purgeMockNodes(state.nodes);
+  if (kept !== state.nodes) {
+    useNodeSlice.setState({ nodes: kept, derived: computeDerived(kept) });
+  }
+});

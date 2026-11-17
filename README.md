@@ -1,6 +1,7 @@
 <div align="center">
+<a id="top"></a>
 
-# 言语云枢 · YYC³ PivotMatrix Ops 异构算力矩阵运维面板
+# 言语云枢 · YYC³ CloudPivot Matrix Ops 异构算力矩阵运维面板
 
 <img src="./public/yyc3-family.png" alt="YYC³ Family · 言启云枢 · 智启新元" width="100%" />
 
@@ -20,14 +21,14 @@
 
 **⭐ GitHub 项目指标 | Repo Metrics**
 
-[![Stars](https://img.shields.io/github/stars/YYC-Cube/YYC3-Cloud-Matrix?style=for-the-badge&logo=github&logoColor=white&label=Stars&color=FFD700)](https://github.com/YYC-Cube/YYC3-Cloud-Matrix/stargazers)
-[![Forks](https://img.shields.io/github/forks/YYC-Cube/YYC3-Cloud-Matrix?style=for-the-badge&logo=github&logoColor=white&label=Forks&color=00D4FF)](https://github.com/YYC-Cube/YYC3-Cloud-Matrix/network/members)
-[![Issues](https://img.shields.io/github/issues/YYC-Cube/YYC3-Cloud-Matrix?style=for-the-badge&logo=github&logoColor=white&label=Issues&color=FF5F57)](https://github.com/YYC-Cube/YYC3-Cloud-Matrix/issues)
-[![PRs](https://img.shields.io/github/issues-pr/YYC-Cube/YYC3-Cloud-Matrix?style=for-the-badge&logo=github&logoColor=white&label=PRs&color=30C8C8)](https://github.com/YYC-Cube/YYC3-Cloud-Matrix/pulls)
-[![Contributors](https://img.shields.io/github/contributors/YYC-Cube/YYC3-Cloud-Matrix?style=for-the-badge&logo=github&logoColor=white&label=Contributors&color=00FF88)](https://github.com/YYC-Cube/YYC3-Cloud-Matrix/graphs/contributors)
-[![Last Commit](https://img.shields.io/github/last-commit/YYC-Cube/YYC3-Cloud-Matrix?style=for-the-badge&logo=github&logoColor=white&label=Last%20Commit&color=646CFF)](https://github.com/YYC-Cube/YYC3-Cloud-Matrix/commits)
-[![Repo Size](https://img.shields.io/github/repo-size/YYC-Cube/YYC3-Cloud-Matrix?style=for-the-badge&logo=github&logoColor=white&label=Repo%20Size&color=BF00FF)](https://github.com/YYC-Cube/YYC3-Cloud-Matrix)
-[![Release](https://img.shields.io/github/v/release/YYC-Cube/YYC3-Cloud-Matrix?style=for-the-badge&logo=github&logoColor=white&label=Release&color=FF6B6B)](https://github.com/YYC-Cube/YYC3-Cloud-Matrix/releases)
+[![Stars](https://img.shields.io/github/stars/YYC-Cube/YYC3-CloudPivot-Matrix-Ops?style=for-the-badge&logo=github&logoColor=white&label=Stars&color=FFD700)](https://github.com/YYC-Cube/YYC3-CloudPivot-Matrix-Ops/stargazers)
+[![Forks](https://img.shields.io/github/forks/YYC-Cube/YYC3-CloudPivot-Matrix-Ops?style=for-the-badge&logo=github&logoColor=white&label=Forks&color=00D4FF)](https://github.com/YYC-Cube/YYC3-CloudPivot-Matrix-Ops/network/members)
+[![Issues](https://img.shields.io/github/issues/YYC-Cube/YYC3-CloudPivot-Matrix-Ops?style=for-the-badge&logo=github&logoColor=white&label=Issues&color=FF5F57)](https://github.com/YYC-Cube/YYC3-CloudPivot-Matrix-Ops/issues)
+[![PRs](https://img.shields.io/github/issues-pr/YYC-Cube/YYC3-CloudPivot-Matrix-Ops?style=for-the-badge&logo=github&logoColor=white&label=PRs&color=30C8C8)](https://github.com/YYC-Cube/YYC3-CloudPivot-Matrix-Ops/pulls)
+[![Contributors](https://img.shields.io/github/contributors/YYC-Cube/YYC3-CloudPivot-Matrix-Ops?style=for-the-badge&logo=github&logoColor=white&label=Contributors&color=00FF88)](https://github.com/YYC-Cube/YYC3-CloudPivot-Matrix-Ops/graphs/contributors)
+[![Last Commit](https://img.shields.io/github/last-commit/YYC-Cube/YYC3-CloudPivot-Matrix-Ops?style=for-the-badge&logo=github&logoColor=white&label=Last%20Commit&color=646CFF)](https://github.com/YYC-Cube/YYC3-CloudPivot-Matrix-Ops/commits)
+[![Repo Size](https://img.shields.io/github/repo-size/YYC-Cube/YYC3-CloudPivot-Matrix-Ops?style=for-the-badge&logo=github&logoColor=white&label=Repo%20Size&color=BF00FF)](https://github.com/YYC-Cube/YYC3-CloudPivot-Matrix-Ops)
+[![Release](https://img.shields.io/github/v/release/YYC-Cube/YYC3-CloudPivot-Matrix-Ops?style=for-the-badge&logo=github&logoColor=white&label=Release&color=FF6B6B)](https://github.com/YYC-Cube/YYC3-CloudPivot-Matrix-Ops/releases)
 
 <br/>
 
@@ -87,9 +88,9 @@
 
 **📊 项目状态 | Project Status**
 
-[![Version](https://img.shields.io/badge/version-v3.4.1-orange?style=flat-square)](https://github.com/YYC-Cube/YYC3-Cloud-Matrix/releases)
-[![License](https://img.shields.io/github/license/YYC-Cube/YYC3-Cloud-Matrix?style=flat-square&label=License&color=00FF88)](./LICENSE)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)](https://github.com/YYC-Cube/YYC3-Cloud-Matrix/pulls)
+[![Version](https://img.shields.io/badge/version-v3.4.1-orange?style=flat-square)](https://github.com/YYC-Cube/YYC3-CloudPivot-Matrix-Ops/releases)
+[![License](https://img.shields.io/github/license/YYC-Cube/YYC3-CloudPivot-Matrix-Ops?style=flat-square&label=License&color=00FF88)](./LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)](https://github.com/YYC-Cube/YYC3-CloudPivot-Matrix-Ops/pulls)
 [![Code Style](https://img.shields.io/badge/code_style-prettier-ff69b4?style=flat-square)](https://prettier.io/)
 [![Type Check](https://img.shields.io/badge/type-check-strict-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Tests](https://img.shields.io/badge/tests-Vitest%20%2B%20Playwright-FECC2C?style=flat-square&logo=vitest&logoColor=black)](https://vitest.dev/)
@@ -113,7 +114,7 @@
 
 ---
 
-**[在线演示 Demo](https://matrix.yyc3.vip/)** · **[文档体系 Docs](./docs/README.md)** · **[模块文档 Module Docs](./docs/modules/README.md)** · **[开发标准 Dev Standard](./docs/10-YYC3-CP-IM-项目模版-标准规范/)** · **[贡献指南 Contributing](#-贡献指南--contributing)**
+**[在线演示 Demo](https://ops.yyc3.vip/)** · **[文档体系 Docs](./docs/README.md)** · **[模块文档 Module Docs](./docs/modules/README.md)** · **[开发标准 Dev Standard](./docs/10-YYC3-CP-IM-项目模版-标准规范/)** · **[贡献指南 Contributing](#-贡献指南--contributing)**
 
 </div>
 
@@ -121,6 +122,7 @@
 
 ## 📑 目录 | Table of Contents
 
+- [🧭 项目概述 | Overview](#-项目概述--overview)
 - [✨ 核心特性 | Features](#-核心特性--features)
 - [🏗️ 五高架构 | Five-High Architecture](#️-五高架构--five-high-architecture)
 - [📋 五标体系 | Five-Standard System](#-五标体系--five-standard-system)
@@ -139,9 +141,35 @@
 
 ---
 
+## 🧭 项目概述 | Overview
+
+**言语云枢·智能矩阵**（英文品牌名 **YYC³ CloudPivot Matrix Ops**，唯一技术标识 **`YYC3-CloudPivot-Matrix-Ops`**）是面向异构算力集群的统一运维面板：以单一控制台纳管 Apple M 系列、DGX GPU、NAS 与 BMC 节点，覆盖实时监控、巡检、告警、权限审计与工单运维全链路，并通过 Web / PWA / Electron 多端交付。
+
+| 维度 | 对齐说明 |
+| ---- | -------- |
+| 产品定位 | 异构算力矩阵的统一运维与可观测入口，而非单纯的监控大屏 |
+| 命名口径 | 中文主名 `言语云枢·智能矩阵` · 品牌英文名 `YYC³ CloudPivot Matrix Ops` · 仓库/包标识 `yyc3-cloudpivot-matrix-ops` |
+| 交付形态 | Web（GitHub Pages）· PWA · Electron 桌面端（macOS / Windows / Linux） |
+| 线上入口 | [https://ops.yyc3.vip](https://ops.yyc3.vip)（`public/CNAME` 为唯一真源，CI 门禁校验） |
+| 数据边界 | 本地优先、无强制后端依赖；节点数据经采集代理与 WebSocket 直连池汇聚 |
+| 治理框架 | 五高架构 · 五标体系 · 五化转型 · 五维评估（详见 [项目命名规范](./docs/YYC3-CloudPivot-Matrix-Ops-项目命名规范.md)） |
+
+**项目标签 | Topics**
+
+![YYC³](https://img.shields.io/badge/YYC³-YanYuCloudCube-00d4ff?style=flat-square)
+![CloudPivot](https://img.shields.io/badge/CloudPivot-Matrix_Ops-00ff88?style=flat-square)
+![Heterogeneous Compute](https://img.shields.io/badge/Heterogeneous-Compute-ff69b4?style=flat-square)
+![Observability](https://img.shields.io/badge/Observability-Monitoring_·_Alerting-ffdd00?style=flat-square)
+![PWA](https://img.shields.io/badge/PWA-Ready-5A0FC8?style=flat-square&logo=pwa&logoColor=white)
+![Electron](https://img.shields.io/badge/Electron-Desktop-47848F?style=flat-square&logo=electron&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white)
+
+---
+
 ## ✨ 核心特性 | Features
 
-YYC³ CloudPivot Intelli-Matrix 是一款 **AI 原生 · 本地闭环 · 多端推理矩阵数据看盘系统**，以「五维驱动五高五标五化」为核心思想，将 8 大独立业务模块、8 位 AI Family 角色、多模型推理引擎与多端交付能力融为一体。
+YYC³ CloudPivot Matrix Ops 是一款 **AI 原生 · 本地闭环 · 多端推理矩阵数据看盘系统**，以「五维驱动五高五标五化」为核心思想，将 8 大独立业务模块、8 位 AI Family 角色、多模型推理引擎与多端交付能力融为一体。
 
 ### 📊 功能矩阵 | Feature Matrix
 
@@ -190,7 +218,7 @@ AI Family 角色自动映射到酒店业务场景：
 
 ## 🏗️ 五高架构 | Five-High Architecture
 
-YYC³ CloudPivot Intelli-Matrix 严格遵循 **五高架构** 设计理念，确保系统在各个维度都达到企业级标准：
+YYC³ CloudPivot Matrix Ops 严格遵循 **五高架构** 设计理念，确保系统在各个维度都达到企业级标准：
 
 | 维度 | 核心目标 | 实现方式 |
 | ------ | ---------- | ---------- |
@@ -218,7 +246,7 @@ YYC³ 团队以 **五标体系** 为指导，确保项目开发的标准化、�
 
 ## 🧩 模块架构 | Module Architecture
 
-YYC³ CloudPivot Intelli-Matrix 采用 **1 共享层 + 7 业务模块 = 8 大独立模块** 的模块化架构设计，实现高内聚低耦合：
+YYC³ CloudPivot Matrix Ops 采用 **1 共享层 + 7 业务模块 = 8 大独立模块** 的模块化架构设计，实现高内聚低耦合：
 
 ```mermaid
 graph TB
@@ -558,8 +586,8 @@ graph TB
 
 ```bash
 # 1️⃣ 克隆项目
-git clone https://github.com/YYC-Cube/YYC3-Cloud-Matrix.git
-cd YYC3-Cloud-Matrix
+git clone https://github.com/YYC-Cube/YYC3-CloudPivot-Matrix-Ops.git
+cd YYC3-CloudPivot-Matrix-Ops
 
 # 2️⃣ 安装依赖
 pnpm install
@@ -578,16 +606,16 @@ pnpm dev
 
 ```bash
 # HTTPS 方式
-git clone https://github.com/YYC-Cube/YYC3-Cloud-Matrix.git
+git clone https://github.com/YYC-Cube/YYC3-CloudPivot-Matrix-Ops.git
 
 # SSH 方式 (推荐)
-git clone git@github.com:YYC-Cube/YYC3-Cloud-Matrix.git
+git clone git@github.com:YYC-Cube/YYC3-CloudPivot-Matrix-Ops.git
 
 # GitHub CLI
-gh repo clone YYC-Cube/YYC3-Cloud-Matrix
+gh repo clone YYC-Cube/YYC3-CloudPivot-Matrix-Ops
 
 # 进入项目目录
-cd YYC3-Cloud-Matrix
+cd YYC3-CloudPivot-Matrix-Ops
 ```
 
 </details>
@@ -624,7 +652,7 @@ cp .env.example .env
 
 | 变量名                       | 必需  | 默认值                   | 说明              |
 | ---------------------------- | :---: | ------------------------ | ----------------- |
-| `VITE_APP_TITLE`             |   ❌   | `CloudPivot Intelli-Matrix` | 应用标题      |
+| `VITE_APP_TITLE`             |   ❌   | `CloudPivot Matrix Ops` | 应用标题      |
 | `VITE_OLLAMA_BASE_URL`       |   ❌   | `http://localhost:11434` | Ollama API 地址   |
 | `VITE_WS_URL`                |   ❌   | `ws://localhost:8080`    | WebSocket 地址    |
 | `VITE_YYC3_ZHIPU_API_KEY`    |   ❌   | -                        | 智谱 AI API Key   |
@@ -716,7 +744,7 @@ dist/assets/index.js            275.69 kB │ gzip: 80.45 kB
 
 ### 🌐 部署 | Deployment
 
-**线上地址**: [https://matrix.yyc3.vip](https://matrix.yyc3.vip)（GitHub Pages + 自定义域名）
+**线上地址**: [https://ops.yyc3.vip](https://ops.yyc3.vip)（GitHub Pages + 自定义域名）
 
 **部署架构（CI 门禁式全链路）**:
 
@@ -728,7 +756,7 @@ push main ──► YYC³ CI（三道门禁）
                        │ (全绿后 pages-dist 工件)
                        ▼
               YYC³ Pages Deploy (workflow_run 门禁触发)
-              └─ 复用 CI 工件 → GitHub Actions 部署 → matrix.yyc3.vip
+              └─ 复用 CI 工件 → GitHub Actions 部署 → ops.yyc3.vip
 ```
 
 **关键设计**:
@@ -740,7 +768,7 @@ push main ──► YYC³ CI（三道门禁）
 | SPA 深链回退 | `dist/404.html`（复制自 index.html），深链经路由器接管渲染 |
 | base=/ | 自定义域名根路径部署，资产绝对路径，深链回退不破链 |
 | .nojekyll | 跳过 Jekyll 处理，加速发布、支持下划线资源 |
-| 自定义域名 | `public/CNAME` → `matrix.yyc3.vip`（DNS CNAME 指向 `<org>.github.io`） |
+| 自定义域名 | `public/CNAME` → `ops.yyc3.vip`（DNS CNAME 指向 `<org>.github.io`） |
 
 **手动触发**: Actions → YYC³ Pages Deploy → Run workflow（免门禁紧急发布，谨慎使用）
 
@@ -878,8 +906,8 @@ pnpm exec vite preview --port 4180
 
 ### 🌟 贡献者
 
-<a href="https://github.com/YYC-Cube/YYC3-Cloud-Matrix/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=YYC-Cube/YYC3-Cloud-Matrix" />
+<a href="https://github.com/YYC-Cube/YYC3-CloudPivot-Matrix-Ops/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=YYC-Cube/YYC3-CloudPivot-Matrix-Ops" />
 </a>
 
 ### 📝 如何贡献
@@ -929,7 +957,7 @@ pnpm exec vite preview --port 4180
 
 ```bash
 # 1. Fork 并克隆
-git clone https://github.com/YYC-Cube/YYC3-Cloud-Matrix.git
+git clone https://github.com/YYC-Cube/YYC3-CloudPivot-Matrix-Ops.git
 
 # 2. 安装依赖
 pnpm install
@@ -1035,7 +1063,7 @@ git push origin feature/your-feature
 <details>
 <summary><b>Q: 如何报告 Bug 或提出功能建议？</b></summary>
 
-**A:** 请在 [GitHub Issues](https://github.com/YYC-Cube/YYC3-Cloud-Matrix/issues) 中提交，我们会及时处理。
+**A:** 请在 [GitHub Issues](https://github.com/YYC-Cube/YYC3-CloudPivot-Matrix-Ops/issues) 中提交，我们会及时处理。
 
 </details>
 
@@ -1099,19 +1127,19 @@ SOFTWARE.
 
 <div align="center">
 
-**[⬆ 返回顶部](#yyc-cloudpivot-intelli-matrix)**
+**[⬆ 返回顶部](#top)**
 
 ---
 
 **Made with ❤️ by [YanYuCloudCube Team](https://github.com/YYC-Cube)**
 
-**[GitHub](https://github.com/YYC-Cube/YYC3-Cloud-Matrix)** · **[在线演示](https://matrix.yyc3.vip/)** · **[文档体系](./docs/README.md)** · **[模块文档](./docs/modules/README.md)** · **[开发标准](./docs/10-YYC3-CP-IM-项目模版-标准规范/)** · **[贡献指南](#-贡献指南--contributing)**
+**[GitHub](https://github.com/YYC-Cube/YYC3-CloudPivot-Matrix-Ops)** · **[在线演示](https://ops.yyc3.vip/)** · **[文档体系](./docs/README.md)** · **[模块文档](./docs/modules/README.md)** · **[开发标准](./docs/10-YYC3-CP-IM-项目模版-标准规范/)** · **[贡献指南](#-贡献指南--contributing)**
 
 ---
 
 *如果这个项目对您有帮助，请给我们一个 ⭐ Star！*
 
-[![Star History Chart](https://api.star-history.com/svg?repos=YYC-Cube/YYC3-Cloud-Matrix&type=Date)](https://star-history.com/#YYC-Cube/YYC3-Cloud-Matrix&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=YYC-Cube/YYC3-CloudPivot-Matrix-Ops&type=Date)](https://star-history.com/#YYC-Cube/YYC3-CloudPivot-Matrix-Ops&Date)
 
 ---
 

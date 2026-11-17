@@ -241,7 +241,7 @@ describe("Bridge Client", () => {
       it("should return default config when not in Electron", async () => {
         const result = await appControlClient.getConfig();
         expect(result).toEqual({
-          name: "YYC3-Cloud-Intelli-Matrix",
+          name: "YYC3-CloudPivot-Matrix-Ops",
           version: "web",
           locale: "zh-CN",
           isPackaged: false,

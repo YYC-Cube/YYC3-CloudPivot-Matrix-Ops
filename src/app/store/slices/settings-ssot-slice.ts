@@ -237,7 +237,7 @@ interface SettingsSSOTActions {
 }
 
 /**
- * 品牌升级归一化（A1 主选命名落地）：
+ * 品牌升级归一化（双轨命名落地）：
  * 仅当值仍是旧默认品牌时替换为新默认，用户自定义值不做覆盖。
  * 供 persist migrate（v1→v2）与 legacy 归并（onRehydrateStorage）两处复用。
  */
@@ -245,7 +245,7 @@ function normalizeLegacyBrand(values: Partial<SettingsValues>): void {
   if (values.brandName === "YanYuCloudCube") {
     values.brandName = APP_BRAND.nameZh;
   }
-  if (typeof values.systemName === "string" && /^YYC³? Cloud Intelli-Matrix/.test(values.systemName)) {
+  if (typeof values.systemName === "string" && /^YYC³? (Cloud Intelli-Matrix|PivotMatrix Ops)/.test(values.systemName)) {
     values.systemName = DEFAULT_VALUES.systemName;
   }
 }

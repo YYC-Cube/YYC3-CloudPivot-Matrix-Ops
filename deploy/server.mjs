@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * YYC³ CloudPivot Intelli-Matrix — 本地部署服务器
+ * YYC³ CloudPivot Matrix Ops — 本地部署服务器
  * ================================================
  * 
  * 功能:
@@ -372,7 +372,7 @@ server.listen(PORT, HOST, () => {
   
   console.log("");
   console.log("  ╔══════════════════════════════════════════════════════════╗");
-  console.log("  ║  YYC³ CloudPivot Intelli-Matrix · Local Deploy Server   ║");
+  console.log("  ║  YYC³ CloudPivot Matrix Ops · Local Deploy Server   ║");
   console.log("  ╚══════════════════════════════════════════════════════════╝");
   console.log("");
   console.log(`  📂 静态文件:   ${DIST_DIR}`);

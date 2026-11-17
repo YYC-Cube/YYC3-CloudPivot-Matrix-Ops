@@ -12,7 +12,7 @@ LOG_DIR="/Volumes/Cache/nginx-logs"
 
 echo ""
 echo "  ╔════════════════════════════════════════════════════════╗"
-echo "  ║  YYC³ CloudPivot — Nginx 部署脚本 (M4 Max)           ║"
+echo "  ║  YYC³ CloudPivot Matrix Ops — Nginx 部署脚本 (M4 Max) ║"
 echo "  ╚════════════════════════════════════════════════════════╝"
 echo ""
 

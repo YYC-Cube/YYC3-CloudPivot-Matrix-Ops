@@ -105,7 +105,7 @@ describe("useYYC3Head", () => {
     const description = document.querySelector('meta[name="description"]');
     
     expect(description).toBeInTheDocument();
-    expect(description?.getAttribute("content")).toContain("言语云枢 · YYC³ PivotMatrix Ops");
+    expect(description?.getAttribute("content")).toContain("言语云枢 · YYC³ CloudPivot Matrix Ops");
   });
 
   it("should set og meta tags", () => {
@@ -117,7 +117,7 @@ describe("useYYC3Head", () => {
     const ogType = document.querySelector('meta[property="og:type"]');
     
     expect(ogTitle).toBeInTheDocument();
-    expect(ogTitle?.getAttribute("content")).toBe("言语云枢·智能矩阵 | YYC³ PivotMatrix Ops");
+    expect(ogTitle?.getAttribute("content")).toBe("言语云枢·智能矩阵 | YYC³ CloudPivot Matrix Ops");
     
     expect(ogDescription).toBeInTheDocument();
     expect(ogDescription?.getAttribute("content")).toContain("矩阵统一管控，算力可视可管");

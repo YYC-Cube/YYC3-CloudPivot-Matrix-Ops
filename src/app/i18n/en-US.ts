@@ -15,8 +15,8 @@ const enUS: TranslationKeys = {
   // ======== Common ========
   common: {
     // ── Brand entries (naming spec §5.3, SSOT: config/app-brand.ts) ──
-    appName: "PivotMatrix Ops",
-    appFullName: "YYC³ PivotMatrix Ops — Heterogeneous Compute Matrix Operations Panel",
+    appName: "CloudPivot Matrix Ops",
+    appFullName: "YYC³ CloudPivot Matrix Ops — Heterogeneous Compute Matrix Operations Panel",
     appSlogan: "Converge at Pivot, Govern the Matrix",
     appSloganOps: "Unified Matrix Control for Heterogeneous Compute",
     loading: "Loading...",
@@ -74,7 +74,8 @@ const enUS: TranslationKeys = {
     userMgmt: "Users",
     settings: "Settings",
     unifiedSettings: "Unified Settings",
-    catMonitor: "Monitoring",
+    catMonitor: "Device Matrix",
+    devicePerformance: "Performance Monitor",
     catOps: "Operations",
     catAI: "Intelligent Engine",
     catDev: "Dev Tools",
@@ -1390,10 +1391,10 @@ const enUS: TranslationKeys = {
   // ======== 404 Page ========
   notFound: {
     title: "Page Not Found",
-    desc: "The requested path does not exist in PivotMatrix Ops.",
+    desc: "The requested path does not exist in CloudPivot Matrix Ops.",
     goBack: "Go Back",
     goHome: "Go Home",
-    footer: "PivotMatrix Ops · 404 NOT_FOUND",
+    footer: "CloudPivot Matrix Ops · 404 NOT_FOUND",
   },
 } as const;
 

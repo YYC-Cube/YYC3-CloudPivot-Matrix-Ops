@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-  YYC³ PivotMatrix Ops — 生产面板 macOS LaunchAgent（开机自启 · 崩溃自愈）
+  YYC³ CloudPivot Matrix Ops — 生产面板 macOS LaunchAgent（开机自启 · 崩溃自愈）
 
   功能：node deploy/server.mjs — 0.0.0.0:3118 静态托管 dist/ + Ollama 反代 + SPA 回退
   （批4部署新增；旧 com.yyc3.dashboard.plist 指向已废弃的 Cloudpivotintellimatrix

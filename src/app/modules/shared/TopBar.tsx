@@ -200,7 +200,7 @@ export function TopBar({
   const { t } = useI18n();
   // 品牌名接设置 SSOT（统一设置面板修改即时生效）
   const brandName = useSettingsSSOT((s) => s.values.brandName);
-  // 系统名接设置 SSOT：提取版本号作为顶栏副标（如 "言语云枢 · YYC³ PivotMatrix Ops … v3.4.1" → "v3.4.1"）
+  // 系统名接设置 SSOT：提取版本号作为顶栏副标（如 "言语云枢 · YYC³ CloudPivot Matrix Ops … v3.4.1" → "v3.4.1"）
   const systemName = useSettingsSSOT((s) => s.values.systemName);
   const versionBadge = useMemo(() => {
     const m = /v(\d+\.\d+[\d.]*)/i.exec(systemName);

@@ -598,7 +598,7 @@ export function UnifiedSettingsPanel() {
                   <Shield className="w-8 h-8 text-[#00d4ff]" />
                 </div>
                 <h3 className="text-[#e0f0ff]" style={{ fontSize: "1rem" }}>言语云枢·智能矩阵</h3>
-                <p className="text-[rgba(0,212,255,0.35)] mt-1" style={{ fontSize: "0.7rem" }}>YYC³ PivotMatrix Ops · v3.4.1</p>
+                <p className="text-[rgba(0,212,255,0.35)] mt-1" style={{ fontSize: "0.7rem" }}>YYC³ CloudPivot Matrix Ops · v3.4.1</p>
               </div>
 
               <div className="space-y-4">

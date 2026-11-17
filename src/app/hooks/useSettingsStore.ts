@@ -136,7 +136,7 @@ const DEFAULT_TOGGLES: SettingsToggles = {
 };
 
 const DEFAULT_VALUES: SettingsValues = {
-  systemName: "言语云枢 · YYC³ PivotMatrix Ops 异构算力矩阵运维面板 v3.4.1",
+  systemName: "言语云枢 · YYC³ CloudPivot Matrix Ops 异构算力矩阵运维面板 v3.4.1",
   clusterId: "CN-EAST-PROD-01",
   brandName: "言语云枢·智能矩阵",
   brandSlogan1: "言启象限 | 语枢未来",

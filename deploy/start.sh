@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-# YYC³ CloudPivot Intelli-Matrix — 一键部署脚本
+# YYC³ CloudPivot Matrix Ops — 一键部署脚本
 # ============================================================
 #
 # 用法:
@@ -23,7 +23,7 @@ cd "$PROJECT_DIR"
 
 echo ""
 echo "  ╔════════════════════════════════════════════════════╗"
-echo "  ║  YYC³ CloudPivot Intelli-Matrix · Deploy Script   ║"
+echo "  ║  YYC³ CloudPivot Matrix Ops · Deploy Script   ║"
 echo "  ╚════════════════════════════════════════════════════╝"
 echo ""
 
