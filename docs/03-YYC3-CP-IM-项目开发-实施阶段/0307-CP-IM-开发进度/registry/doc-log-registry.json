@@ -780,6 +780,24 @@
    "related_docs": [
     "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/51-性能监控趋势区-会话级时序采样-探针历史实测卡-20261117.md"
    ]
+  },
+  {
+   "trace_id": "TRC-20261118001",
+   "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/53-服务端持久时序-指标历史落盘续接-跨会话回填-20261118.md",
+   "action": "create",
+   "timestamp": "2026-11-18T00:15:00+08:00",
+   "version": "v1.0.0",
+   "checksum": "c8ff2e4a2d5abe9e",
+   "author": "YYC³ Team",
+   "changes": [
+    {
+     "field": "content",
+     "summary": "服务端持久时序：OpsPanel 自主采样+落盘续接+360 点窗口+/api/metrics/history（ed8000c）+ 前端跨会话回填（d9382b6）"
+    }
+   ],
+   "related_docs": [
+    "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/51-性能监控趋势区-会话级时序采样-探针历史实测卡-20261117.md"
+   ]
   }
  ]
 }
