@@ -1,22 +1,26 @@
 /**
  * @file: DevicePerformance.tsx
- * @description: 设备矩阵 · 性能监控（落档 50）——聚合本机 agent WS 快照 +
- *               OpsPanel 探针（每卡 DCGM / vLLM），展示节点性能矩阵；
- *               无真实来源的指标一律显示「—」，不做趋势伪造。
+ * @description: 设备矩阵 · 性能监控（落档 50/51）——聚合本机 agent WS 快照 +
+ *               OpsPanel 探针（每卡 DCGM / vLLM），展示节点性能矩阵 +
+ *               会话级趋势（10s 采样环形 60 点）与探针可达性/延迟实测时序；
+ *               无真实来源的指标一律显示「—」，趋势断线呈现，不伪造曲线。
  * @author: YanYuCloudCube Team
- * @version: v1.0.0
+ * @version: v1.1.0
  * @created: 2026-11-17
  * @updated: 2026-11-17
  * @status: active
- * @tags: [module],[monitor],[performance]
+ * @tags: [module],[monitor],[performance],[time-series]
  */
 
 import { useMemo, useState } from "react";
+import { format } from "date-fns";
 import { Cpu, MemoryStick, Gauge, Thermometer, Zap, Activity, Server, RefreshCw } from "lucide-react";
 import { GlassCard } from "../shared/GlassCard";
 import { useNodeSlice } from "../../store/slices/node-slice";
 import { useOpsPanelMetrics } from "../../hooks/useOpsPanelMetrics";
 import { useMultiNodeWS } from "../../hooks/useMultiNodeWS";
+import { useNodeTimeSeries, type NodeTimeSeriesPoint } from "../../hooks/useNodeTimeSeries";
+import { useOpsPanelHistory, type OpsHistoryPoint } from "../../hooks/useOpsPanelHistory";
 
 function pct(v: number | undefined | null, treatZeroAsUnknown = false): string {
   if (typeof v !== "number" || !Number.isFinite(v)) { return "—"; }
@@ -33,6 +37,209 @@ function Bar({ value, color }: { value?: number; color: string }) {
   );
 }
 
+// ══════════════════════════════════════════════════════════════════
+// 落档 51 · 趋势区：SVG 三线折线（CPU/内存/GPU，0-100% 轴）+ 图例 + 时间轴
+// 口径：与概览卡同源聚合；null = 无真实来源 → 断线呈现，不插值不补零
+// ══════════════════════════════════════════════════════════════════
+
+/** 趋势线定义：字段/颜色与概览卡同源（卡片与曲线必须一致） */
+const TREND_LINES = [
+  { key: "avgCpu" as const, label: "CPU", color: "#00ff88" },
+  { key: "avgMem" as const, label: "内存", color: "#aa55ff" },
+  { key: "avgGpu" as const, label: "GPU", color: "#00d4ff" },
+];
+
+function TrendChart({ series }: { series: NodeTimeSeriesPoint[] }) {
+  // 绘图区（viewBox 800×240）：左留百分比轴、下留时间轴
+  const L = 44, R = 792, T = 14, B = 200;
+  const xAt = (i: number) => (series.length <= 1 ? (L + R) / 2 : L + (i * (R - L)) / (series.length - 1));
+  const yAt = (v: number) => B - (Math.max(0, Math.min(100, v)) / 100) * (B - T);
+
+  // 逐线构建 path：连续非 null 段成线，遇 null 断开（诚实呈现无来源区间）
+  const lines = TREND_LINES.map(({ key, color }) => {
+    const seg: string[] = [];
+    let open = false;
+    series.forEach((p, i) => {
+      const v = p[key];
+      if (typeof v === "number" && Number.isFinite(v)) {
+        seg.push(`${open ? "L" : "M"}${xAt(i).toFixed(1)} ${yAt(v).toFixed(1)}`);
+        open = true;
+      } else {
+        open = false;
+      }
+    });
+    // 线尾圆点（最新一个真实值）
+    let dot: { x: number; y: number } | null = null;
+    for (let i = series.length - 1; i >= 0; i--) {
+      const v = series[i][key];
+      if (typeof v === "number" && Number.isFinite(v)) { dot = { x: xAt(i), y: yAt(v) }; break; }
+    }
+    return { key, color, d: seg.join(" "), dot };
+  });
+
+  // 时间轴刻度：首 / 三等分 / 末（去重）
+  const n = series.length;
+  const tickIdx = Array.from(new Set(n > 1 ? [0, Math.floor((n - 1) / 3), Math.floor((2 * (n - 1)) / 3), n - 1] : [0]));
+
+  return (
+    <div data-testid="perf-trend-chart">
+      <svg viewBox="0 0 800 240" className="w-full" role="img" aria-label="节点聚合性能趋势（CPU/内存/GPU）" data-testid="perf-trend-svg">
+        {/* 网格 + 百分比轴 */}
+        {[0, 25, 50, 75, 100].map((v) => (
+          <g key={v}>
+            <line x1={L} x2={R} y1={yAt(v)} y2={yAt(v)} stroke="rgba(0,180,255,0.1)" strokeWidth="1" />
+            <text x={L - 6} y={yAt(v) + 3} textAnchor="end" fill="rgba(224,240,255,0.35)" fontSize="9">
+              {v}%
+            </text>
+          </g>
+        ))}
+        {/* 三线 + 线尾点 */}
+        {lines.map((l) => (
+          <g key={l.key}>
+            {l.d && <path d={l.d} fill="none" stroke={l.color} strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round" opacity="0.9" />}
+            {l.dot && <circle cx={l.dot.x} cy={l.dot.y} r="2.5" fill={l.color} />}
+          </g>
+        ))}
+        {/* 时间轴 */}
+        <line x1={L} x2={R} y1={B} y2={B} stroke="rgba(0,180,255,0.15)" strokeWidth="1" />
+        {n > 0 && tickIdx.map((i) => (
+          <text
+            key={i}
+            x={xAt(i)}
+            y={222}
+            textAnchor={i === 0 ? "start" : i === n - 1 ? "end" : "middle"}
+            fill="rgba(224,240,255,0.35)"
+            fontSize="9"
+            style={{ fontFamily: "'JetBrains Mono', monospace" }}
+          >
+            {format(series[i].ts, "HH:mm:ss")}
+          </text>
+        ))}
+      </svg>
+      {/* 图例：色点 + 名称 + 最新值 */}
+      <div className="flex items-center gap-4 flex-wrap mt-1" data-testid="perf-trend-legend">
+        {TREND_LINES.map(({ key, label, color }) => {
+          let v: number | null = null;
+          for (let i = series.length - 1; i >= 0; i--) {
+            const cur = series[i][key];
+            if (typeof cur === "number" && Number.isFinite(cur)) { v = cur; break; }
+          }
+          return (
+            <span key={key} className="flex items-center gap-1.5" style={{ fontSize: "0.66rem" }}>
+              <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
+              <span className="text-[rgba(224,240,255,0.55)]">{label}</span>
+              <span className="text-[#e0f0ff]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>{v === null ? "—" : pct(v)}</span>
+            </span>
+          );
+        })}
+        <span className="text-[rgba(0,212,255,0.3)] ml-auto" style={{ fontSize: "0.6rem" }}>
+          {n} 点 · 每 10s 采样 · 窗口约 10 分钟（会话级）
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** 探针历史单节点行：probe_ms 迷你趋势 + 可达率/最新值（OpsPanel 实测时序） */
+function ProbeNodeRow({ id, points }: { id: string; points: OpsHistoryPoint[] }) {
+  const L = 8, R = 792, T = 10, B = 58;
+  const msVals = points.filter((p) => p.reachable && Number.isFinite(p.probe_ms)).map((p) => p.probe_ms);
+  const latest = points[points.length - 1];
+  const reachableCount = points.filter((p) => p.reachable).length;
+  const min = msVals.length ? Math.min(...msVals) : 0;
+  const max = msVals.length ? Math.max(...msVals) : 0;
+  const pad = Math.max(1, (max - min) * 0.15);
+  const lo = min - pad;
+  const hi = max + pad;
+  const xAt = (i: number) => (points.length <= 1 ? (L + R) / 2 : L + (i * (R - L)) / (points.length - 1));
+  const yAt = (v: number) => B - ((v - lo) / (hi - lo)) * (B - T);
+
+  // probe_ms 折线（仅 reachable 点成线；不可达点以红色刻度标记，不连线）
+  const seg: string[] = [];
+  let open = false;
+  const downTicks: number[] = [];
+  points.forEach((p, i) => {
+    if (p.reachable && Number.isFinite(p.probe_ms)) {
+      seg.push(`${open ? "L" : "M"}${xAt(i).toFixed(1)} ${yAt(p.probe_ms).toFixed(1)}`);
+      open = true;
+    } else {
+      open = false;
+      downTicks.push(xAt(i));
+    }
+  });
+
+  return (
+    <div className="px-3 py-2.5 rounded-xl bg-[rgba(0,20,45,0.4)] border border-[rgba(0,180,255,0.08)]" data-testid="probe-history-node">
+      <div className="flex items-center justify-between flex-wrap gap-2 mb-1.5">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${latest?.reachable ? "bg-[#00ff88]" : "bg-[rgba(255,51,102,0.8)]"}`} />
+          <span className="text-[#e0f0ff] truncate" style={{ fontSize: "0.78rem", fontFamily: "'JetBrains Mono', monospace" }}>{id}</span>
+        </div>
+        <div className="flex items-center gap-3" style={{ fontSize: "0.64rem" }}>
+          <span className="text-[rgba(224,240,255,0.5)]">
+            最新 <span className="text-[#e0f0ff]" style={{ fontFamily: "'JetBrains Mono', monospace" }}>
+              {latest && Number.isFinite(latest.probe_ms) ? `${Math.round(latest.probe_ms)}ms` : "—"}
+            </span>
+          </span>
+          <span className="text-[rgba(224,240,255,0.5)]">
+            可达率 <span style={{ color: reachableCount === points.length ? "#00ff88" : "#ff3366", fontFamily: "'JetBrains Mono', monospace" }}>
+              {points.length ? `${Math.round((reachableCount / points.length) * 100)}%` : "—"}
+            </span>
+          </span>
+          <span className="text-[rgba(0,212,255,0.3)]">
+            {points.length ? `${format(new Date(points[0].ts), "HH:mm:ss")} → ${format(new Date(latest.ts), "HH:mm:ss")}` : ""}
+          </span>
+        </div>
+      </div>
+      <svg viewBox={`0 0 800 ${B + 16}`} className="w-full" role="img" aria-label={`探针延迟趋势 ${id}`} data-testid="probe-history-sparkline">
+        {/* 基线 */}
+        <line x1={L} x2={R} y1={B} y2={B} stroke="rgba(0,180,255,0.12)" strokeWidth="1" />
+        {seg.length > 0 && (
+          <path d={seg.join(" ")} fill="none" stroke="#ffdd00" strokeWidth="1.3" strokeLinejoin="round" strokeLinecap="round" opacity="0.85" />
+        )}
+        {/* 不可达点：红色刻度（诚实标记，不连线） */}
+        {downTicks.map((x, i) => (
+          <line key={i} x1={x} x2={x} y1={B - 5} y2={B + 5} stroke="#ff3366" strokeWidth="1.5" />
+        ))}
+      </svg>
+    </div>
+  );
+}
+
+/** 探针可达性 · 延迟趋势卡（OpsPanel /api/history — 唯一服务端留存实测时序） */
+function ProbeHistoryCard({ state }: { state: ReturnType<typeof useOpsPanelHistory> }) {
+  const entries = Object.entries(state.history).filter(([, pts]) => pts.length > 0);
+  return (
+    <GlassCard className="p-4">
+      <h2 className="text-[#e0f0ff] mb-3 flex items-center gap-2" style={{ fontSize: "0.88rem" }}>
+        <Zap className="w-4 h-4 text-[#00ff88]" /> 探针可达性 · 延迟趋势
+        <span className="px-1.5 py-0.5 rounded bg-[rgba(0,212,255,0.08)] text-[#00d4ff]" style={{ fontSize: "0.58rem" }}>
+          OpsPanel /api/history 实测
+        </span>
+      </h2>
+
+      {state.loading ? (
+        <p className="py-4 text-center text-[rgba(0,212,255,0.35)]" style={{ fontSize: "0.72rem" }} data-testid="probe-history-loading">
+          加载探针历史…
+        </p>
+      ) : entries.length === 0 ? (
+        <p className="py-4 text-center text-[rgba(0,212,255,0.35)]" style={{ fontSize: "0.72rem" }} data-testid="probe-history-empty">
+          {state.error ? "探针历史不可达（OpsPanel /api/history）——保留空态，不构造假曲线" : "暂无历史采样"}
+        </p>
+      ) : (
+        <div className="space-y-2" data-testid="probe-history-list">
+          {entries.map(([id, pts]) => <ProbeNodeRow key={id} id={id} points={pts.slice(-60)} />)}
+        </div>
+      )}
+
+      <p className="text-[rgba(0,212,255,0.25)] mt-3" style={{ fontSize: "0.62rem" }}>
+        数据口径：OpsPanel 服务端探针窗口原样透传（{`{ts, reachable, probe_ms}`}），每节点显示最近 60 点；
+        不可达点以红色刻度标记、不连线；探针不可达时如实呈现空态。
+      </p>
+    </GlassCard>
+  );
+}
+
 export function DevicePerformance() {
   // 挂载即启动两条真实数据源（与 Dashboard 同源）：OpsPanel 10s 探针 + 多节点 WS
   useOpsPanelMetrics();
@@ -40,6 +247,9 @@ export function DevicePerformance() {
   const nodes = useNodeSlice((s) => s.nodes);
   const addNode = useNodeSlice((s) => s.addNode);
   const [importing, setImporting] = useState(false);
+  // 落档 51：会话级时序采样（10s × 环形 60 点）+ OpsPanel 探针历史（唯一服务端留存时序）
+  const series = useNodeTimeSeries();
+  const probeHistory = useOpsPanelHistory();
 
   /** 从 OpsPanel 探针导入真实节点（显式用户动作；清单由用户确认后维护，非暗注入） */
   const importProbeNodes = async () => {
@@ -129,6 +339,29 @@ export function DevicePerformance() {
           </GlassCard>
         ))}
       </div>
+
+      {/* 聚合性能趋势（落档 51）：会话级 10s 采样；首点前显示「采样中…」，不伪造 */}
+      <GlassCard className="p-4">
+        <h2 className="text-[#e0f0ff] mb-3 flex items-center gap-2" style={{ fontSize: "0.88rem" }}>
+          <Activity className="w-4 h-4 text-[#00d4ff]" /> 聚合性能趋势
+          <span className="px-1.5 py-0.5 rounded bg-[rgba(0,212,255,0.08)] text-[#00d4ff]" style={{ fontSize: "0.58rem" }}>
+            10s 采样 · 环形 60 点 · 会话级
+          </span>
+        </h2>
+        {series.length === 0 ? (
+          <div className="py-10 text-center" data-testid="perf-trend-sampling">
+            <p className="text-[rgba(0,212,255,0.4)] animate-pulse" style={{ fontSize: "0.75rem" }}>采样中…</p>
+            <p className="text-[rgba(0,212,255,0.25)] mt-1" style={{ fontSize: "0.62rem" }}>
+              首点到达后开始绘制（每 10s 采一次，无数据不伪造曲线）
+            </p>
+          </div>
+        ) : (
+          <TrendChart series={series} />
+        )}
+      </GlassCard>
+
+      {/* 探针可达性 · 延迟趋势（OpsPanel 实测时序） */}
+      <ProbeHistoryCard state={probeHistory} />
 
       {/* 节点矩阵 */}
       <GlassCard className="p-4">
@@ -234,7 +467,8 @@ export function DevicePerformance() {
 
         <p className="text-[rgba(0,212,255,0.25)] mt-3" style={{ fontSize: "0.62rem" }}>
           数据口径：CPU = 本机 agent 采集的真实 CPU 利用率；GPU/温度/功耗 = OpsPanel DCGM 探针（每 10s）；
-          无来源指标显示「—」。时序趋势图待接入时序存储后提供（当前为实时快照，不伪造曲线）。
+          无来源指标显示「—」。趋势曲线 = 前端会话级采样（与概览卡同源聚合，刷新保留、关闭即清）；
+          服务端留存时序见上方「探针可达性 · 延迟趋势」——两者均不插值、不补零、不伪造。
         </p>
       </GlassCard>
     </div>
