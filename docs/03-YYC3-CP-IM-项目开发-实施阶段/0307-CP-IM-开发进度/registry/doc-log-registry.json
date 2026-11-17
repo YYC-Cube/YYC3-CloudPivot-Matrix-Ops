@@ -718,6 +718,24 @@
    "related_docs": [
     "docs/YYC3-AI-FAmily-Agent-文档架构-标规体系/YYC3-AI-Family-Agent-交互气泡-设计文档.md"
    ]
+  },
+  {
+   "trace_id": "TRC-20261117009",
+   "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/50-设备矩阵性能监控页-Family设置空格修正-mock节点净化-20261117.md",
+   "action": "create",
+   "timestamp": "2026-11-17T10:17:04+08:00",
+   "version": "v1.0.0",
+   "checksum": "f8f1448ebff26804",
+   "author": "YYC³ Team",
+   "changes": [
+    {
+     "field": "content",
+     "summary": "设备矩阵分类 + 性能监控页（真实双源）+ Family设置空格 + mock 节点双重净化（fb94d89）"
+    }
+   ],
+   "related_docs": [
+    "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/49-导航改名与业务空间新增页-气泡文档对齐清单-20261117.md"
+   ]
   }
  ]
 }
