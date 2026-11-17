@@ -107,6 +107,24 @@ if (typeof window !== "undefined") {
   };
 }
 
+// ────────────────────────────────────────────────────────────────
+// 深链兜底：路径形式 → 哈希路由归一化
+// 路由表由 createHashRouter 构建，真实路由位于 hash 之后。若以路径形式
+// 直达（如 https://host/ai-family/music），路由器只会匹配 index，表现为
+// "深链落到仪表盘且地址栏仍停在该路径"。
+// 仅对 http(s) 生效：Electron 生产环境走 file://，pathname 是磁盘路径，
+// 归一化会把文件路径写进 hash，因此必须排除。
+// ────────────────────────────────────────────────────────────────
+if (typeof window !== "undefined") {
+  const { protocol, pathname, search, hash } = window.location;
+  const isHttp = protocol === "http:" || protocol === "https:";
+  const isRoot = pathname === "/" || pathname === "" || pathname === "/index.html";
+  const hasRoute = hash !== "" && hash !== "#" && hash !== "#/";
+  if (isHttp && !isRoot && !hasRoute) {
+    window.location.replace(`/#${pathname}${search}`);
+  }
+}
+
 export default function App() {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
   const [userEmail, setUserEmail] = useState("");
