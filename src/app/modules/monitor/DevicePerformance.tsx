@@ -133,7 +133,7 @@ function TrendChart({ series }: { series: NodeTimeSeriesPoint[] }) {
           );
         })}
         <span className="text-[rgba(0,212,255,0.3)] ml-auto" style={{ fontSize: "0.6rem" }}>
-          {n} 点 · 每 10s 采样 · 窗口约 10 分钟（会话级）
+          {n} 点 · 每 10s 采样 · 窗口约 10 分钟（服务端历史回填 + 实时续采）
         </span>
       </div>
     </div>
@@ -340,12 +340,12 @@ export function DevicePerformance() {
         ))}
       </div>
 
-      {/* 聚合性能趋势（落档 51）：会话级 10s 采样；首点前显示「采样中…」，不伪造 */}
+      {/* 聚合性能趋势（落档 51/53）：服务端持久历史回填 + 本地 10s 续采；首点前显示「采样中…」，不伪造 */}
       <GlassCard className="p-4">
         <h2 className="text-[#e0f0ff] mb-3 flex items-center gap-2" style={{ fontSize: "0.88rem" }}>
           <Activity className="w-4 h-4 text-[#00d4ff]" /> 聚合性能趋势
-          <span className="px-1.5 py-0.5 rounded bg-[rgba(0,212,255,0.08)] text-[#00d4ff]" style={{ fontSize: "0.58rem" }}>
-            10s 采样 · 环形 60 点 · 会话级
+          <span className="px-1.5 py-0.5 rounded bg-[rgba(0,255,136,0.08)] text-[#00ff88]" style={{ fontSize: "0.58rem" }}>
+            服务端持久时序 · 10s 采样 · 环形 60 点
           </span>
         </h2>
         {series.length === 0 ? (
@@ -466,9 +466,10 @@ export function DevicePerformance() {
         )}
 
         <p className="text-[rgba(0,212,255,0.25)] mt-3" style={{ fontSize: "0.62rem" }}>
-          数据口径：CPU = 本机 agent 采集的真实 CPU 利用率；GPU/温度/功耗 = OpsPanel DCGM 探针（每 10s）；
-          无来源指标显示「—」。趋势曲线 = 前端会话级采样（与概览卡同源聚合，刷新保留、关闭即清）；
-          服务端留存时序见上方「探针可达性 · 延迟趋势」——两者均不插值、不补零、不伪造。
+          数据口径：CPU = 本机 agent 采集的真实 CPU 利用率；GPU/温度 = OpsPanel DCGM 探针（每 10s）；
+          无来源指标显示「—」。趋势曲线 = OpsPanel 服务端持久时序回填（服务端自主采样 10s、落盘续接，
+          浏览器关闭不丢）+ 前端实时续采（CPU/内存仅前端有来源，服务端历史段如实断线）；
+          服务端探针时序见上方「探针可达性 · 延迟趋势」——均不插值、不补零、不伪造。
         </p>
       </GlassCard>
     </div>

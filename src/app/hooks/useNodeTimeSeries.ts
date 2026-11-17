@@ -1,9 +1,10 @@
 /**
  * @file: useNodeTimeSeries.ts
- * @description: 设备矩阵 · 节点聚合指标时序采样 Hook（落档 51）——10s 采样 CPU/内存/GPU/温度聚合，
- *               环形 60 点（≈10 分钟窗口），sessionStorage 会话级持久（刷新不丢、跨标签页不串）
+ * @description: 设备矩阵 · 节点聚合指标时序采样 Hook（落档 51/53）——10s 采样 CPU/内存/GPU/温度聚合，
+ *               环形 60 点（≈10 分钟窗口），sessionStorage 会话级持久；启动时从 OpsPanel
+ *               /api/metrics/history 回填服务端持久历史（跨会话连续，GPU/温度字段），本地采样续采
  * @author: YanYuCloudCube Team
- * @version: v1.0.0
+ * @version: v2.0.0
  * @created: 2026-11-17
  * @updated: 2026-11-17
  * @status: active
@@ -11,7 +12,8 @@
  *
  * @brief: 对 node-slice 当前聚合口径（与 DevicePerformance 概览卡完全同源）做前端采样，
  *         只记录真实出现过的值；无在线节点时不采样（不制造全 null 点污染窗口）。
- *         模块级单例采样器：首个消费者挂载启动、最后一个卸载停止，组件重挂不重置序列。
+ *         模块级单例采样器：首个消费者挂载启动、最后一个卸载停止，组件重挂不重置序列；
+ *         服务端持久历史（OpsPanel 自主采样）启动时一次性回填，跨会话连续。
  *
  * @data-sources:
  *   - node-slice（本机 agent WS 快照 + OpsPanel 探针轮询的汇聚态）
@@ -21,6 +23,7 @@
 
 import { useEffect, useSyncExternalStore } from "react";
 import { useNodeSlice } from "../store/slices/node-slice";
+import { useSettingsSSOT } from "../store/slices/settings-ssot-slice";
 import type { NodeData } from "../types";
 
 /** 采样间隔（与 useOpsPanelMetrics 探针轮询同节奏） */
@@ -94,8 +97,48 @@ function append(p: NodeTimeSeriesPoint): void {
 // ── 单例采样器（引用计数启停） ──────────────────────────────────────────
 let refCount = 0;
 let timer: ReturnType<typeof setInterval> | null = null;
+let hydrated = false;
+
+/**
+ * 落档 53 · 服务端历史回填：拉 OpsPanel /api/metrics/history（服务端自主采样 +
+ * 落盘续接，约 1h 窗口），把 {ts, avg_gpu_util, max_gpu_temp} 映射进环形窗口底部，
+ * 使刷新/重开浏览器后曲线立即跨会话连续。本地采样随后继续追加最新点。
+ * 口径：服务端无 CPU/内存来源 → 映射为 null（图表断线呈现，不伪造）；
+ * 与本地重叠区间以本地点为准（本地点含 CPU/内存更完整）；拉取失败静默回落纯本地。
+ */
+async function hydrateFromServer(): Promise<void> {
+  if (hydrated) { return; }
+  hydrated = true;
+  try {
+    const ssot = useSettingsSSOT.getState();
+    const enabled = ssot.toggles.demoMode ? false : ssot.toggles.opsPanelEnabled !== false;
+    const base = (ssot.values.opsPanelBaseUrl || "http://127.0.0.1:7864").trim().replace(/\/+$/, "");
+    if (!enabled || !base) { return; }
+    const res = await fetch(`${base}/api/metrics/history`, { signal: AbortSignal.timeout(6000) });
+    const payload = await res.json() as { history?: Array<{ ts: string; avg_gpu_util?: number | null; max_gpu_temp?: number | null }> };
+    const serverPts = (payload.history || [])
+      .filter((p) => p && typeof p.ts === "string")
+      .slice(-MAX_POINTS)
+      .map((p) => ({
+        ts: new Date(p.ts).getTime(),
+        avgCpu: null,
+        avgMem: null,
+        avgGpu: typeof p.avg_gpu_util === "number" && Number.isFinite(p.avg_gpu_util) ? p.avg_gpu_util : null,
+        maxTemp: typeof p.max_gpu_temp === "number" && Number.isFinite(p.max_gpu_temp) ? p.max_gpu_temp : null,
+      }))
+      .filter((p) => Number.isFinite(p.ts));
+    if (!serverPts.length) { return; }
+    const serverLast = serverPts[serverPts.length - 1].ts;
+    // 本地保留「比服务端末点新」的点（sessionStorage 回放或已采样的最新点）
+    const localTail = series.filter((p) => p.ts > serverLast + 2000);
+    series = [...serverPts, ...localTail].slice(-MAX_POINTS);
+    persist();
+    emit();
+  } catch { /* 服务端不可达：保持本地窗口（现状行为），不抛错 */ }
+}
 
 function startSampler(): void {
+  void hydrateFromServer(); // 首消费者挂载即回填服务端历史（一次；失败不重试）
   const tick = () => {
     const p = samplePoint();
     if (p) { append(p); }
@@ -109,7 +152,7 @@ function stopSampler(): void {
 }
 
 /**
- * 订阅节点聚合指标时序（10s 采样 · 环形 60 点 · sessionStorage 会话持久）。
+ * 订阅节点聚合指标时序（10s 采样 · 环形 60 点 · 服务端历史回填 + sessionStorage 会话持久）。
  * 返回采样点数组（旧 → 新）；首点到达前为空数组，由消费方显示「采样中…」占位。
  */
 export function useNodeTimeSeries(): NodeTimeSeriesPoint[] {
