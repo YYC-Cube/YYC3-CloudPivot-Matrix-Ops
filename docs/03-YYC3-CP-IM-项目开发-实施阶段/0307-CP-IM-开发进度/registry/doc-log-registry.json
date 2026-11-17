@@ -724,13 +724,17 @@
    "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/50-设备矩阵性能监控页-Family设置空格修正-mock节点净化-20261117.md",
    "action": "create",
    "timestamp": "2026-11-17T10:17:04+08:00",
-   "version": "v1.0.0",
-   "checksum": "f8f1448ebff26804",
+   "version": "v1.1.0",
+   "checksum": "624e454170af8767",
    "author": "YYC³ Team",
    "changes": [
     {
      "field": "content",
      "summary": "设备矩阵分类 + 性能监控页（真实双源）+ Family设置空格 + mock 节点双重净化（fb94d89）"
+    },
+    {
+     "field": "content",
+     "summary": "顺序调整：数据监控(首页/)置首、性能监控居次（45b3556）"
     }
    ],
    "related_docs": [
