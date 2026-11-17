@@ -746,13 +746,17 @@
    "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/51-性能监控趋势区-会话级时序采样-探针历史实测卡-20261117.md",
    "action": "create",
    "timestamp": "2026-11-17T14:55:00+08:00",
-   "version": "v1.0.0",
-   "checksum": "407ca94dee0833b4",
+   "version": "v1.1.0",
+   "checksum": "a4ebc4b0c0a26b92",
    "author": "YYC³ Team",
    "changes": [
     {
      "field": "content",
      "summary": "性能监控趋势区：会话级 10s 采样三线折线（useNodeTimeSeries）+ OpsPanel /api/history 探针可达性/延迟实测卡（c8bb82e）"
+    },
+    {
+     "field": "content",
+     "summary": "口径补登：隐藏标签页节流实证（暂停不补点、恢复续采无损、sessionStorage 持久验证）"
     }
    ],
    "related_docs": [
