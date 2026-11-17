@@ -151,7 +151,7 @@
     "@lhci/cli": "^0.15.1",
     "@playwright/test": "^1.59.1",
     "@tailwindcss/vite": "^4.2.2",
-    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@types/electron": "^1.6.10",
@@ -160,7 +160,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.4",
     "@vitest/coverage-v8": "^4.1.11",
-    "concurrently": "^9.2.1",
+    "concurrently": "^10.0.6",
     "electron": "^41.10.6",
     "electron-builder": "^26.15.3",
     "esbuild": "^0.28.1",
@@ -180,7 +180,7 @@
     "vite-plugin-electron-renderer": "^0.14.0",
     "vitest": "^4.1.11",
     "vitest-axe": "^0.1.0",
-    "wait-on": "^7.2.0"
+    "wait-on": "^9.5.1"
   },
   "build": {
     "appId": "com.yyc3.cloudpivot.matrix",
