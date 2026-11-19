@@ -798,6 +798,24 @@
    "related_docs": [
     "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/51-性能监控趋势区-会话级时序采样-探针历史实测卡-20261117.md"
    ]
+  },
+  {
+   "trace_id": "TRC-20261118002",
+   "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/53-服务端持久时序-指标历史落盘续接-跨会话回填-20261118.md",
+   "action": "update",
+   "timestamp": "2026-11-18T03:10:00+08:00",
+   "version": "v1.1.0",
+   "checksum": "e5a7cc6242e6dddb",
+   "author": "YYC³ Team",
+   "changes": [
+    {
+     "field": "content",
+     "summary": "「起点 0 值点」结项澄清：实测为真实聚合（节点种子 0 + 本机 agent 未上报），首点延时与 lastUpdateAt 就绪门控两方案经 E2E 否决并撤回（工作区零 diff）"
+    }
+   ],
+   "related_docs": [
+    "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/53-服务端持久时序-指标历史落盘续接-跨会话回填-20261118.md"
+   ]
   }
  ]
 }
