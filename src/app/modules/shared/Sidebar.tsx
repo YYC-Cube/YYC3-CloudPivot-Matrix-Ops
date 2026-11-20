@@ -174,6 +174,7 @@ const NAV_CATEGORIES: NavCategory[] = [
       { key: "nav.audit", path: "/audit", icon: ClipboardList },
       { key: "nav.userMgmt", path: "/users", icon: Users },
       { key: "nav.settings", path: "/settings", icon: Cog },
+      { key: "nav.sources", path: "/sources", icon: Database },
       { key: "nav.unifiedSettings", path: "/unified-settings", icon: Settings2 },
       { key: "nav.securityMonitor", path: "/security", icon: ShieldCheck },
       { key: "nav.pwa", path: "/pwa", icon: Smartphone },

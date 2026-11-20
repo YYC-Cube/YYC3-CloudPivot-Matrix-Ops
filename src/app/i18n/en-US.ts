@@ -73,6 +73,7 @@ const enUS: TranslationKeys = {
     audit: "Audit",
     userMgmt: "Users",
     settings: "Settings",
+    sources: "Data Sources",
     unifiedSettings: "Unified Settings",
     catMonitor: "Device Matrix",
     devicePerformance: "Performance Monitor",

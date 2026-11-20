@@ -128,6 +128,9 @@ const RefactoringReport = lazy(() =>
 const DataEditorPanel = lazy(() =>
   import("./modules/admin/DataEditorPanel").then((m) => ({ default: m.DataEditorPanel })),
 );
+const SourceRegistryPage = lazy(() =>
+  import("./modules/admin/SourceRegistryPage").then((m) => ({ default: m.SourceRegistryPage })),
+);
 const PerformanceMonitor = lazy(() =>
   import("./modules/admin/PerformanceMonitor").then((m) => ({ default: m.PerformanceMonitor })),
 );
@@ -211,6 +214,7 @@ export const router = createHashRouter([
       { path: "audit", Component: withSuspense(OperationAudit) },
       { path: "users", Component: withSuspense(UserManagement) },
       { path: "settings", Component: withSuspense(SystemSettings) },
+      { path: "sources", Component: withSuspense(SourceRegistryPage) },
       { path: "security", Component: withSuspense(SecurityMonitor) },
       { path: "alerts", Component: withSuspense(AlertRulesPanel) },
       { path: "reports", Component: withSuspense(ReportExporter) },

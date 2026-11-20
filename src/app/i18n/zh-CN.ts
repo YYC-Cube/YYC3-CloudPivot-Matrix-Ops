@@ -71,6 +71,7 @@ const zhCN = {
     audit: "操作审计",
     userMgmt: "用户管理",
     settings: "系统设置",
+    sources: "数据源",
     unifiedSettings: "统一设置",
     catMonitor: "设备矩阵",
     devicePerformance: "性能监控",
