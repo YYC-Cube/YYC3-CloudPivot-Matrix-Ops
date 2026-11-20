@@ -9,9 +9,10 @@
  * @tags: [tag1],[tag2],[tag3]
  */
 
-import React, { useState, useContext, Suspense, useMemo, useCallback } from "react";
+import React, { useState, useContext, Suspense, useMemo, useCallback, useEffect } from "react";
 import { Outlet, useLocation } from "react-router";
 import { Toaster } from "sonner";
+import { pruneIdbHistory } from "../../lib/yyc3-storage";
 import { TopBar } from "./TopBar";
 import { Sidebar } from "./Sidebar";
 import { BottomNav } from "./BottomNav";
@@ -71,6 +72,11 @@ export function Layout() {
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [terminalOpen, setTerminalOpen] = useState(false);
+
+  // 落档 61：启动时修剪 IDB 历史表（每日一次机会，异常不影响界面）
+  useEffect(() => {
+    void pruneIdbHistory().catch(() => undefined);
+  }, []);
 
   const isDesktop = !view.isMobile && !view.isTablet;
 

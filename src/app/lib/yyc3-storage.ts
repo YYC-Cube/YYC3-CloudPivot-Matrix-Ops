@@ -531,3 +531,47 @@ export async function clearAllStorage(): Promise<void> {
     await idbClear(store);
   }
 }
+
+/**
+ * 历史表保留上限（落档 61）——启动时统一修剪，避免 IDB 无限增长。
+ * 未列出的 store（配置/规则/连接等）不做修剪。
+ */
+const IDB_RETENTION: Partial<Record<StoreName, number>> = {
+  operationLogs: 1000,
+  operationTemplates: 100,
+  patrolHistory: 500,
+  loopHistory: 500,
+  diagnosisHistory: 200,
+  reports: 100,
+  queryHistory: 500,
+  fileVersions: 50,
+  errorLog: 500,
+};
+
+function recordTime(row: Record<string, unknown>): number {
+  const candidates = [row.timestamp, row.createdAt, row.updatedAt, row.completedAt, row.at];
+  for (const c of candidates) {
+    if (typeof c === "number" && Number.isFinite(c)) { return c; }
+    if (typeof c === "string") {
+      const t = Date.parse(c);
+      if (!Number.isNaN(t)) { return t; }
+    }
+  }
+  return 0;
+}
+
+/** 按保留上限修剪历史表，返回每个 store 删除的条数 */
+export async function pruneIdbHistory(): Promise<Record<string, number>> {
+  const report: Record<string, number> = {};
+  for (const [storeName, max] of Object.entries(IDB_RETENTION) as [StoreName, number][]) {
+    const rows = await idbGetAll<Record<string, unknown> & { id: string }>(storeName);
+    if (rows.length <= max) { continue; }
+    const sorted = [...rows].sort((a, b) => recordTime(a) - recordTime(b)); // 旧 → 新
+    const drop = sorted.slice(0, rows.length - max);
+    for (const row of drop) {
+      if (row?.id) { await idbDelete(storeName, row.id); }
+    }
+    report[storeName] = drop.length;
+  }
+  return report;
+}

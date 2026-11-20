@@ -1048,6 +1048,24 @@
    "related_docs": [
     "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/59-存储架构与独立性缺陷分析-备份脱敏-清理白名单-i18n误报消除-20261121.md"
    ]
+  },
+  {
+   "trace_id": "TRC-20261121006",
+   "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/61-存储收尾-IDB历史上限-Family绑定单源-WiFi密码不落盘-部署路径对齐-20261121.md",
+   "action": "create",
+   "timestamp": "2026-11-21T06:30:00+08:00",
+   "version": "v1.0.0",
+   "checksum": "36f7c039e47095e9",
+   "author": "YYC³ Team",
+   "changes": [
+    {
+     "field": "content",
+     "summary": "存储收尾：IDB 9 张历史表上限+启动修剪；Family 绑定以 member slice 单源；WiFi 密码不落盘并迁移删除；部署 plist/nginx/setup 路径对齐当前仓库"
+    }
+   ],
+   "related_docs": [
+    "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/60-存储下一步执行-恢复覆盖语义-字体本地化-容量上限-凭据副本清理-20261121.md"
+   ]
   }
  ]
 }

@@ -4,7 +4,7 @@
   YYC³ Dashboard — macOS LaunchAgent (开机自启)
 
   安装:
-    cp ~/Cloudpivotintellimatrix/deploy/com.yyc3.dashboard.plist ~/Library/LaunchAgents/
+    cp /Users/yanyu/YYC-Cube/personal/YYC3-CloudPivot-Matrix-Ops/deploy/com.yyc3.dashboard.plist ~/Library/LaunchAgents/
     launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.yyc3.dashboard.plist
 
   管理:
@@ -22,11 +22,11 @@
     <key>ProgramArguments</key>
     <array>
         <string>/opt/homebrew/bin/node</string>
-        <string>/Users/yanyu/Cloudpivotintellimatrix/deploy/server.mjs</string>
+        <string>/Users/yanyu/YYC-Cube/personal/YYC3-CloudPivot-Matrix-Ops/deploy/server.mjs</string>
     </array>
 
     <key>WorkingDirectory</key>
-    <string>/Users/yanyu/Cloudpivotintellimatrix</string>
+    <string>/Users/yanyu/YYC-Cube/personal/YYC3-CloudPivot-Matrix-Ops</string>
 
     <key>EnvironmentVariables</key>
     <dict>

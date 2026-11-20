@@ -6,7 +6,7 @@
 
 set -e
 
-PROJECT_DIR="/Users/yanyu/Cloudpivotintellimatrix"
+PROJECT_DIR="/Users/yanyu/YYC-Cube/personal/YYC3-CloudPivot-Matrix-Ops"
 NGINX_CONF_DIR="/opt/homebrew/etc/nginx/servers"
 LOG_DIR="/Volumes/Cache/nginx-logs"
 

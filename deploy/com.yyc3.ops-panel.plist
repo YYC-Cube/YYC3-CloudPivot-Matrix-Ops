@@ -27,11 +27,11 @@
     <key>ProgramArguments</key>
     <array>
         <string>/opt/homebrew/bin/node</string>
-        <string>/Users/yanyu/YYC-Cube/personal/YYC3-Cloud-Matrix/deploy/server.mjs</string>
+        <string>/Users/yanyu/YYC-Cube/personal/YYC3-CloudPivot-Matrix-Ops/deploy/server.mjs</string>
     </array>
 
     <key>WorkingDirectory</key>
-    <string>/Users/yanyu/YYC-Cube/personal/YYC3-Cloud-Matrix</string>
+    <string>/Users/yanyu/YYC-Cube/personal/YYC3-CloudPivot-Matrix-Ops</string>
 
     <key>EnvironmentVariables</key>
     <dict>

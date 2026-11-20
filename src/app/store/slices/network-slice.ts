@@ -50,8 +50,18 @@ export const useNetworkSlice = create<NetworkSlice>()(
     }),
     {
       name: 'yyc3-network-slice',
+      // 落档 61：v1 起 WiFi 密码不落盘；迁移删除历史明文密码
+      version: 1,
+      migrate: (persisted) => {
+        const state = (persisted ?? {}) as { networks?: Array<Record<string, unknown>> };
+        const networks = Array.isArray(state.networks)
+          ? state.networks.map(({ password: _pw, ...rest }) => rest)
+          : [];
+        return { ...state, networks };
+      },
       partialize: (state) => ({
-        networks: state.networks,
+        // 落档 61：WiFi 密码不落盘（凭据不进 localStorage；需要时由用户重新输入）
+        networks: state.networks.map(({ password: _pw, ...rest }) => rest),
         autoReconnect: state.autoReconnect,
       }),
     }

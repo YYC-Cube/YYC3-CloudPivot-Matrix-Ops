@@ -412,6 +412,24 @@ export function FamilyModelSettings() {
     useProviderSlice.getState().fetchOllamaModels();
   }, []);
 
+  useEffect(() => {
+    // 落档 61：运行时以 member slice 为唯一绑定 SSOT；把 settings 视图对齐到 member，
+    // 避免「界面显示的模型不是实际发送的模型」（两套默认值历史上不一致）。
+    const memberState = useFamilyMemberSlice.getState();
+    const settingsState = useFamilySettingsSlice.getState();
+    for (const member of memberState.members) {
+      const binding = member.modelAssignment;
+      if (!binding) { continue; }
+      const current = settingsState.modelAssignments.find((a) => a.memberId === member.id);
+      if (!current || current.providerId !== binding.providerId || current.modelId !== binding.modelId) {
+        settingsState.updateModelAssignment(member.id, {
+          providerId: binding.providerId,
+          modelId: binding.modelId,
+        });
+      }
+    }
+  }, []);
+
   // Handlers
   const handleKeyChange = useCallback((providerId: string, key: string) => {
     const existing = providerSlice.configuredModels.find(cm => cm.providerId === providerId);
