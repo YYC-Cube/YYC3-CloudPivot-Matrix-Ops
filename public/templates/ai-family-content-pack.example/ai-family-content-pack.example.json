@@ -1,0 +1,91 @@
+{
+  "$schema": "https://yyc3.vip/schemas/ai-family-content-pack.schema.json",
+  "_说明": "示例包，待内容本体覆盖。全部条目为合成占位数据（零真实家人信息）；packId 示例值不可复用；本包不进生产注册表。",
+  "pack": {
+    "name": "示例：起步内容包（example）",
+    "packId": "pack-example-starter-20261120",
+    "version": "0.1.0-example",
+    "author": "示例作者（example）",
+    "createdAt": "2026-11-20",
+    "description": "示例包：演示 posts/activities/memories/skills/settings/artworks 六个域的填写方式，全部为合成占位数据。"
+  },
+  "domains": {
+    "posts": [
+      {
+        "id": "example-post-001",
+        "memberId": "creative",
+        "content": "【示例文案】今天完成了一次虚拟里程碑：把示例构思整理成了三页占位草图。此条为合成数据，请替换为真实动态。",
+        "createdAt": "2026-11-20T09:00:00+08:00",
+        "tags": ["示例", "example"]
+      },
+      {
+        "id": "example-post-002",
+        "memberId": "thinker",
+        "content": "【示例文案】复盘了一条示例流程：先定义问题，再列三方案，最后按权重评分。此条为合成数据。",
+        "createdAt": "2026-11-20T10:30:00+08:00",
+        "tags": ["示例", "example"]
+      }
+    ],
+    "activities": [
+      {
+        "id": "example-act-001",
+        "type": "milestone",
+        "memberId": "sentinel",
+        "title": "【示例】完成一次占位巡检",
+        "createdAt": "2026-11-20T08:15:00+08:00"
+      },
+      {
+        "id": "example-act-002",
+        "type": "practice",
+        "memberId": "master",
+        "title": "【示例】练习占位技能 30 分钟",
+        "createdAt": "2026-11-20T14:00:00+08:00"
+      }
+    ],
+    "memories": [
+      {
+        "id": "example-mem-001",
+        "memberId": "thinker",
+        "content": "【示例记忆】占位记录：某次示例讨论得出的三条结论，仅用于演示 memories 域结构。",
+        "importance": 3,
+        "createdAt": "2026-11-20T11:00:00+08:00"
+      }
+    ],
+    "skills": [
+      {
+        "id": "example-skill-001",
+        "memberId": "master",
+        "name": "示例技能：结构化拆解",
+        "description": "【示例】把一个模糊目标拆成可执行步骤的占位技能说明。",
+        "proficiency": 60
+      },
+      {
+        "id": "example-skill-002",
+        "memberId": "creative",
+        "name": "示例技能：版式留白",
+        "description": "【示例】用留白与字重对比组织页面的占位技能说明。",
+        "proficiency": 45
+      }
+    ],
+    "settings": {
+      "memberTitles": {
+        "navigator": "示例称号：入口"
+      }
+    },
+    "artworks": [
+      {
+        "id": "example-art-001",
+        "memberId": "creative",
+        "path": "artworks/example-placeholder.svg",
+        "title": "【示例】占位作品"
+      }
+    ]
+  },
+  "import": {
+    "mergeMode": "skipExisting",
+    "dryRun": true
+  },
+  "acceptance": {
+    "_提示": "验收六条见 public/templates/ai-family-content-pack.template.json 的 acceptance 域；本示例包满足结构，但不含真实内容。"
+  }
+}

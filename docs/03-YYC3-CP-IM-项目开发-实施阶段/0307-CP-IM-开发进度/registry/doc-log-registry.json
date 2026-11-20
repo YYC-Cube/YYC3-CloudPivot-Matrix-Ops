@@ -1,7 +1,7 @@
 {
  "registry": "YYC3-Cloud-Matrix 文档日志追溯注册表",
  "standard": "依《YYC3-团队通用-文档闭环》追溯记录结构；checksum = 正文（去除 frontmatter）SHA256 前 16 位；trace_id = TRC-YYYYMMDDNNN（本地日期）",
- "updated": "2026-11-17",
+ "updated": "2026-11-20",
  "records": [
   {
    "trace_id": "TRC-20261116001",
@@ -814,6 +814,43 @@
     }
    ],
    "related_docs": [
+    "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/53-服务端持久时序-指标历史落盘续接-跨会话回填-20261118.md"
+   ]
+  },
+  {
+   "trace_id": "TRC-20261120001",
+   "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/43-i18n引擎换芯-NAS统一网关接入-P6外部输入处置-20261117.md",
+   "action": "update",
+   "timestamp": "2026-11-20T16:35:00+08:00",
+   "version": "v1.5.0",
+   "checksum": "92237b441ce0338c",
+   "author": "YYC³ Team",
+   "changes": [
+    {
+     "field": "content",
+     "summary": "主控裁决②：key_id 换册 452b0ed4 → 5d2df810（只记 id 不记明文）；旧 key 吊销需管理面凭据转落档 54 待办"
+    }
+   ],
+   "related_docs": [
+    "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/54-主控四项裁决执行-面板归属整改-三配置重建-DGX四脚本-示例内容包-20261120.md"
+   ]
+  },
+  {
+   "trace_id": "TRC-20261120002",
+   "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/54-主控四项裁决执行-面板归属整改-三配置重建-DGX四脚本-示例内容包-20261120.md",
+   "action": "create",
+   "timestamp": "2026-11-20T16:35:00+08:00",
+   "version": "v1.0.0",
+   "checksum": "76790cc2f3c3ade3",
+   "author": "YYC³ Team",
+   "changes": [
+    {
+     "field": "content",
+     "summary": "整改令（matrix- 前缀+归属注记+写入路径清单）+ 三配置重建校验 + key_id 换册 + DGX 四脚本白名单(8 条)只读实测 + example 内容包 + 教训 T-07"
+    }
+   ],
+   "related_docs": [
+    "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/43-i18n引擎换芯-NAS统一网关接入-P6外部输入处置-20261117.md",
     "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/53-服务端持久时序-指标历史落盘续接-跨会话回填-20261118.md"
    ]
   }
