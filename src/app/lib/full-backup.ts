@@ -19,13 +19,19 @@
 
 import { exportStoreData, importStoreData } from "../stores/global-store";
 import { exportAllData, importAllData } from "./yyc3-storage";
+import {
+  AUTH_STORAGE_KEYS, isFullyRedacted, isProjectStorageKey, redactStorageValue,
+  stripRedactedJson,
+} from "./storage-registry";
 
 // ============================================================
 // 类型定义
 // ============================================================
 
 export interface FullBackupData {
-  _version: 1;
+  /** v2 起：敏感字段默认脱敏（[REDACTED]），导入时跳过占位值 */
+  _version: 2;
+  _redacted?: boolean;
   _exportedAt: string;
   _tool: "yyc3-full-backup";
   localStorage: Record<string, string>;
@@ -34,18 +40,24 @@ export interface FullBackupData {
 }
 
 // ============================================================
-// 需要备份的 localStorage 键前缀
+// 备份键边界（落档 59：统一由 storage-registry 提供，禁止各模块自带前缀表）
 // ============================================================
 
-const BACKUP_PREFIXES = [
-  "yyc3",
-  "yyc3-",
-  "network_config",
-  "offline_snapshot",
-];
-
 function shouldBackup(key: string): boolean {
-  return BACKUP_PREFIXES.some((prefix) => key.startsWith(prefix));
+  // 认证/会话键不备份：恢复它们等于注入登录态
+  return isProjectStorageKey(key) && !AUTH_STORAGE_KEYS.has(key);
+}
+
+/** 导入时还原单个值：整体脱敏跳过；部分脱敏移除占位字段 */
+function restoreStorageValue(raw: string): string | null {
+  if (isFullyRedacted(raw)) { return null; }
+  try {
+    const parsed = JSON.parse(raw);
+    const cleaned = stripRedactedJson(parsed);
+    return JSON.stringify(cleaned);
+  } catch {
+    return raw;
+  }
 }
 
 // ============================================================
@@ -79,8 +91,8 @@ export async function exportFullBackup(): Promise<string> {
     if (key && shouldBackup(key)) {
       const value = localStorage.getItem(key);
       if (value) {
-        // 脱敏: 跳过包含 password/apiKey 的值中的实际内容
-        lsData[key] = value;
+        // 落档 59：敏感字段真实脱敏（apiKey/password/token/secret → [REDACTED]）
+        lsData[key] = redactStorageValue(key, value);
       }
     }
   }
@@ -92,7 +104,8 @@ export async function exportFullBackup(): Promise<string> {
   const globalStoreData = exportStoreData();
 
   const backup: FullBackupData = {
-    _version: 1,
+    _version: 2,
+    _redacted: true,
     _exportedAt: new Date().toISOString(),
     _tool: "yyc3-full-backup",
     localStorage: lsData,
@@ -123,12 +136,19 @@ export async function importFullBackup(json: string): Promise<{ success: boolean
     if (backup._tool !== "yyc3-full-backup") {
       return { success: false, errors: ["Invalid backup file: missing _tool marker"] };
     }
+    // 落档 59：版本边界（v1/v2 可导入；更高版本拒绝，避免未知 schema 覆盖）
+    if (typeof backup._version !== "number" || backup._version > 2) {
+      return { success: false, errors: [`Unsupported backup version: ${String(backup._version)}`] };
+    }
 
-    // 1. 恢复 localStorage
+    // 1. 恢复 localStorage（键白名单 + 跳过认证键 + 跳过脱敏占位）
     if (backup.localStorage) {
       for (const [key, value] of Object.entries(backup.localStorage)) {
+        if (!isProjectStorageKey(key) || AUTH_STORAGE_KEYS.has(key)) { continue; }
+        const restored = restoreStorageValue(value);
+        if (restored === null) { continue; }
         try {
-          localStorage.setItem(key, value);
+          localStorage.setItem(key, restored);
         } catch (e) {
           errors.push(`localStorage[${key}]: ${(e as Error).message}`);
         }

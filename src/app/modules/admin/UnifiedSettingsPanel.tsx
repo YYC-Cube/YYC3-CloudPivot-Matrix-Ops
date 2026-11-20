@@ -34,6 +34,7 @@ import { useCopyFeedback } from "../../hooks/useCopyFeedback";
 import { useI18n } from "../../hooks/useI18n";
 import { isCryptoAvailable } from "../../lib/crypto-vault";
 import { downloadFullBackup, importFullBackup } from "../../lib/full-backup";
+import { clearProjectStorage } from "../../lib/storage-registry";
 import { useProviderSlice, useSettingsSSOT } from "../../store";
 import type { ModelProviderDef } from "../../types/model-provider-types";
 import {
@@ -175,9 +176,11 @@ export function UnifiedSettingsPanel() {
   }, [t, refreshStorageInfo]);
 
   const handleClearData = useCallback(() => {
-    localStorage.clear();
-    sessionStorage.clear();
-    toast.success(t("settings.clearSuccess") || "数据已清除");
+    // 落档 59：禁止全局 clear()，只清本项目前缀键（保持同源其他应用数据）
+    const { localRemoved, sessionRemoved } = clearProjectStorage();
+    toast.success(
+      `${t("settings.clearSuccess") || "数据已清除"}（local ${localRemoved.length} · session ${sessionRemoved.length}）`,
+    );
     refreshStorageInfo();
   }, [t, refreshStorageInfo]);
 

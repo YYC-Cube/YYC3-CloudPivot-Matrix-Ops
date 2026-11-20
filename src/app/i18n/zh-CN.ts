@@ -839,7 +839,7 @@ const zhCN = {
     selectProvider: "选择模型服务商",
     model: "模型",
     selectModel: "选择模型",
-    apiKey: "API 密钥",
+    apiKeyLabel: "API 密钥",
     enterApiKey: "输入 API 密钥",
     ollamaEndpoint: "Ollama 端点",
     detectedModels: "已检测到 {n} 个本地模型",

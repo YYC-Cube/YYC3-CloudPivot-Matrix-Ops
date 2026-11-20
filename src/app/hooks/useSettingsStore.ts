@@ -30,6 +30,32 @@
 import { useCallback, useEffect, useState } from "react";
 import { DEFAULT_WS_ENDPOINT } from "../lib/api-config";
 import { getSharedChannel } from "../lib/broadcast-channel";
+import { useSettingsSSOT } from "../store/slices/settings-ssot-slice";
+
+/**
+ * 落档 59：旧设置 store → Settings SSOT 镜像。
+ * SystemSettings 主体仍写旧键，而运行时（WS/AI/诊断）读 SSOT。
+ * 这里把共享字段写穿到 SSOT，消除「设置页改了但运行时不生效」的分裂；
+ * 仅当 SSOT 存在同名字段时镜像，避免旧 store 独有字段污染 SSOT。
+ */
+function mirrorToSSOT(key: string, val: string): void {
+  try {
+    const ssot = useSettingsSSOT.getState();
+    if (Object.prototype.hasOwnProperty.call(ssot.values, key)) {
+      ssot.updateValue(key as keyof typeof ssot.values, val);
+    }
+  } catch { /* SSOT 未初始化时忽略 */ }
+}
+
+function mirrorToggleToSSOT(key: string): void {
+  try {
+    const ssot = useSettingsSSOT.getState();
+    if (Object.prototype.hasOwnProperty.call(ssot.toggles, key)) {
+      const current = ssot.toggles[key as keyof typeof ssot.toggles];
+      ssot.setToggle(key as keyof typeof ssot.toggles, !current);
+    }
+  } catch { /* ignore */ }
+}
 
 // ============================================================
 // 类型定义
@@ -253,6 +279,7 @@ export function useSettingsStore() {
       broadcast(next);
       return next;
     });
+    mirrorToggleToSSOT(key);
   }, [broadcast]);
 
   // Value 更新
@@ -265,6 +292,7 @@ export function useSettingsStore() {
       broadcast(next);
       return next;
     });
+    mirrorToSSOT(key, val);
   }, [broadcast]);
 
   // 批量更新
@@ -277,6 +305,9 @@ export function useSettingsStore() {
       broadcast(next);
       return next;
     });
+    for (const [key, val] of Object.entries(updates)) {
+      if (typeof val === "string") { mirrorToSSOT(key, val); }
+    }
   }, [broadcast]);
 
   // 重置

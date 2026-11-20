@@ -27,6 +27,7 @@
  */
 
 import { useState, useCallback } from "react";
+import { clearProjectStorage } from "../lib/storage-registry";
 import { useSettingsSSOT } from "../store/slices/settings-ssot-slice";
 import type {
   SecurityTab,
@@ -665,7 +666,8 @@ export function useSecurityMonitor() {
         }
       }
       if (type === "privacy" && typeof sessionStorage !== "undefined") {
-        sessionStorage.clear();
+        // 落档 59：只清本项目 session 键，不做全局 clear
+        clearProjectStorage({ local: false, session: true });
       }
       // expired：无 TTL 体系，本就为 0
     }

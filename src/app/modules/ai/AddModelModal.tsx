@@ -389,7 +389,7 @@ export function AddModelModal({
               <label className="flex items-center gap-1 mb-2">
                 <span className="text-[#ff3366]" style={{ fontSize: "0.75rem" }}>*</span>
                 <span className="text-[#e0f0ff]" style={{ fontSize: "0.85rem" }}>
-                  {t("modelProvider.apiKey")}
+                  {t("modelProvider.apiKeyLabel")}
                 </span>
               </label>
               <div className="relative">

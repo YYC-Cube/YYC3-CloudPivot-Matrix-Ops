@@ -28,6 +28,7 @@ import { getAPIConfig } from "../lib/api-config";
 import { deriveAgentHttpBase } from "../lib/agent-rules-sync";
 import { idbClear, idbCount } from "../lib/yyc3-storage";
 import { downloadFullBackup } from "../lib/full-backup";
+import { clearProjectStorage } from "../lib/storage-registry";
 import { useFSSlice } from "../store/slices/fs-slice";
 import { useLogSlice } from "../store/slices/log-slice";
 import { useNodeSlice } from "../store/slices/node-slice";
@@ -322,7 +323,7 @@ export function useLocalFileSystem() {
       count = await idbCount("inference_cache");
       await idbClear("inference_cache");
     } catch { /* IndexedDB 不可用时仍继续清理会话存储 */ }
-    try { sessionStorage.clear(); } catch { /* ignore */ }
+    try { clearProjectStorage({ local: false, session: true }); } catch { /* ignore */ }
     toast.success(`缓存已清理（推理缓存 ${count} 条 + 会话存储）`);
   }, []);
 

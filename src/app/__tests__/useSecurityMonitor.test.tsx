@@ -225,8 +225,9 @@ describe("useSecurityMonitor（真实采集路径 · demoMode 关闭）", () => 
     expect(result.current.overallScore).toBe(expected);
   });
 
-  it("cleanupData(privacy): 真实清空 sessionStorage 并重算体积", async () => {
-    sessionStorage.setItem("privacy_item", "sensitive-session-data");
+  it("cleanupData(privacy): 只清项目 session 键并重算体积", async () => {
+    sessionStorage.setItem("yyc3-node-ts-v1", "sensitive-session-data");
+    sessionStorage.setItem("other-app", "keep");
     const { result } = renderHook(() => useSecurityMonitor());
     await runScan(result);
     expect(result.current.dataManagement!.storage.sessionStorage).toBeGreaterThan(0);
@@ -234,8 +235,10 @@ describe("useSecurityMonitor（真实采集路径 · demoMode 关闭）", () => 
     await act(async () => {
       await result.current.cleanupData("privacy");
     });
-    expect(sessionStorage.length).toBe(0);
-    expect(result.current.dataManagement!.storage.sessionStorage).toBe(0);
+    expect(sessionStorage.getItem("yyc3-node-ts-v1")).toBeNull();
+    expect(sessionStorage.getItem("other-app")).toBe("keep");
+    // 同源其他应用的键保留，不再全局 clear
+    expect(sessionStorage.length).toBe(1);
   });
 
   it("cleanupData(cache): 无 Cache API 时如实为 0", async () => {

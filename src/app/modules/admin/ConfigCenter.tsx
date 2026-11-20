@@ -13,6 +13,7 @@ import { useState } from "react";
 import { PageConfigEditor } from "./PageConfigEditor";
 import { getAllPages, type PageConfig } from "../../config";
 import { GlassCard } from "../shared/GlassCard";
+import { listProjectStorageKeys } from "../../lib/storage-registry";
 import {
   Settings,
   FileText,
@@ -250,7 +251,8 @@ function StorageManager() {
 
   const handleClearAll = () => {
     if (confirm("确定要清除所有 YYC³ 存储数据吗？此操作不可撤销。")) {
-      storageKeys.forEach((key) => localStorage.removeItem(key));
+      // 落档 59：按注册表现取项目键（含挂载后新增），不使用挂载时快照
+      listProjectStorageKeys().forEach((key) => localStorage.removeItem(key));
       window.location.reload();
     }
   };

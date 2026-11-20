@@ -370,13 +370,15 @@ describe("useLocalFileSystem (v2 全真)", () => {
       expect(toast.success).toHaveBeenCalledWith("已导出 1 条日志");
     });
 
-    it("clearCache 清空推理缓存与会话存储", async () => {
+    it("clearCache 清空推理缓存与项目会话键（不碰同源其他应用）", async () => {
       const { toast } = await import("sonner");
+      sessionStorage.setItem("yyc3-node-ts-v1", "1");
       sessionStorage.setItem("tmp", "1");
       const { result } = renderHook(() => useLocalFileSystem());
 
       await act(async () => { await result.current.clearCache(); });
-      expect(sessionStorage.getItem("tmp")).toBeNull();
+      expect(sessionStorage.getItem("yyc3-node-ts-v1")).toBeNull();
+      expect(sessionStorage.getItem("tmp")).toBe("1");
       expect(toast.success).toHaveBeenCalledWith(expect.stringContaining("缓存已清理"));
     });
   });

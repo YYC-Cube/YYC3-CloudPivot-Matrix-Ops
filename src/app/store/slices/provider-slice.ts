@@ -665,6 +665,13 @@ export const useProviderSlice = create<ProviderSlice>()(
           );
           state.providers = [...existing, ...missingBuiltins];
         }
+
+        // 落档 59：旧 provider 键已在初始化时读取迁移，删除避免「新键损坏/清空后旧 provider 复活」
+        // （旧键含明文 apiKey，也不应继续留在备份/清空清单里）
+        try {
+          localStorage.removeItem("yyc3_model_providers");
+          localStorage.removeItem("yyc3_configured_models");
+        } catch { /* 存储不可用时忽略 */ }
       },
     }
   )

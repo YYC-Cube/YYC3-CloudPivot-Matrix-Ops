@@ -841,7 +841,7 @@ const enUS: TranslationKeys = {
     selectProvider: "Select model provider",
     model: "Model",
     selectModel: "Select model",
-    apiKey: "API Key",
+    apiKeyLabel: "API Key",
     enterApiKey: "Enter API key",
     ollamaEndpoint: "Ollama Endpoint",
     detectedModels: "{n} local models detected",
