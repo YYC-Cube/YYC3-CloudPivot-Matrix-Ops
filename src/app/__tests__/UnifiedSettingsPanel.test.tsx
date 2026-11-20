@@ -157,7 +157,7 @@ describe("UnifiedSettingsPanel", () => {
   it("renders API key management section in security tab", () => {
     render(React.createElement(UnifiedSettingsPanel));
     expect(screen.getByText("settings.apiKeyManagement")).toBeInTheDocument();
-    expect(screen.getByText("settings.apiKeyDesc")).toBeInTheDocument();
+    expect(screen.getByText("settings.keyStorageHint")).toBeInTheDocument();
     expect(screen.getByText("OpenAI")).toBeInTheDocument();
     expect(screen.getByText("Ollama")).toBeInTheDocument();
   });

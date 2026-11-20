@@ -322,7 +322,7 @@ export function UnifiedSettingsPanel() {
               {t("settings.apiKeyManagement") || "API 密钥管理"}
             </h3>
             <p className="text-[rgba(0,212,255,0.35)] mb-3" style={{ fontSize: "0.7rem" }}>
-              {t("settings.apiKeyDesc") || "您的 API 密钥仅存储在本地浏览器中，永远不会上传到任何服务器"}
+              {t("settings.keyStorageHint") || "您的 API 密钥仅存储在本地浏览器中，永远不会上传到任何服务器"}
             </p>
             <div className="space-y-3">
               {providers.slice(0, 3).map((provider: ModelProviderDef) => (

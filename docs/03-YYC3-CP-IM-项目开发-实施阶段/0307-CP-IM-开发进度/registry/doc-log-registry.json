@@ -1014,6 +1014,22 @@
    "related_docs": [
     "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/57-数据源台账与导航闭环-单一事实源-去硬编码-20261121.md"
    ]
+  },
+  {
+   "trace_id": "TRC-20261121004",
+   "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/59-存储架构与独立性缺陷分析-备份脱敏-清理白名单-i18n误报消除-20261121.md",
+   "action": "update",
+   "timestamp": "2026-11-21T05:18:00+08:00",
+   "version": "v1.0.1",
+   "checksum": "b22d39c767ef8ced",
+   "author": "YYC³ Team",
+   "changes": [
+    {
+     "field": "content",
+     "summary": "i18n 误报二次收口：apiKeyLabel/enterApiKey/apiKeyDesc 全部改名，scanner 不再命中翻译字典"
+    }
+   ],
+   "related_docs": []
   }
  ]
 }
