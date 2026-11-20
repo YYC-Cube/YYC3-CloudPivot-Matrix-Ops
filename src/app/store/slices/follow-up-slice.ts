@@ -22,6 +22,26 @@ const ALERT_LEVEL_TO_PRIORITY: Record<AlertData["level"], FollowUpRecord["priori
   info: "low",
 };
 
+/**
+ * 历史演示告警清理（落档 55 · P0 真实性批次）：
+ * 2026-10-19~20 由已退役的演示 WS 摄入的 `node-a100-*` 工单会永久留在 persist 里，
+ * 在「真实告警」位置进入首页横幅 / TopBar 铃铛 / 巡查待处理项，且当前链路无法产生
+ * 同类事件（agent 不上报温度、本地规则无 temperature 指标）——按来源一次性剔除。
+ * 仅匹配演示源（node-a100-NN / ALERT-node-a100-NN-* / 旧硬编码 AL-00NN），不误删真实工单。
+ */
+const LEGACY_DEMO_SOURCE = /^node-a100-\d+$/;
+const LEGACY_DEMO_TASK = /^ALERT-node-a100-\d+-/;
+const LEGACY_DEMO_ID = /^AL-00\d{2}$/;
+
+function purgeLegacyDemoAlerts(items: FollowUpRecord[]): FollowUpRecord[] {
+  return items.filter(
+    (f) =>
+      !LEGACY_DEMO_SOURCE.test(f.assigneeName ?? "") &&
+      !LEGACY_DEMO_TASK.test(f.taskId ?? "") &&
+      !LEGACY_DEMO_ID.test(f.id ?? ""),
+  );
+}
+
 export interface FollowUpSlice {
   followUps: FollowUpRecord[];
   addFollowUp: (fu: Omit<FollowUpRecord, 'id' | 'createdAt'>) => void;
@@ -90,6 +110,14 @@ export const useFollowUpSlice = create<FollowUpSlice>()(
     {
       name: 'yyc3-follow-up-slice',
       partialize: (state) => ({ followUps: state.followUps }),
+      // v1：一次性剔除历史演示告警（落档 55）。用 migrate 而非 onRehydrateStorage，
+      // 迁移结果会回写 localStorage，避免每次启动都在内存里再过滤一遍。
+      version: 1,
+      migrate: (persisted) => {
+        const state = (persisted ?? {}) as { followUps?: FollowUpRecord[] };
+        const followUps = Array.isArray(state.followUps) ? state.followUps : [];
+        return { ...state, followUps: purgeLegacyDemoAlerts(followUps) };
+      },
     }
   )
 );

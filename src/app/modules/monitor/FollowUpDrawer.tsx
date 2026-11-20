@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { OperationChain } from "../ops/OperationChain";
 import { QuickActionGroup } from "./QuickActionGroup";
+import { useProviderSlice } from "../../store/slices/provider-slice";
+import { callConfiguredModel } from "../../lib/model-request";
 import type { FollowUpItem, FollowUpSeverity, FollowUpStatus } from "../../types";
 
 interface FollowUpDrawerProps {
@@ -47,23 +49,7 @@ const statusLabels: Record<FollowUpStatus, { label: string; color: string }> = {
   ignored:       { label: "已忽略", color: "rgba(0,212,255,0.3)" },
 };
 
-// AI suggestion mock data
-const AI_SUGGESTIONS = [
-  "建议将模型迁移到 GPU-A100-07（当前负载 15%），预计延迟下降至 800ms",
-  "建议重启推理服务以清理内存碎片，预计恢复时间 30s",
-  "建议启用动态负载均衡，自动分配后续请求到空闲节点",
-  "检测到过去 1 小时内连续 3 次延迟异常，建议检查 CUDA 驱动版本",
-];
-
-// Related metrics mock
-const RELATED_METRICS = [
-  { label: "GPU 利用率", value: "98%", trend: "↑", status: "danger" as const },
-  { label: "显存使用", value: "76.2 GB / 80 GB", trend: "↑", status: "warning" as const },
-  { label: "推理延迟", value: "2,450ms", trend: "↑", status: "danger" as const },
-  { label: "温度", value: "82°C", trend: "→", status: "warning" as const },
-  { label: "任务队列", value: "23 / 50", trend: "→", status: "normal" as const },
-  { label: "网络 I/O", value: "1.2 Gbps", trend: "↓", status: "normal" as const },
-];
+// AI 建议改为真实模型调用（落档 55 · P0 真实性批次）：无激活模型时如实提示，不生成占位建议
 
 export function FollowUpDrawer({
   item,
@@ -76,6 +62,7 @@ export function FollowUpDrawer({
   const [activeTab, setActiveTab] = useState<"detail" | "chain" | "metrics" | "ai">("detail");
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
+  const [aiError, setAiError] = useState<string | null>(null);
   const [copiedIdx, copyText] = useCopyFeedback<number>();
   const drawerRef = useRef<HTMLDivElement>(null);
 
@@ -84,6 +71,7 @@ export function FollowUpDrawer({
     if (item) {
       setActiveTab("detail");
       setAiSuggestions([]);
+      setAiError(null);
     }
   }, [item]);
 
@@ -100,9 +88,43 @@ export function FollowUpDrawer({
 
   const loadAiSuggestions = async () => {
     setAiLoading(true);
-    await new Promise((r) => setTimeout(r, 1200));
-    setAiSuggestions(AI_SUGGESTIONS);
-    setAiLoading(false);
+    setAiError(null);
+    const model = useProviderSlice.getState().getActiveModel();
+    if (!model) {
+      setAiSuggestions([]);
+      setAiLoading(false);
+      setAiError("暂无激活模型 — 请前往「系统设置 → 模型管理」添加并激活后再试（不生成占位建议）。");
+      return;
+    }
+    try {
+      const prompt = [
+        `告警来源：${item?.source ?? "未知"}`,
+        `告警标题：${item?.title ?? "未知"}`,
+        `告警级别：${item ? severityConfig[item.severity].label : "未知"}`,
+        `上报指标：${item?.metric || "未上报"}`,
+        "请基于以上真实上下文给出 3 条可执行的处置建议，每条一行，不要编造未提供的指标或节点。",
+      ].join("\n");
+      const result = await callConfiguredModel(
+        "你是 YYC³ 运维告警分析助手。只依据用户提供的告警上下文作答；缺少数据时明确说明缺失，不得编造指标、节点或时间。",
+        [{ role: "user", content: prompt }],
+        model,
+        { temperature: 0.3, maxTokens: 600 },
+      );
+      if (result.success) {
+        const lines = result.text
+          .split(/\n+/)
+          .map((line) => line.replace(/^\s*(?:[-*•]|\d+[.、)])\s*/, "").trim())
+          .filter(Boolean)
+          .slice(0, 6);
+        setAiSuggestions(lines.length > 0 ? lines : [result.text.trim()]);
+      } else {
+        setAiError(`模型调用失败（${model.model}）：${result.error ?? "未知错误"}`);
+      }
+    } catch (err) {
+      setAiError(`模型调用异常：${(err as Error).message}`);
+    } finally {
+      setAiLoading(false);
+    }
   };
 
 
@@ -218,7 +240,7 @@ export function FollowUpDrawer({
               data-testid={`followup-tab-${tab.key}`}
               onClick={() => {
                 setActiveTab(tab.key);
-                if (tab.key === "ai" && aiSuggestions.length === 0) {loadAiSuggestions();}
+                // 不自动调用模型（避免误触产生费用）；由「获取 AI 建议」按钮显式触发
               }}
               className={`px-3 py-1.5 rounded-lg transition-all ${
                 activeTab === tab.key
@@ -332,7 +354,12 @@ export function FollowUpDrawer({
                 关联指标 · {item.source}
               </h4>
               <div className="grid grid-cols-2 gap-2">
-                {RELATED_METRICS.map((m) => (
+                {[
+                  { label: "上报指标", value: item.metric || "未上报", tone: item.metric ? "text-[#e0f0ff]" : "text-[rgba(0,212,255,0.35)]" },
+                  { label: "告警来源", value: item.source || "未知", tone: "text-[#e0f0ff]" },
+                  { label: "级别", value: sev.label, tone: "text-[#e0f0ff]" },
+                  { label: "状态", value: st.label, tone: "text-[#e0f0ff]" },
+                ].map((m) => (
                   <div
                     key={m.label}
                     className="p-3 rounded-xl bg-[rgba(0,40,80,0.2)] border border-[rgba(0,180,255,0.08)]"
@@ -341,21 +368,9 @@ export function FollowUpDrawer({
                       <span className="text-[rgba(0,212,255,0.4)]" style={{ fontSize: "0.65rem" }}>
                         {m.label}
                       </span>
-                      <span
-                        className={
-                          m.status === "danger"
-                            ? "text-[#ff3366]"
-                            : m.status === "warning"
-                            ? "text-[#ffaa00]"
-                            : "text-[#00ff88]"
-                        }
-                        style={{ fontSize: "0.65rem" }}
-                      >
-                        {m.trend}
-                      </span>
                     </div>
                     <span
-                      className="text-[#e0f0ff]"
+                      className={m.tone}
                       style={{ fontSize: "0.82rem", fontFamily: "'Rajdhani', monospace" }}
                     >
                       {m.value}
@@ -363,6 +378,11 @@ export function FollowUpDrawer({
                   </div>
                 ))}
               </div>
+              {!item.metric && (
+                <p className="mt-3 text-[rgba(0,212,255,0.35)]" style={{ fontSize: "0.7rem" }}>
+                  该告警未上报关联指标——此处不显示推测值；真实指标以上报源（agent / OpsPanel）为准。
+                </p>
+              )}
             </div>
           )}
 
@@ -376,13 +396,16 @@ export function FollowUpDrawer({
                 </h4>
               </div>
 
-              {/* Context */}
+              {/* Context（真实告警上下文，不编造历史次数） */}
               <div className="p-3 rounded-xl bg-[rgba(0,40,80,0.2)] border border-[rgba(0,180,255,0.08)] mb-4">
                 <p className="text-[rgba(0,212,255,0.4)]" style={{ fontSize: "0.7rem" }}>
-                  检测到异常模式
+                  告警上下文
                 </p>
                 <p className="text-[#e0f0ff] mt-1" style={{ fontSize: "0.78rem" }}>
-                  {item.source} 在过去 1 小时内连续 3 次{item.severity === "critical" ? "严重" : ""}延迟异常
+                  {item.source} · {item.title}
+                </p>
+                <p className="text-[rgba(0,212,255,0.45)] mt-1" style={{ fontSize: "0.7rem" }}>
+                  上报指标：{item.metric || "未上报"}
                 </p>
               </div>
 
@@ -393,6 +416,19 @@ export function FollowUpDrawer({
                   <span className="text-[rgba(0,212,255,0.4)]" style={{ fontSize: "0.78rem" }}>
                     AI 正在分析...
                   </span>
+                </div>
+              ) : aiError ? (
+                <div className="p-3 rounded-xl bg-[rgba(255,51,102,0.08)] border border-[rgba(255,51,102,0.18)]">
+                  <p className="text-[rgba(255,180,200,0.9)]" style={{ fontSize: "0.75rem", lineHeight: 1.6 }}>
+                    {aiError}
+                  </p>
+                  <button
+                    onClick={loadAiSuggestions}
+                    className="mt-2 px-3 py-1.5 rounded-lg bg-[rgba(0,40,80,0.3)] border border-[rgba(0,180,255,0.1)] text-[rgba(0,212,255,0.6)] hover:text-[#00d4ff] transition-all"
+                    style={{ fontSize: "0.72rem" }}
+                  >
+                    重试
+                  </button>
                 </div>
               ) : aiSuggestions.length > 0 ? (
                 <div className="space-y-2.5">

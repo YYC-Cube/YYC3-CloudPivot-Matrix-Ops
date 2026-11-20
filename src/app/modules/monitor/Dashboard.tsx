@@ -422,7 +422,7 @@ export function Dashboard() {
                   <AlertTriangle className="w-3.5 h-3.5 text-[#ffaa00]" />
                   <span className="text-[rgba(255,170,0,0.85)] font-medium" style={{ fontSize: "0.68rem" }}>
                     {ws?.connectionState === "disconnected"
-                      ? "WebSocket 未连接 — 数据为模拟值"
+                      ? "WebSocket 未连接 — 无实时数据（显示空态）"
                       : "等待连接..."}
                   </span>
                 </div>

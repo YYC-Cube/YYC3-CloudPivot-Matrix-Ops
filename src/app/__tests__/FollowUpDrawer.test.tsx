@@ -161,26 +161,27 @@ describe("FollowUpDrawer", () => {
       expect(screen.getAllByText(/完整操作链路/)[0]).toBeInTheDocument();
     });
 
-    it("切换到指标 tab 应显示关联指标", () => {
+    it("切换到指标 tab 应显示该告警真实上报指标", () => {
       render(
         <FollowUpDrawer item={mockItem} isOpen={true} onClose={onClose} />
       );
       fireEvent.click(screen.getAllByText("指标")[0]);
       expect(screen.getAllByText(/关联指标/)[0]).toBeInTheDocument();
-      expect(screen.getAllByText("GPU 利用率")[0]).toBeInTheDocument();
+      expect(screen.getAllByText("2,450ms > 2,000ms")[0]).toBeInTheDocument();
+      // 不再渲染固定假指标
+      expect(screen.queryByText("GPU 利用率")).not.toBeInTheDocument();
     });
 
-    it("切换到 AI 建议 tab 应加载建议", async () => {
+    it("AI 建议 tab 不自动调用模型；无激活模型时如实提示", async () => {
       render(
         <FollowUpDrawer item={mockItem} isOpen={true} onClose={onClose} />
       );
       fireEvent.click(screen.getAllByText("AI 建议")[0]);
-      // Should show loading first
       expect(screen.getAllByText("AI 智能建议")[0]).toBeInTheDocument();
-      // Wait for suggestions to load
+      fireEvent.click(screen.getAllByText("获取 AI 建议")[0]);
       await waitFor(
         () => {
-          expect(screen.getAllByText("推荐操作")[0]).toBeInTheDocument();
+          expect(screen.getAllByText(/暂无激活模型/)[0]).toBeInTheDocument();
         },
         { timeout: 3000 }
       );
