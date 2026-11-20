@@ -14,7 +14,7 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { useFollowUpSlice } from '../../store/slices/follow-up-slice';
+import { useFollowUpSlice, purgeLegacyDemoAlerts } from '../../store/slices/follow-up-slice';
 import type { FollowUpRecord } from '../../types';
 import type { AlertData } from '../../types/websocket-types';
 
@@ -328,6 +328,46 @@ describe('useFollowUpSlice', () => {
 
       const done = useFollowUpSlice.getState().followUps.find(f => f.id === fu.id);
       expect(done?.status).toBe('completed');
+    });
+  });
+
+  describe('purgeLegacyDemoAlerts（落档 55 迁移）', () => {
+    it('应剔除演示 WS 来源（node-a100-NN / ALERT-node-a100-*）', () => {
+      const kept = purgeLegacyDemoAlerts([
+        {
+          ...makeFu('ALERT-node-a100-03-alert-001'),
+          id: 'fu-1',
+          createdAt: Date.now(),
+          assigneeName: 'node-a100-03',
+        } as FollowUpRecord,
+        {
+          ...makeFu('ALERT-other-1'),
+          id: 'fu-2',
+          createdAt: Date.now(),
+          assigneeName: 'yyc3-22',
+        } as FollowUpRecord,
+      ]);
+      expect(kept).toHaveLength(1);
+      expect(kept[0].assigneeName).toBe('yyc3-22');
+    });
+
+    it('应剔除旧硬编码种子（AL-00NN id 与三条种子标题）', () => {
+      const kept = purgeLegacyDemoAlerts([
+        { ...makeFu('x'), id: 'AL-0032', createdAt: Date.now() } as FollowUpRecord,
+        {
+          ...makeFu('y'),
+          id: 'fu-3',
+          createdAt: Date.now(),
+          title: 'GPU-H100-02 显存不足告警',
+        } as unknown as FollowUpRecord,
+        {
+          ...makeFu('z'),
+          id: 'fu-4',
+          createdAt: Date.now(),
+          title: '真实告警——磁盘使用率 92%',
+        } as unknown as FollowUpRecord,
+      ]);
+      expect(kept.map((f) => f.id)).toEqual(['fu-4']);
     });
   });
 });

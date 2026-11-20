@@ -926,6 +926,22 @@
    "related_docs": [
     "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/55-全局生产落地总览-压缩史-进度矩阵-差距清单-路线图-20261120.md"
    ]
+  },
+  {
+   "trace_id": "TRC-20261120007",
+   "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/55-全局生产落地总览-压缩史-进度矩阵-差距清单-路线图-20261120.md",
+   "action": "update",
+   "timestamp": "2026-11-20T17:35:00+08:00",
+   "version": "v1.0.1",
+   "checksum": "11782e432dd86800",
+   "author": "YYC³ Team",
+   "changes": [
+    {
+     "field": "content",
+     "summary": "运行态恢复：Ollama 三检全绿 / agent launchd 路径修正 / WS 令牌写入设置（已连接 8 节点）/ 迁移 v2 补清种子告警"
+    }
+   ],
+   "related_docs": []
   }
  ]
 }

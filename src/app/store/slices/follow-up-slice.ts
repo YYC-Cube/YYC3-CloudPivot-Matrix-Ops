@@ -32,14 +32,23 @@ const ALERT_LEVEL_TO_PRIORITY: Record<AlertData["level"], FollowUpRecord["priori
 const LEGACY_DEMO_SOURCE = /^node-a100-\d+$/;
 const LEGACY_DEMO_TASK = /^ALERT-node-a100-\d+-/;
 const LEGACY_DEMO_ID = /^AL-00\d{2}$/;
+/** 旧 FollowUpPanel 三条硬编码工单的标题（经 addFollowUp 写入后 id 已重写，只能按标题识别） */
+const LEGACY_SEED_TITLES = new Set([
+  "GPU-A100-03 推理延迟异常",
+  "GPU-H100-02 显存不足告警",
+  "存储空间接近阈值",
+]);
 
-function purgeLegacyDemoAlerts(items: FollowUpRecord[]): FollowUpRecord[] {
-  return items.filter(
-    (f) =>
+export function purgeLegacyDemoAlerts(items: FollowUpRecord[]): FollowUpRecord[] {
+  return items.filter((f) => {
+    const legacy = f as FollowUpRecord & { title?: string };
+    return (
       !LEGACY_DEMO_SOURCE.test(f.assigneeName ?? "") &&
       !LEGACY_DEMO_TASK.test(f.taskId ?? "") &&
-      !LEGACY_DEMO_ID.test(f.id ?? ""),
-  );
+      !LEGACY_DEMO_ID.test(f.id ?? "") &&
+      !LEGACY_SEED_TITLES.has(legacy.title ?? "")
+    );
+  });
 }
 
 export interface FollowUpSlice {
@@ -110,9 +119,9 @@ export const useFollowUpSlice = create<FollowUpSlice>()(
     {
       name: 'yyc3-follow-up-slice',
       partialize: (state) => ({ followUps: state.followUps }),
-      // v1：一次性剔除历史演示告警（落档 55）。用 migrate 而非 onRehydrateStorage，
+      // v1/v2：一次性剔除历史演示告警（落档 55）。用 migrate 而非 onRehydrateStorage，
       // 迁移结果会回写 localStorage，避免每次启动都在内存里再过滤一遍。
-      version: 1,
+      version: 2,
       migrate: (persisted) => {
         const state = (persisted ?? {}) as { followUps?: FollowUpRecord[] };
         const followUps = Array.isArray(state.followUps) ? state.followUps : [];
