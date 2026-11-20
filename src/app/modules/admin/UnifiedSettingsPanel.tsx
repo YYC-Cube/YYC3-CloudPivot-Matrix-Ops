@@ -32,7 +32,6 @@ import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useCopyFeedback } from "../../hooks/useCopyFeedback";
 import { useI18n } from "../../hooks/useI18n";
-import { isCryptoAvailable } from "../../lib/crypto-vault";
 import { downloadFullBackup, importFullBackup } from "../../lib/full-backup";
 import { clearProjectStorage } from "../../lib/storage-registry";
 import { useProviderSlice, useSettingsSSOT } from "../../store";
@@ -429,11 +428,15 @@ export function UnifiedSettingsPanel() {
                     input.onchange = async (e) => {
                       const file = (e.target as HTMLInputElement).files?.[0];
                       if (!file) { return; }
+                      // 落档 60：恢复是覆盖语义——先确认，再清空项目数据/IDB 后导入
+                      if (!window.confirm("全量恢复将覆盖当前全部本地数据（认证会话保留），是否继续？")) { return; }
                       const text = await file.text();
-                      const result = await importFullBackup(text);
+                      const result = await importFullBackup(text, { replace: true });
                       if (result.success) {
-                        toast.success(t("settings.importSuccess") || "全量恢复成功");
+                        toast.success(`${t("settings.importSuccess") || "全量恢复成功"}，即将重载以应用`);
                         refreshStorageInfo();
+                        // 让所有 zustand 内存态从新持久化重新水合
+                        window.setTimeout(() => window.location.reload(), 700);
                       } else {
                         toast.error(`${t("settings.importFailed") || "全量恢复失败"}: ${result.errors.join("; ")}`);
                       }
@@ -447,9 +450,7 @@ export function UnifiedSettingsPanel() {
                 </button>
                 <div className="flex items-center gap-2 text-xs text-[rgba(0,180,255,0.5)]">
                   <Lock className="w-3 h-3" />
-                  {isCryptoAvailable()
-                    ? (t("settings.cryptoAvailable") || "加密引擎可用")
-                    : (t("settings.cryptoUnavailable") || "加密引擎不可用")}
+                  {t("settings.backupRedacted") || "备份已脱敏：密钥 / 密码导出为 [REDACTED]"}
                 </div>
               </div>
             </GlassCard>

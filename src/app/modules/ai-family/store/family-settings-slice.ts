@@ -355,6 +355,11 @@ export const useFamilySettingsSlice = create<FamilySettingsSlice>()(
     {
       name: 'yyc3-family-settings',
       storage: createJSONStorage(() => localStorage),
+      // 落档 60：providerKeys 为历史死副本（真实 Key 在 provider-slice），不再落盘
+      partialize: (s) => {
+        const { providerKeys: _ignored, ...rest } = s;
+        return rest;
+      },
       version: 1,
       migrate: (persisted, version) => {
         // v0 → v1：精确清除通讯中心历史假种子站内信（msg-001 ~ msg-010），保留真实消息

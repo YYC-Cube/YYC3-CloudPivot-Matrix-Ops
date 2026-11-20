@@ -1030,6 +1030,24 @@
     }
    ],
    "related_docs": []
+  },
+  {
+   "trace_id": "TRC-20261121005",
+   "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/60-存储下一步执行-恢复覆盖语义-字体本地化-容量上限-凭据副本清理-20261121.md",
+   "action": "create",
+   "timestamp": "2026-11-21T05:35:00+08:00",
+   "version": "v1.0.0",
+   "checksum": "ec27cf444819058d",
+   "author": "YYC³ Team",
+   "changes": [
+    {
+     "field": "content",
+     "summary": "落档 59 §五第一批：恢复覆盖语义+会话保留+重载、字体本地化（零 Google 请求）、fs 内容缓存上限、family providerKeys 与 secret.* 死凭据清理、api/env 监听 setState 生效"
+    }
+   ],
+   "related_docs": [
+    "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/59-存储架构与独立性缺陷分析-备份脱敏-清理白名单-i18n误报消除-20261121.md"
+   ]
   }
  ]
 }

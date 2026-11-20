@@ -41,6 +41,23 @@ interface FSSlice {
 }
 
 const MAX_RECENT = 20;
+/** 落档 60：文件内容缓存持久化上限（localStorage 配额保护） */
+const MAX_CONTENT_FILES = 20;
+const MAX_CONTENT_BYTES = 256 * 1024;
+
+function capFileContents(contents: Record<string, string>): Record<string, string> {
+  const out: Record<string, string> = {};
+  let bytes = 0;
+  let count = 0;
+  for (const [id, content] of Object.entries(contents)) {
+    const size = content.length * 2; // UTF-16 字节估算
+    if (count >= MAX_CONTENT_FILES || bytes + size > MAX_CONTENT_BYTES) { continue; }
+    out[id] = content;
+    bytes += size;
+    count += 1;
+  }
+  return out;
+}
 
 // ============================================================
 // Store
@@ -75,6 +92,13 @@ export const useFSSlice = create<FSSlice>()(
     {
       name: 'yyc3-fs',
       storage: createJSONStorage(() => localStorage),
+      // 落档 60：只持久化「有界」内容缓存，避免任意文件全文撑爆 localStorage
+      version: 1,
+      partialize: (s) => ({
+        fileTree: s.fileTree,
+        fileContents: capFileContents(s.fileContents),
+        recentFiles: s.recentFiles,
+      }),
     }
   )
 );

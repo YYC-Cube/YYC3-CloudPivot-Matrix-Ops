@@ -1,12 +1,62 @@
 /**
  * @file: fonts.css
- * @description: fonts.css description
+ * @description: 本地自托管字体（Orbitron / Rajdhani）— 落档 60 去 Google Fonts 外联
  * @author: YanYuCloudCube Team
- * @version: v1.0.0
+ * @version: v2.0.0
  * @created: 2026-03-31
- * @updated: 2026-03-31
+ * @updated: 2026-11-21
  * @status: active
- * @tags: [style]
+ * @tags: [style],[font]
+ *
+ * 字体文件来自 Google Fonts（SIL Open Font License 1.1），已本地化到 src/styles/fonts/，
+ * 由 Vite 打包；运行期不再请求 fonts.googleapis.com / fonts.gstatic.com。
+ * Orbitron 为可变字体：单文件覆盖 400–900。
  */
 
-@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap');
+@font-face {
+  font-family: 'Orbitron';
+  font-style: normal;
+  font-weight: 400 900;
+  font-display: swap;
+  src: url('./fonts/Orbitron-var.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Rajdhani';
+  font-style: normal;
+  font-weight: 300;
+  font-display: swap;
+  src: url('./fonts/Rajdhani-300.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Rajdhani';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('./fonts/Rajdhani-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Rajdhani';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('./fonts/Rajdhani-500.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Rajdhani';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('./fonts/Rajdhani-600.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Rajdhani';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('./fonts/Rajdhani-700.woff2') format('woff2');
+}

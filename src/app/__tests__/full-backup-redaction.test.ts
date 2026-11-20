@@ -33,7 +33,8 @@ describe("全量备份脱敏", () => {
     expect(backup.localStorage["other-app"]).toBeUndefined();
   });
 
-  it("恢复时跳过认证键、非项目键与脱敏占位", async () => {
+  it("恢复时跳过认证键、非项目键与脱敏占位，并清掉备份中不存在的旧键", async () => {
+    localStorage.setItem("yyc3-old-key", "stale");
     const backup = {
       _version: 2,
       _redacted: true,
@@ -59,6 +60,8 @@ describe("全量备份脱敏", () => {
     expect(restored.state.configuredModels[0].apiKey).toBeUndefined();
     expect(restored.state.configuredModels[0].model).toBe("x");
     expect(localStorage.getItem("yyc3_locale")).toBe("zh-CN");
+    // 覆盖模式：备份里没有的旧项目键被清掉
+    expect(localStorage.getItem("yyc3-old-key")).toBeNull();
   });
 
   it("拒绝未知版本备份", async () => {

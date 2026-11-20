@@ -18,7 +18,7 @@
  */
 
 import { exportStoreData, importStoreData } from "../stores/global-store";
-import { exportAllData, importAllData } from "./yyc3-storage";
+import { clearAllStorage, exportAllData, importAllData } from "./yyc3-storage";
 import {
   AUTH_STORAGE_KEYS, isFullyRedacted, isProjectStorageKey, redactStorageValue,
   stripRedactedJson,
@@ -127,7 +127,17 @@ export async function exportFullBackup(): Promise<string> {
  * - 最后恢复 GlobalStore
  * - 触发所有同步通道广播
  */
-export async function importFullBackup(json: string): Promise<{ success: boolean; errors: string[] }> {
+export interface ImportOptions {
+  /** 覆盖模式（默认 true）：先清空项目 localStorage + 全部 IndexedDB store，再导入备份。
+   *  认证会话键在清理前快照、清理后恢复，避免恢复数据时被强制登出。 */
+  replace?: boolean;
+}
+
+export async function importFullBackup(
+  json: string,
+  options: ImportOptions = {},
+): Promise<{ success: boolean; errors: string[] }> {
+  const { replace = true } = options;
   const errors: string[] = [];
 
   try {
@@ -139,6 +149,23 @@ export async function importFullBackup(json: string): Promise<{ success: boolean
     // 落档 59：版本边界（v1/v2 可导入；更高版本拒绝，避免未知 schema 覆盖）
     if (typeof backup._version !== "number" || backup._version > 2) {
       return { success: false, errors: [`Unsupported backup version: ${String(backup._version)}`] };
+    }
+
+    // 0. 覆盖模式：清空项目键 + IndexedDB，保留认证会话
+    if (replace) {
+      const authSnapshot = new Map<string, string>();
+      for (const key of AUTH_STORAGE_KEYS) {
+        const value = localStorage.getItem(key);
+        if (value !== null) { authSnapshot.set(key, value); }
+      }
+      try {
+        await clearAllStorage();
+      } catch (e) {
+        errors.push(`clear before import: ${(e as Error).message}`);
+      }
+      for (const [key, value] of authSnapshot) {
+        try { localStorage.setItem(key, value); } catch { /* ignore */ }
+      }
     }
 
     // 1. 恢复 localStorage（键白名单 + 跳过认证键 + 跳过脱敏占位）

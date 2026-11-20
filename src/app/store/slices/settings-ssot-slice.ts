@@ -489,24 +489,26 @@ export const useSettingsSSOT = create<SettingsSSOTSlice>()(
 
             if (_apiConfigUnsubscribe) { _apiConfigUnsubscribe(); }
             _apiConfigUnsubscribe = onAPIConfigChange((config) => {
-              if (state) {
-                state.apiEndpoints = config;
-              }
+              // 落档 60：必须走 setState 才会触发订阅与持久化（此前直接改闭包对象，不生效）
+              useSettingsSSOT.setState({ apiEndpoints: config });
             });
 
             if (_envConfigUnsubscribe) { _envConfigUnsubscribe(); }
             _envConfigUnsubscribe = onEnvConfigChange((config) => {
-              if (state) {
-                state.values.wsEndpoint = config.WS_ENDPOINT;
-                state.values.aiBaseUrl = config.DEFAULT_AI_BASE_URL;
-                state.values.aiModel = config.DEFAULT_AI_MODEL;
-                state.values.aiTemperature = String(config.DEFAULT_AI_TEMPERATURE);
-                state.values.aiMaxTokens = String(config.DEFAULT_AI_MAX_TOKENS);
-                state.values.aiTimeout = String(config.DEFAULT_AI_TIMEOUT);
-                state.values.sessionTimeout = String(config.SESSION_TIMEOUT_MIN);
-                state.values.clusterId = config.CLUSTER_ID;
-                state.values.systemName = config.SYSTEM_NAME;
-              }
+              useSettingsSSOT.setState((s) => ({
+                values: {
+                  ...s.values,
+                  wsEndpoint: config.WS_ENDPOINT,
+                  aiBaseUrl: config.DEFAULT_AI_BASE_URL,
+                  aiModel: config.DEFAULT_AI_MODEL,
+                  aiTemperature: String(config.DEFAULT_AI_TEMPERATURE),
+                  aiMaxTokens: String(config.DEFAULT_AI_MAX_TOKENS),
+                  aiTimeout: String(config.DEFAULT_AI_TIMEOUT),
+                  sessionTimeout: String(config.SESSION_TIMEOUT_MIN),
+                  clusterId: config.CLUSTER_ID,
+                  systemName: config.SYSTEM_NAME,
+                },
+              }));
             });
           };
         },
