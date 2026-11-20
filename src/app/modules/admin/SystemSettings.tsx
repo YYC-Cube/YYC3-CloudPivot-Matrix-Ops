@@ -509,6 +509,50 @@ function ModelManagementSection({ settings, toggleSetting }: { settings: Setting
 // Main Component
 // ============================================================
 
+// ============================================================
+// WS Connection Fields (SSOT values/toggles)
+// 落档 57：WS 四字段与两个开关全部读写 Settings SSOT——此前写旧
+// useSettingsStore，而 useWebSocketData 读 SSOT，导致「改了不生效」。
+// ============================================================
+
+function WsConnectionFields() {
+  const wsEndpoint = useSettingsSSOT((s) => s.values.wsEndpoint);
+  const reconnectInterval = useSettingsSSOT((s) => s.values.wsReconnectInterval);
+  const maxReconnect = useSettingsSSOT((s) => s.values.wsMaxReconnect);
+  const heartbeatInterval = useSettingsSSOT((s) => s.values.wsHeartbeatInterval);
+  const throttleMs = useSettingsSSOT((s) => s.values.wsThrottleMs);
+  const autoReconnect = useSettingsSSOT((s) => s.toggles.wsAutoReconnect);
+  const heartbeat = useSettingsSSOT((s) => s.toggles.wsHeartbeat);
+  const updateValue = useSettingsSSOT((s) => s.updateValue);
+  const setToggle = useSettingsSSOT((s) => s.setToggle);
+
+  return (
+    <div className="space-y-3">
+      <EditableField label="WebSocket 端点" value={wsEndpoint} onChange={(v) => updateValue("wsEndpoint", v)} mono description="实时数据推送 WebSocket 服务地址（修改后立即重连）" />
+      <WsTokenField />
+      <OpsPanelField />
+      <div className="flex items-center justify-between p-3 rounded-xl bg-[rgba(0,40,80,0.15)] border border-[rgba(0,180,255,0.06)]">
+        <div>
+          <p className="text-[#c0dcf0]" style={{ fontSize: "0.82rem" }}>自动重连</p>
+          <p className="text-[rgba(0,212,255,0.35)]" style={{ fontSize: "0.68rem" }}>断线后按间隔重连，达到最大次数后如实断开</p>
+        </div>
+        <Toggle enabled={autoReconnect} onChange={(v) => setToggle("wsAutoReconnect", v)} />
+      </div>
+      <EditableField label="重连间隔 (ms)" value={reconnectInterval} onChange={(v) => updateValue("wsReconnectInterval", v)} type="number" description="两次重连之间的等待时间" />
+      <EditableField label="最大重连次数" value={maxReconnect} onChange={(v) => updateValue("wsMaxReconnect", v)} type="number" description="超过此次数后如实置为断开" />
+      <div className="flex items-center justify-between p-3 rounded-xl bg-[rgba(0,40,80,0.15)] border border-[rgba(0,180,255,0.06)]">
+        <div>
+          <p className="text-[#c0dcf0]" style={{ fontSize: "0.82rem" }}>心跳检测</p>
+          <p className="text-[rgba(0,212,255,0.35)]" style={{ fontSize: "0.68rem" }}>定时发送 {`{type:"heartbeat"}`}，agent 回 ack</p>
+        </div>
+        <Toggle enabled={heartbeat} onChange={(v) => setToggle("wsHeartbeat", v)} />
+      </div>
+      <EditableField label="心跳间隔 (ms)" value={heartbeatInterval} onChange={(v) => updateValue("wsHeartbeatInterval", v)} type="number" />
+      <EditableField label="UI 更新节流 (ms)" value={throttleMs} onChange={(v) => updateValue("wsThrottleMs", v)} type="number" description="防止高频更新导致渲染卡顿" />
+    </div>
+  );
+}
+
 export function SystemSettings() {
   const { t } = useI18n();
   const { availableModels } = useModelProvider();
@@ -1021,27 +1065,7 @@ export function SystemSettings() {
               WebSocket 连接配置
             </h3>
             <div className="space-y-3">
-              <EditableField label="WebSocket 端点" value={values.wsEndpoint} onChange={v => updateValue("wsEndpoint", v)} mono description="实时数据推送 WebSocket 服务地址" />
-              <WsTokenField />
-              <OpsPanelField />
-              <div className="flex items-center justify-between p-3 rounded-xl bg-[rgba(0,40,80,0.15)] border border-[rgba(0,180,255,0.06)]">
-                <div>
-                  <p className="text-[#c0dcf0]" style={{ fontSize: "0.82rem" }}>自动重连</p>
-                  <p className="text-[rgba(0,212,255,0.35)]" style={{ fontSize: "0.68rem" }}>断线后自动尝试重新连接</p>
-                </div>
-                <Toggle enabled={settings.wsAutoReconnect} onChange={() => toggleSetting("wsAutoReconnect")} />
-              </div>
-              <EditableField label="重连间隔 (ms)" value={values.wsReconnectInterval} onChange={v => updateValue("wsReconnectInterval", v)} type="number" description="两次重连之间的等待时间" />
-              <EditableField label="最大重连次数" value={values.wsMaxReconnect} onChange={v => updateValue("wsMaxReconnect", v)} type="number" description="超过此次数后切换模拟模式" />
-              <div className="flex items-center justify-between p-3 rounded-xl bg-[rgba(0,40,80,0.15)] border border-[rgba(0,180,255,0.06)]">
-                <div>
-                  <p className="text-[#c0dcf0]" style={{ fontSize: "0.82rem" }}>心跳检测</p>
-                  <p className="text-[rgba(0,212,255,0.35)]" style={{ fontSize: "0.68rem" }}>定时发送心跳保持连接</p>
-                </div>
-                <Toggle enabled={settings.wsHeartbeat} onChange={() => toggleSetting("wsHeartbeat")} />
-              </div>
-              <EditableField label="心跳间隔 (ms)" value={values.wsHeartbeatInterval} onChange={v => updateValue("wsHeartbeatInterval", v)} type="number" />
-              <EditableField label="UI 更新节流 (ms)" value={values.wsThrottleMs} onChange={v => updateValue("wsThrottleMs", v)} type="number" description="防止高频更新导致渲染卡顿" />
+              <WsConnectionFields />
             </div>
           </div>
         );

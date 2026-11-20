@@ -109,7 +109,9 @@ interface RealActionResult {
 }
 
 async function runHealthCheck(): Promise<RealActionResult> {
-  const base = deriveAgentHttpBase(getAPIConfig().wsEndpoint);
+  const base = deriveAgentHttpBase(
+    useSettingsSSOT.getState().values.wsEndpoint || getAPIConfig().wsEndpoint,
+  );
   if (!base) {
     return { ok: false, note: "未配置 WS 端点 — 请到「系统设置 → WebSocket」配置" };
   }

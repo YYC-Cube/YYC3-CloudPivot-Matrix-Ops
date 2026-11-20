@@ -157,6 +157,8 @@ export interface ProviderSlice {
   ollamaError: string | null;
   activeModelId: string | null;
   testingIds: string[];
+  /** 落档 57：用户显式删除的内置服务商 id——迁移不再自动补回（可删可减） */
+  removedBuiltinIds: string[];
 
   // Provider CRUD
   addProvider: (provider: Omit<ModelProviderDef, "id" | "isBuiltin" | "isCustom" | "createdAt">) => ModelProviderDef;
@@ -200,6 +202,7 @@ export const useProviderSlice = create<ProviderSlice>()(
       ollamaError: null,
       activeModelId: null,
       testingIds: [],
+      removedBuiltinIds: [],
 
       // ── Provider CRUD ──
 
@@ -236,6 +239,13 @@ export const useProviderSlice = create<ProviderSlice>()(
         set((s) => ({
           providers: s.providers.filter((p) => p.id !== id),
           configuredModels: s.configuredModels.filter((m) => m.providerId !== id),
+          // 落档 57：内置服务商删除后写入 tombstone，rehydrate 不再自动补回
+          removedBuiltinIds: BUILTIN_PROVIDERS.some((b) => b.id === id)
+            ? Array.from(new Set([...s.removedBuiltinIds, id]))
+            : s.removedBuiltinIds,
+          activeModelId: s.activeModelId && s.configuredModels.some((m) => m.id === s.activeModelId && m.providerId !== id)
+            ? s.activeModelId
+            : null,
         }));
       },
 
@@ -243,7 +253,11 @@ export const useProviderSlice = create<ProviderSlice>()(
         const builtin = BUILTIN_PROVIDERS.find((p) => p.id === id);
         if (!builtin) { return; }
         set((s) => ({
-          providers: s.providers.map((p) => (p.id === id ? { ...builtin, updatedAt: Date.now() } : p)),
+          providers: s.providers.some((p) => p.id === id)
+            ? s.providers.map((p) => (p.id === id ? { ...builtin, updatedAt: Date.now() } : p))
+            : [...s.providers, { ...builtin, updatedAt: Date.now() }],
+          // 重置内置 = 撤销该 id 的删除标记
+          removedBuiltinIds: s.removedBuiltinIds.filter((x) => x !== id),
         }));
       },
 
@@ -258,6 +272,7 @@ export const useProviderSlice = create<ProviderSlice>()(
             providers: BUILTIN_PROVIDERS.map((p) => ({ ...p })),
             configuredModels: keptModels,
             activeModelId: s.activeModelId && keptIds.has(s.activeModelId) ? s.activeModelId : null,
+            removedBuiltinIds: [],
           };
         });
       },
@@ -572,6 +587,7 @@ export const useProviderSlice = create<ProviderSlice>()(
         providers: state.providers,
         configuredModels: state.configuredModels,
         activeModelId: state.activeModelId,
+        removedBuiltinIds: state.removedBuiltinIds,
       }),
       onRehydrateStorage: () => (state) => {
         if (!state) { return; }
@@ -638,16 +654,16 @@ export const useProviderSlice = create<ProviderSlice>()(
           state.configuredModels = updated;
         }
 
-        if (state.providers) {
-          state.providers = migrateProviders();
-          const ollama = state.providers.find(p => p.id === "ollama");
-          if (ollama) {
-            ollama.baseUrl = ollamaBaseUrl;
-          }
-          const zhipu = state.providers.find(p => p.id === "zhipu");
-          if (zhipu) {
-            zhipu.baseUrl = zhipuBaseUrl;
-          }
+        // 落档 57：保留用户已存服务商（含自定义与编辑），只补齐未被显式删除的内置服务商。
+        // 此前 migrateProviders() 整体覆盖会导致自定义服务商/编辑在刷新后丢失；
+        // 也不再强制用 env 地址覆盖用户已配置的 baseUrl（「当前已定即可」）。
+        {
+          const existing = state.providers ?? [];
+          const tombstoned = new Set(state.removedBuiltinIds ?? []);
+          const missingBuiltins = BUILTIN_PROVIDERS.filter(
+            (b) => !tombstoned.has(b.id) && !existing.some((p) => p.id === b.id),
+          );
+          state.providers = [...existing, ...missingBuiltins];
         }
       },
     }

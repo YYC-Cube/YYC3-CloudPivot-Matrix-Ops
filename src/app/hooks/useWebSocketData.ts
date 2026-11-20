@@ -134,6 +134,12 @@ export function useWebSocketData(): WebSocketDataState {
     const n = Number(s.values.wsHeartbeatInterval);
     return Number.isFinite(n) && n >= 5000 ? n : 30000;
   });
+  const wsAutoReconnect = useSettingsSSOT((s) => s.toggles.wsAutoReconnect);
+  const wsHeartbeatEnabled = useSettingsSSOT((s) => s.toggles.wsHeartbeat);
+  const autoReconnectRef = useRef(wsAutoReconnect);
+  autoReconnectRef.current = wsAutoReconnect;
+  const heartbeatEnabledRef = useRef(wsHeartbeatEnabled);
+  heartbeatEnabledRef.current = wsHeartbeatEnabled;
   const endpointRef = useRef(wsEndpoint);
   endpointRef.current = wsEndpoint;
   const reconnectDelayRef = useRef(wsReconnectInterval);
@@ -278,16 +284,18 @@ export function useWebSocketData(): WebSocketDataState {
             clearInterval(simulateTimerRef.current);
             simulateTimerRef.current = null;
           }
-          // 落档 56：应用层心跳（agent 收到 heartbeat 回 heartbeat_ack），间隔取设置
+          // 落档 56/57：应用层心跳（agent 收到 heartbeat 回 heartbeat_ack），开关与间隔取设置
           if (heartbeatTimerRef.current) {
             clearInterval(heartbeatTimerRef.current);
             heartbeatTimerRef.current = null;
           }
-          heartbeatTimerRef.current = setInterval(() => {
-            if (ws.readyState === WebSocket.OPEN) {
-              ws.send(JSON.stringify({ type: "heartbeat" }));
-            }
-          }, heartbeatIntervalRef.current);
+          if (heartbeatEnabledRef.current) {
+            heartbeatTimerRef.current = setInterval(() => {
+              if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: "heartbeat" }));
+              }
+            }, heartbeatIntervalRef.current);
+          }
           dataBus.registerWSSender((msg) => {
             if (ws.readyState === WebSocket.OPEN) {
               ws.send(JSON.stringify(msg));
@@ -373,6 +381,11 @@ export function useWebSocketData(): WebSocketDataState {
             startSimulation();
           }
 
+          // 落档 57：自动重连开关关闭时不再重试，如实置断开
+          if (!autoReconnectRef.current) {
+            setConnectionState((prev) => (prev === "simulated" ? prev : "disconnected"));
+            return;
+          }
           // 落档 56：重连间隔/最大次数取设置；超限后如实置断开，不再无限重试
           if (reconnectAttemptsRef.current >= maxReconnectRef.current) {
             setConnectionState((prev) => (prev === "simulated" ? prev : "disconnected"));

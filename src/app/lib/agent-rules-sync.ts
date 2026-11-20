@@ -79,7 +79,10 @@ export async function syncAlertRulesToAgent(rules: AlertRule[]): Promise<SyncRes
   const token = useSettingsSSOT.getState().values.wsToken?.trim();
   if (!token) { return { ok: false, reason: "no-token" }; }
 
-  const base = deriveAgentHttpBase(getAPIConfig().wsEndpoint);
+  // 落档 57：agent HTTP 基址优先取 SSOT 端点（与 WS 实际连接同源），避免「连远端、规则打本机」
+  const base = deriveAgentHttpBase(
+    useSettingsSSOT.getState().values.wsEndpoint || getAPIConfig().wsEndpoint,
+  );
   if (!base) { return { ok: false, reason: "no-endpoint" }; }
 
   const controller = new AbortController();

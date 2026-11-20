@@ -66,7 +66,9 @@ function extensionOf(name: string): string {
 async function agentFetch(path: string, init?: RequestInit): Promise<Response | null> {
   const token = useSettingsSSOT.getState().values.wsToken?.trim();
   if (!token) { return null; }
-  const base = deriveAgentHttpBase(getAPIConfig().wsEndpoint);
+  const base = deriveAgentHttpBase(
+    useSettingsSSOT.getState().values.wsEndpoint || getAPIConfig().wsEndpoint,
+  );
   if (!base) { return null; }
   const sep = path.includes("?") ? "&" : "?";
   const controller = new AbortController();

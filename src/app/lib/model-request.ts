@@ -54,12 +54,17 @@ export function resolveRequestRoot(
   return { root: base, viaProxy: false };
 }
 
-/** Ollama 原生 chat 端点（与反代/同源语义对齐） */
-function getOllamaChatUrl(): string {
-  const base = typeof window !== "undefined"
+/**
+ * Ollama chat 端点（落档 57）：以模型配置的 baseUrl 为准，不再写死当前主机 11434。
+ * 统一走 OpenAI 兼容面 `/v1/chat/completions`（Ollama 原生支持），
+ * 与下方 choices 解析保持一致；baseUrl 已含 /v1 时直接补 /chat/completions。
+ */
+function getOllamaChatUrl(model: Pick<ConfiguredModel, "baseUrl">): string {
+  const configured = (model.baseUrl || "").trim().replace(/\/+$/, "");
+  const base = configured || (typeof window !== "undefined"
     ? `${window.location.protocol}//${window.location.hostname}:11434`
-    : "http://localhost:11434";
-  return `${base}/api/chat`;
+    : "http://localhost:11434");
+  return /\/v1$/.test(base) ? `${base}/chat/completions` : `${base}/v1/chat/completions`;
 }
 
 /** 统一模型调用：按 apiFormat 分流（openai /chat/completions ｜ anthropic /v1/messages） */
@@ -154,7 +159,7 @@ export async function callConfiguredModel(
     const headers: Record<string, string> = { "Content-Type": "application/json" };
     if (model.apiKey) { headers["Authorization"] = `Bearer ${model.apiKey}`; }
     const url = model.providerId === "ollama" && !model.proxyUrl
-      ? getOllamaChatUrl()
+      ? getOllamaChatUrl(model)
       : `${root}/chat/completions`;
 
     const response = await fetch(url, {

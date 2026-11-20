@@ -1,7 +1,7 @@
 {
  "registry": "YYC3-Cloud-Matrix 文档日志追溯注册表",
  "standard": "依《YYC3-团队通用-文档闭环》追溯记录结构；checksum = 正文（去除 frontmatter）SHA256 前 16 位；trace_id = TRC-YYYYMMDDNNN（本地日期）",
- "updated": "2026-11-20",
+ "updated": "2026-11-21",
  "records": [
   {
    "trace_id": "TRC-20261116001",
@@ -955,6 +955,24 @@
     {
      "field": "content",
      "summary": "批次 B：GPU/温度口径纠正（gpuAvailable/tempAvailable + 有证据才统计）+ OpsPanel vLLM 真值接入首页 + WS 四项设置生效与心跳 + 大小写重复主机修复"
+    }
+   ],
+   "related_docs": [
+    "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/55-全局生产落地总览-压缩史-进度矩阵-差距清单-路线图-20261120.md"
+   ]
+  },
+  {
+   "trace_id": "TRC-20261121001",
+   "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/57-数据源台账与导航闭环-单一事实源-去硬编码-20261121.md",
+   "action": "create",
+   "timestamp": "2026-11-21T03:35:00+08:00",
+   "version": "v1.0.0",
+   "checksum": "0eec3b9bd648c6db",
+   "author": "YYC³ Team",
+   "changes": [
+    {
+     "field": "content",
+     "summary": "53 项导航闭环盘点（A12/B10/C13/D18，完整闭环 0）+ 数据源台账 + 第一批整改（WS 单一事实源/agent HTTP 同源/Ollama 去写死/探针导入用配置/服务商可删可减不丢）；定位 3118 保留、0379-World B 端"
     }
    ],
    "related_docs": [

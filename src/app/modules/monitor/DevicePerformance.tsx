@@ -17,6 +17,7 @@ import { format } from "date-fns";
 import { Cpu, MemoryStick, Gauge, Thermometer, Zap, Activity, Server, RefreshCw } from "lucide-react";
 import { GlassCard } from "../shared/GlassCard";
 import { useNodeSlice } from "../../store/slices/node-slice";
+import { useSettingsSSOT } from "../../store/slices/settings-ssot-slice";
 import { useOpsPanelMetrics } from "../../hooks/useOpsPanelMetrics";
 import { useMultiNodeWS } from "../../hooks/useMultiNodeWS";
 import { useNodeTimeSeries, type NodeTimeSeriesPoint } from "../../hooks/useNodeTimeSeries";
@@ -246,6 +247,8 @@ export function DevicePerformance() {
   useMultiNodeWS();
   const nodes = useNodeSlice((s) => s.nodes);
   const addNode = useNodeSlice((s) => s.addNode);
+  // 落档 57：探针导入与轮询共用同一 OpsPanel 数据源（不再写死 127.0.0.1:7864）
+  const opsPanelBaseUrl = useSettingsSSOT((s) => s.values.opsPanelBaseUrl);
   const [importing, setImporting] = useState(false);
   // 落档 51：会话级时序采样（10s × 环形 60 点）+ OpsPanel 探针历史（唯一服务端留存时序）
   const series = useNodeTimeSeries();
@@ -255,7 +258,8 @@ export function DevicePerformance() {
   const importProbeNodes = async () => {
     setImporting(true);
     try {
-      const res = await fetch("http://127.0.0.1:7864/api/nodes", { signal: AbortSignal.timeout(6000) });
+      const base = (opsPanelBaseUrl || "http://127.0.0.1:7864").trim().replace(/\/+$/, "");
+      const res = await fetch(`${base}/api/nodes`, { signal: AbortSignal.timeout(6000) });
       const payload = await res.json() as { nodes?: Array<{ id: string; role?: string; ts_ip?: string; services?: Array<{ listening?: boolean }> }> };
       const list = payload.nodes || [];
       if (!list.length) { return; }
