@@ -853,6 +853,42 @@
     "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/43-i18n引擎换芯-NAS统一网关接入-P6外部输入处置-20261117.md",
     "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/53-服务端持久时序-指标历史落盘续接-跨会话回填-20261118.md"
    ]
+  },
+  {
+   "trace_id": "TRC-20261120003",
+   "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/43-i18n引擎换芯-NAS统一网关接入-P6外部输入处置-20261117.md",
+   "action": "update",
+   "timestamp": "2026-11-20T16:50:00+08:00",
+   "version": "v1.5.1",
+   "checksum": "9ccf50a7d526f188",
+   "author": "YYC³ Team",
+   "changes": [
+    {
+     "field": "content",
+     "summary": "② 结项：旧 key 452b0ed4 已吊销（主控回执），吊销后现役 key 5d2df810 复测 200"
+    }
+   ],
+   "related_docs": [
+    "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/54-主控四项裁决执行-面板归属整改-三配置重建-DGX四脚本-示例内容包-20261120.md"
+   ]
+  },
+  {
+   "trace_id": "TRC-20261120004",
+   "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/54-主控四项裁决执行-面板归属整改-三配置重建-DGX四脚本-示例内容包-20261120.md",
+   "action": "update",
+   "timestamp": "2026-11-20T16:50:00+08:00",
+   "version": "v1.0.1",
+   "checksum": "6efb2ab9c4232ad9",
+   "author": "YYC³ Team",
+   "changes": [
+    {
+     "field": "content",
+     "summary": "§四 key 吊销闭环（回执留档）+ §八 待办关闭"
+    }
+   ],
+   "related_docs": [
+    "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/43-i18n引擎换芯-NAS统一网关接入-P6外部输入处置-20261117.md"
+   ]
   }
  ]
 }
