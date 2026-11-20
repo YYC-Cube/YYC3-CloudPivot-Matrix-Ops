@@ -490,11 +490,14 @@ async function collectSnapshot() {
   const node = {
     id: CONFIG.nodeId,
     status: !ollama.online ? "warning" : "active",
-    // macOS 无免密 powermetrics，GPU 利用率暂以 CPU 口径占位说明：
-    // 为避免误导，gpu 字段上报真实 CPU 利用率，节点 id 后缀标注口径
+    // macOS 无免密 powermetrics，GPU 利用率拿不到：
+    // 落档 56 起显式标记 gpuAvailable=false，gpu 字段承载真实 CPU 利用率（仅设备性能页按 CPU 口径展示）；
+    // 首页 GPU 卡片/节点 GPU 条不把该值当 GPU（此前无标记导致 CPU 30% 被显示成 GPU 30%）。
     gpu: cpu ?? prevSnapshot?.node?.gpu ?? 0,
+    gpuAvailable: false,
     mem: mem ?? prevSnapshot?.node?.mem ?? 0,
-    temp: 0, // 温度需 powermetrics 授权，未授权时报 0 并见告警说明
+    temp: 0, // 温度需 powermetrics 授权，未授权即未上报（tempAvailable=false，UI 显示「—」）
+    tempAvailable: false,
     model: modelLabel,
     tasks: runningModels,
   };

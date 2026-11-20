@@ -68,7 +68,9 @@ interface NodeSlice {
     activeCount: number;
     totalCount: number;
     activeRatio: string;
+    /** 仅统计有实时 GPU 证据的活跃节点（metrics.gpus 或 gpuAvailable===true）；无此类节点时 avgGpu=0，UI 显示「—」 */
     avgGpu: number;
+    gpuNodeCount: number;
     avgMem: number;
     avgTemp: number;
     totalTasks: number;
@@ -81,14 +83,21 @@ function computeDerived(nodes: NodeData[]) {
   const activeCount = activeNodes.length;
   const totalCount = nodes.length;
 
-  const avgGpu = activeCount > 0
-    ? Math.round(activeNodes.reduce((s, n) => s + n.gpu, 0) / activeCount * 10) / 10
+  // 落档 56：不把 CPU 值/占位 0 冒充 GPU——只对「有实时 GPU 证据」的节点求均值：
+  //   metrics.gpus（OpsPanel DCGM 逐卡）或显式 gpuAvailable=true（用户/agent 明确声明）。
+  //   agent 上报 gpuAvailable=false（CPU 口径）；用户清单未接数据源时 gpu=0 视为未知，不参与。
+  const gpuNodes = activeNodes.filter(
+    (n) => n.gpuAvailable === true || (n.metrics?.gpus?.length ?? 0) > 0,
+  );
+  const avgGpu = gpuNodes.length > 0
+    ? Math.round(gpuNodes.reduce((s, n) => s + n.gpu, 0) / gpuNodes.length * 10) / 10
     : 0;
   const avgMem = activeCount > 0
     ? Math.round(activeNodes.reduce((s, n) => s + n.mem, 0) / activeCount * 10) / 10
     : 0;
-  const avgTemp = activeCount > 0
-    ? Math.round(activeNodes.reduce((s, n) => s + n.temp, 0) / activeCount * 10) / 10
+  const tempNodes = activeNodes.filter((n) => n.tempAvailable !== false);
+  const avgTemp = tempNodes.length > 0
+    ? Math.round(tempNodes.reduce((s, n) => s + n.temp, 0) / tempNodes.length * 10) / 10
     : 0;
   const totalTasks = activeNodes.reduce((s, n) => s + n.tasks, 0);
 
@@ -99,6 +108,7 @@ function computeDerived(nodes: NodeData[]) {
     totalCount,
     activeRatio: `${activeCount}/${totalCount}`,
     avgGpu,
+    gpuNodeCount: gpuNodes.length,
     avgMem,
     avgTemp,
     totalTasks,
@@ -132,19 +142,40 @@ export const useNodeSlice = create<NodeSlice>()(
               const userNodes = options?.authoritative
                 ? state.nodes.filter((n) => n.source === "user")
                 : [];
+              // 落档 56：id 大小写归一——agent 上报 os.hostname()（YYC3-22）与用户清单（yyc3-22）
+              // 大写不同会被当成两个节点，导致首页多出一台重复主机与错误均值
+              const existingByLower = new Map(state.nodes.map((n) => [n.id.toLowerCase(), n]));
+              const normalizedIncoming = incoming.map((n) => {
+                const hit = existingByLower.get(n.id.toLowerCase());
+                return hit && hit.id !== n.id ? { ...n, id: hit.id } : n;
+              });
               const merged = dataBus.mergeNodeData(
                 state.nodes,
-                incoming,
+                normalizedIncoming,
                 "websocket",
                 "ws_priority",
                 options?.authoritative ? { dropAbsent: true } : undefined
               );
+              // 命中用户节点时只取实时字段，保留用户维护的身份信息（role/host/source 不被快照抹掉）
+              const identityById = new Map(state.nodes.filter((n) => n.source === "user").map((n) => [n.id, n]));
+              const mergedFixed = merged.map((m) => {
+                const orig = identityById.get(m.id);
+                if (!orig) { return m; }
+                return {
+                  ...m,
+                  id: orig.id,
+                  source: orig.source,
+                  role: orig.role ?? m.role,
+                  host: orig.host ?? m.host,
+                  wsPort: orig.wsPort ?? m.wsPort,
+                };
+              });
               const restored = userNodes
                 .filter((u) => !merged.some((m) => m.id === u.id))
                 // 批6：user 节点状态由 OpsPanel 探针轮询驱动（useOpsPanelMetrics），
                 // WS 快照仅保存在性，不覆盖其真实状态（快照不含远端节点信息）
                 .map((u) => ({ ...u }));
-              const nodes = [...merged, ...restored];
+              const nodes = [...mergedFixed, ...restored];
               state.nodes = nodes;
               state.lastSource = "websocket";
               state.lastUpdateAt = new Date().toISOString();

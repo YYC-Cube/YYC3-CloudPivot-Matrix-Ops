@@ -53,14 +53,15 @@ function samplePoint(): NodeTimeSeriesPoint | null {
   };
   return {
     ts: Date.now(),
-    avgCpu: avg((n) => n.gpu), // 本机 agent 口径：node.gpu 字段上报真实 CPU 利用率（agent 注记）
+    // 落档 56：CPU 只取 agent CPU 口径节点；温度排除未上报节点（不把 0 当温度）
+    avgCpu: avg((n) => (n.gpuAvailable === false ? n.gpu : undefined)),
     avgMem: avg((n) => n.mem),
     avgGpu: avg((n) => {
       const gpus = n.metrics?.gpus;
       if (!gpus?.length) { return undefined; }
       return gpus.reduce((s, g) => s + (g.util ?? 0), 0) / gpus.length;
     }),
-    maxTemp: avg((n) => n.temp),
+    maxTemp: avg((n) => (n.tempAvailable === false ? undefined : n.temp)),
   };
 }
 

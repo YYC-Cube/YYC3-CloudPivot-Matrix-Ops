@@ -82,8 +82,11 @@ export function NodeEditModal({ initial, onClose, onSubmit, onRemove }: NodeEdit
       wsPort: form.wsPort.trim() ? Math.max(1, Math.min(65535, Number(form.wsPort) || 3113)) : undefined,
       status: form.status,
       gpu: clampPct(form.gpu),
+      // 落档 56：用户在面板显式维护的 GPU/温度视为用户声明值，参与均值与展示
+      gpuAvailable: true,
       mem: clampPct(form.mem),
       temp: Math.max(-20, Math.min(150, Number(form.temp) || 30)),
+      tempAvailable: true,
       model: form.model.trim(),
       tasks: Math.max(0, Math.round(Number(form.tasks) || 0)),
       source: "user",

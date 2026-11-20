@@ -14,8 +14,8 @@ import { useNodeSlice } from '../../store/slices/node-slice';
 import type { NodeData } from '../../types';
 
 const TEST_NODES: NodeData[] = [
-  { id: "GPU-A100-01", status: "active", gpu: 87, mem: 72, temp: 68, model: "LLaMA-70B", tasks: 128 },
-  { id: "GPU-A100-02", status: "active", gpu: 92, mem: 85, temp: 74, model: "Qwen-72B", tasks: 156 },
+  { id: "GPU-A100-01", status: "active", gpu: 87, mem: 72, temp: 68, model: "LLaMA-70B", tasks: 128, gpuAvailable: true, tempAvailable: true },
+  { id: "GPU-A100-02", status: "active", gpu: 92, mem: 85, temp: 74, model: "Qwen-72B", tasks: 156, gpuAvailable: true, tempAvailable: true },
   { id: "GPU-A100-03", status: "inactive", gpu: 0, mem: 5, temp: 32, model: "", tasks: 0 },
 ];
 
@@ -103,6 +103,25 @@ describe('useNodeSlice', () => {
     it('avgGpu 应该计算活跃节点的平均 GPU 使用率', () => {
       const { derived } = useNodeSlice.getState();
       expect(derived.avgGpu).toBeCloseTo(89.5, 1); // (87 + 92) / 2
+    });
+
+    it('gpuNodeCount 应排除 gpuAvailable=false 的节点，avgGpu 不被 CPU 值污染', () => {
+      useNodeSlice.getState().setNodes([
+        { id: "LOCAL", status: "active", gpu: 30, mem: 40, temp: 0, model: "m", tasks: 1, gpuAvailable: false, tempAvailable: false },
+        { id: "DGX", status: "active", gpu: 80, mem: 50, temp: 60, model: "n", tasks: 0, gpuAvailable: true },
+      ], 'initialization');
+      const { derived } = useNodeSlice.getState();
+      expect(derived.gpuNodeCount).toBe(1);
+      expect(derived.avgGpu).toBe(80); // 只算 DGX，不含 LOCAL 的 CPU 30
+    });
+
+    it('全部节点未上报 GPU 时 gpuNodeCount=0（UI 应显示「—」而非 0%）', () => {
+      useNodeSlice.getState().setNodes([
+        { id: "LOCAL", status: "active", gpu: 30, mem: 40, temp: 0, model: "m", tasks: 1, gpuAvailable: false, tempAvailable: false },
+      ], 'initialization');
+      const { derived } = useNodeSlice.getState();
+      expect(derived.gpuNodeCount).toBe(0);
+      expect(derived.avgGpu).toBe(0);
     });
 
     it('avgMem 应该计算活跃节点的平均内存使用率', () => {
@@ -268,7 +287,7 @@ describe('useNodeSlice', () => {
 
     it('单节点操作应该正确计算派生状态', () => {
       useNodeSlice.getState().setNodes([
-        { id: "ONLY-ONE", status: "active", gpu: 75, mem: 60, temp: 55, model: "Solo", tasks: 42 },
+        { id: "ONLY-ONE", status: "active", gpu: 75, mem: 60, temp: 55, model: "Solo", tasks: 42, gpuAvailable: true, tempAvailable: true },
       ]);
 
       const { derived } = useNodeSlice.getState();

@@ -141,9 +141,9 @@ export function NodeDetailModal({ node, onClose, onNodeRemoved, onEdit }: NodeDe
         {/* Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
           {[
-            { label: "GPU 负载", value: `${node.gpu}%`, icon: Cpu, color: "#00d4ff" },
+            { label: "GPU 负载", value: node.gpuAvailable === false ? "—" : `${node.gpu}%`, icon: Cpu, color: "#00d4ff" },
             { label: "内存使用", value: `${node.mem}%`, icon: HardDrive, color: "#aa55ff" },
-            { label: "温度", value: `${node.temp}°C`, icon: Thermometer, color: node.temp > 75 ? "#ff3366" : "#00ff88" },
+            { label: "温度", value: node.tempAvailable === false ? "—" : `${node.temp}°C`, icon: Thermometer, color: node.tempAvailable === false ? "rgba(0,212,255,0.35)" : node.temp > 75 ? "#ff3366" : "#00ff88" },
             { label: "任务数", value: `${node.tasks}`, icon: Activity, color: "#ffdd00" },
           ].map((stat) => (
             <div key={stat.label} className="p-3 rounded-xl bg-[rgba(0,40,80,0.3)] border border-[rgba(0,180,255,0.1)]">
@@ -155,6 +155,13 @@ export function NodeDetailModal({ node, onClose, onNodeRemoved, onEdit }: NodeDe
             </div>
           ))}
         </div>
+        {(node.gpuAvailable === false || node.tempAvailable === false) && (
+          <p className="mb-4 text-[rgba(0,212,255,0.35)]" style={{ fontSize: "0.68rem" }}>
+            {node.gpuAvailable === false ? "该节点未上报 GPU 指标（agent 无 GPU 采集能力）" : ""}
+            {node.gpuAvailable === false && node.tempAvailable === false ? " · " : ""}
+            {node.tempAvailable === false ? "温度未上报" : ""}
+          </p>
+        )}
 
         {/* Model Info */}
         <div className="p-3 rounded-xl bg-[rgba(0,40,80,0.2)] border border-[rgba(0,180,255,0.08)] mb-6">

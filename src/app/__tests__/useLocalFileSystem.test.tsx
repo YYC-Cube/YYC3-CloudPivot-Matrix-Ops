@@ -292,8 +292,8 @@ describe("useLocalFileSystem (v2 全真)", () => {
   describe("报告生成", () => {
     function seedRealData() {
       useNodeSlice.getState().setNodes([
-        { id: "NODE-1", status: "active", gpu: 60, mem: 50, temp: 55, model: "m1", tasks: 10 },
-        { id: "NODE-2", status: "warning", gpu: 90, mem: 80, temp: 78, model: "m2", tasks: 5 },
+        { id: "NODE-1", status: "active", gpu: 60, mem: 50, temp: 55, model: "m1", tasks: 10, gpuAvailable: true, tempAvailable: true },
+        { id: "NODE-2", status: "warning", gpu: 90, mem: 80, temp: 78, model: "m2", tasks: 5, gpuAvailable: true, tempAvailable: true },
       ], "initialization");
       useFollowUpSlice.getState().addFollowUp({
         taskId: "T-1", taskName: "处理告警", assignee: "system", assigneeName: "agent",

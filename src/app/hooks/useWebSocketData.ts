@@ -123,6 +123,25 @@ export function useWebSocketData(): WebSocketDataState {
   const demoMode = useSettingsSSOT((s) => s.toggles.demoMode);
   // WS 访问令牌（配合 yyc3-agent 鉴权，空表示未配置）
   const wsToken = useSettingsSSOT((s) => s.values.wsToken);
+  // 落档 56：以下四项设置此前只存不用，现真正驱动连接（端点变更即重连）
+  const wsEndpoint = useSettingsSSOT((s) => s.values.wsEndpoint);
+  const wsReconnectInterval = useSettingsSSOT((s) => Number(s.values.wsReconnectInterval) || RECONNECT_DELAY_MS);
+  const wsMaxReconnect = useSettingsSSOT((s) => {
+    const n = Number(s.values.wsMaxReconnect);
+    return Number.isFinite(n) && n > 0 ? n : 10;
+  });
+  const wsHeartbeatInterval = useSettingsSSOT((s) => {
+    const n = Number(s.values.wsHeartbeatInterval);
+    return Number.isFinite(n) && n >= 5000 ? n : 30000;
+  });
+  const endpointRef = useRef(wsEndpoint);
+  endpointRef.current = wsEndpoint;
+  const reconnectDelayRef = useRef(wsReconnectInterval);
+  reconnectDelayRef.current = wsReconnectInterval;
+  const maxReconnectRef = useRef(wsMaxReconnect);
+  maxReconnectRef.current = wsMaxReconnect;
+  const heartbeatIntervalRef = useRef(wsHeartbeatInterval);
+  heartbeatIntervalRef.current = wsHeartbeatInterval;
   const demoModeRef = useRef(demoMode);
   demoModeRef.current = demoMode;
   const wsTokenRef = useRef(wsToken);
@@ -139,6 +158,8 @@ export function useWebSocketData(): WebSocketDataState {
   const wsRef = useRef<WebSocket | null>(null);
   const simulateTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const heartbeatTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const reconnectAttemptsRef = useRef(0);
   const connectWSRef = useRef<(() => void) | null>(null);
 
   // ----- simulated data updater -----
@@ -228,7 +249,7 @@ export function useWebSocketData(): WebSocketDataState {
 
     const tryConnectWS = () => {
       if (cancelled) { return; }
-      const base = getAPIConfig().wsEndpoint;
+      const base = (endpointRef.current || getAPIConfig().wsEndpoint || "").trim();
       // WS 访问令牌：非空时拼接到连接 URL（yyc3-agent 校验）
       const token = wsTokenRef.current?.trim();
       const wsUrl = token
@@ -250,12 +271,23 @@ export function useWebSocketData(): WebSocketDataState {
           clearTimeout(connectTimeout);
           if (cancelled) { ws.close(); return; }
           wsConnected = true;
+          reconnectAttemptsRef.current = 0;
           setConnectionState("connected");
           setReconnectCount(0);
           if (simulateTimerRef.current) {
             clearInterval(simulateTimerRef.current);
             simulateTimerRef.current = null;
           }
+          // 落档 56：应用层心跳（agent 收到 heartbeat 回 heartbeat_ack），间隔取设置
+          if (heartbeatTimerRef.current) {
+            clearInterval(heartbeatTimerRef.current);
+            heartbeatTimerRef.current = null;
+          }
+          heartbeatTimerRef.current = setInterval(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+              ws.send(JSON.stringify({ type: "heartbeat" }));
+            }
+          }, heartbeatIntervalRef.current);
           dataBus.registerWSSender((msg) => {
             if (ws.readyState === WebSocket.OPEN) {
               ws.send(JSON.stringify(msg));
@@ -331,18 +363,28 @@ export function useWebSocketData(): WebSocketDataState {
           clearTimeout(connectTimeout);
           wsRef.current = null;
           dataBus.unregisterWSSender();
+          if (heartbeatTimerRef.current) {
+            clearInterval(heartbeatTimerRef.current);
+            heartbeatTimerRef.current = null;
+          }
           if (cancelled) { return; }
 
           if (!wsConnected) {
             startSimulation();
           }
 
+          // 落档 56：重连间隔/最大次数取设置；超限后如实置断开，不再无限重试
+          if (reconnectAttemptsRef.current >= maxReconnectRef.current) {
+            setConnectionState((prev) => (prev === "simulated" ? prev : "disconnected"));
+            return;
+          }
+          reconnectAttemptsRef.current += 1;
           reconnectTimerRef.current = setTimeout(() => {
             if (cancelled) { return; }
             setReconnectCount((c) => c + 1);
             wsConnected = false;
             tryConnectWS();
-          }, RECONNECT_DELAY_MS);
+          }, reconnectDelayRef.current);
         };
 
         ws.onerror = () => {
@@ -370,8 +412,13 @@ export function useWebSocketData(): WebSocketDataState {
         clearTimeout(reconnectTimerRef.current);
         reconnectTimerRef.current = null;
       }
+      if (heartbeatTimerRef.current) {
+        clearInterval(heartbeatTimerRef.current);
+        heartbeatTimerRef.current = null;
+      }
+      reconnectAttemptsRef.current = 0;
     };
-  }, [mergeFromWS, runSimulation]);
+  }, [mergeFromWS, runSimulation, wsEndpoint]);
 
   // ----- public API -----
   const manualReconnect = useCallback(() => {

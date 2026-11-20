@@ -69,6 +69,7 @@ import { GlassCard } from "../shared/GlassCard";
 import { NodeDetailModal } from "./NodeDetailModal";
 import { NodeEditModal } from "./NodeEditModal";
 import { useOpsPanelMetrics } from "../../hooks/useOpsPanelMetrics";
+import { useOpsPanelInferenceHistory } from "../../hooks/useOpsPanelInferenceHistory";
 import { useMultiNodeWS } from "../../hooks/useMultiNodeWS";
 
 // ============================================================
@@ -235,6 +236,23 @@ export function Dashboard() {
   );
   // 批6：OpsPanel 多节点真实指标轮询（端点在系统设置可编辑，即时生效）
   useOpsPanelMetrics();
+  // 落档 56：vLLM 推理真值（OpsPanel → node.metrics.vllm）→ 首页 QPS/吞吐/延迟/趋势/模型负载
+  const opsVllmNodes = useMemo(() => nodes.filter((n) => n.metrics?.vllm), [nodes]);
+  const opsInference = useMemo(() => {
+    if (opsVllmNodes.length === 0) { return null; }
+    let qps = 0; let tokens = 0; let running = 0; let waiting = 0; let latSum = 0; let latCount = 0;
+    for (const n of opsVllmNodes) {
+      const v = n.metrics?.vllm;
+      if (!v) { continue; }
+      qps += v.qps || 0;
+      tokens += v.genTokensPerS || 0;
+      running += v.running || 0;
+      waiting += v.waiting || 0;
+      if ((v.avgLatencyS || 0) > 0) { latSum += v.avgLatencyS; latCount += 1; }
+    }
+    return { qps, tokens, running, waiting, avgLatencyMs: latCount > 0 ? Math.round((latSum / latCount) * 1000) : 0 };
+  }, [opsVllmNodes]);
+  const opsHistory = useOpsPanelInferenceHistory(Boolean(opsInference));
   // M4 方案 A：多节点 WS 直连池（用户清单 host/wsPort → 远端 agent 快照归并）
   useMultiNodeWS();
   // 批5：节点添加/编辑表单状态（替换硬编码占位添加）
@@ -272,27 +290,42 @@ export function Dashboard() {
   });
 
   // WebSocket data (零硬编码：无真实数据时显示 0 / "-" 空态，不编造数字)
-  const liveQPS = ws?.liveQPS ?? 0;
-  const qpsTrend = ws?.qpsTrend ?? "-";
-  const liveLatency = ws?.liveLatency ?? 0;
-  const latencyTrend = ws?.latencyTrend ?? "-";
+  // 落档 56：vLLM 可用时 QPS/延迟/Token 以 OpsPanel 为准（agent 未采集推理流量）
+  const liveQPS = opsInference ? opsInference.qps : (ws?.liveQPS ?? 0);
+  const qpsTrend = opsInference ? "-" : (ws?.qpsTrend ?? "-");
+  const liveLatency = opsInference && opsInference.avgLatencyMs > 0
+    ? opsInference.avgLatencyMs
+    : (ws?.liveLatency ?? 0);
+  const latencyTrend = opsInference ? "-" : (ws?.latencyTrend ?? "-");
   const activeNodesStr = derived.activeRatio;
-  const gpuUtilStr = `${derived.avgGpu}%`;
-  const tokenTP = ws?.tokenThroughput ?? "-";
+  // 落档 56：没有任何节点上报真实 GPU 时不把 CPU 值当 GPU 展示
+  const gpuUtilStr = derived.gpuNodeCount > 0 ? `${derived.avgGpu}%` : "—";
+  const latencyText = liveLatency >= 1000 ? `${(liveLatency / 1000).toFixed(1)}s` : `${liveLatency}ms`;
+  const tokenTP = opsInference
+    ? (opsInference.tokens >= 1000
+      ? `${(opsInference.tokens / 1000).toFixed(1)}K/s`
+      : `${Math.round(opsInference.tokens)} tok/s`)
+    : (ws?.tokenThroughput ?? "-");
   const storageStr = ws?.storageUsed ?? "-";
-  const throughputHistory = ws?.throughputHistory ?? [];
+  const throughputHistory = opsInference && opsHistory.length > 0 ? opsHistory : (ws?.throughputHistory ?? []);
 
   const isQPSUp = qpsTrend.startsWith("+");
   const isLatencyUp = latencyTrend.startsWith("+");
 
-  // ★ 模型负载分布：WS 真连态从真实节点聚合（按 model 分组的 tasks 占比），
-  //   模拟/未连接态回退 metrics-slice（DataEditorPanel 可编辑）
+  // ★ 模型负载分布：WS 真连态从真实节点聚合（按 model 分组的 tasks 占比）；
+  //   落档 56：带 vLLM 指标的节点一律按 running 计入（不依赖 WS 连接态）；
+  //   模拟/未连接且无 vLLM 数据时回退 metrics-slice（DataEditorPanel 可编辑）
   const isLive = ws?.connectionState === "connected";
   const liveModelDist = useMemo(() => {
-    if (!isLive) { return []; }
     const byModel = new Map<string, number>();
     for (const n of nodes) {
-      if (n.status === "inactive" || !n.model) { continue; }
+      if (n.status === "inactive") { continue; }
+      const vllm = n.metrics?.vllm;
+      if (vllm?.model) {
+        byModel.set(vllm.model, (byModel.get(vllm.model) ?? 0) + (vllm.running || 0));
+        continue;
+      }
+      if (!isLive || !n.model) { continue; } // WS 断开时 agent 旧 tasks 不可信，不参与分布
       byModel.set(n.model, (byModel.get(n.model) ?? 0) + n.tasks);
     }
     const total = [...byModel.values()].reduce((s, v) => s + v, 0);
@@ -308,7 +341,7 @@ export function Dashboard() {
 
   const statCards = [
     { label: "QPS", value: liveQPS.toLocaleString(), icon: Activity, trend: qpsTrend, up: isQPSUp, color: "#00d4ff" },
-    { label: "Latency", value: `${liveLatency}ms`, icon: Clock, trend: latencyTrend, up: isLatencyUp, color: "#00ff88" },
+    { label: "Latency", value: latencyText, icon: Clock, trend: latencyTrend, up: isLatencyUp, color: "#00ff88" },
     { label: t("monitor.activeNodes"), value: activeNodesStr, icon: Server, trend: "-", up: true, color: "#aa55ff" },
     { label: t("monitor.gpuUtil"), value: gpuUtilStr, icon: Cpu, trend: "-", up: true, color: "#ff6600" },
     { label: t("monitor.tokenThroughput"), value: tokenTP, icon: Zap, trend: "-", up: true, color: "#ffdd00" },
@@ -375,7 +408,7 @@ export function Dashboard() {
           <div className="flex items-center gap-3 md:gap-4 text-[rgba(0,212,255,0.6)]" style={{ fontSize: "0.68rem" }}>
             <span className="flex items-center gap-1">
               <Activity className="w-3 h-3" style={{ color: "#00d4ff" }} />
-              延迟: <strong className="text-[#e0f0ff]">{liveLatency}ms</strong>
+              延迟: <strong className="text-[#e0f0ff]">{latencyText}</strong>
             </span>
             <span className="flex items-center gap-1">
               <Radio className="w-3 h-3" style={{ color: "#aa55ff" }} />
@@ -563,7 +596,14 @@ export function Dashboard() {
                   style={{ height: isMobile ? 140 : 160, fontSize: "0.75rem" }}
                   data-testid="model-dist-empty"
                 >
-                  {t("monitor.modelLoadEmpty")}
+                  <div className="text-center">
+                    <div>{t("monitor.modelLoadEmpty")}</div>
+                    {opsInference && opsInference.running === 0 && (
+                      <div className="mt-1" style={{ fontSize: "0.68rem", color: "rgba(0,255,136,0.55)" }}>
+                        OpsPanel vLLM 在线 · 当前无在途请求
+                      </div>
+                    )}
+                  </div>
                 </div>
               );
             }
@@ -918,11 +958,11 @@ const NodeCard = memo(function NodeCard({ node, onClick }: { node: NodeData; onC
       <div className="mb-1">
         <div className="flex justify-between mb-0.5">
           <span className="text-[rgba(0,212,255,0.4)]" style={{ fontSize: "0.58rem" }}>GPU</span>
-          <span style={{ fontSize: "0.58rem", color: node.gpu > 90 ? "#ff3366" : "#00d4ff" }}>{node.gpu}%</span>
+          <span style={{ fontSize: "0.58rem", color: node.gpuAvailable === false ? "rgba(0,212,255,0.35)" : node.gpu > 90 ? "#ff3366" : "#00d4ff" }}>{node.gpuAvailable === false ? "—" : `${node.gpu}%`}</span>
         </div>
         <div className="w-full h-1 rounded-full bg-[rgba(0,180,255,0.1)]">
           <div className="h-full rounded-full transition-all duration-500" style={{
-            width: `${node.gpu}%`,
+            width: `${node.gpuAvailable === false ? 0 : node.gpu}%`,
             background: node.gpu > 90 ? "linear-gradient(90deg, #ff6600, #ff3366)" : "linear-gradient(90deg, #00d4ff, #00ff88)",
           }} />
         </div>

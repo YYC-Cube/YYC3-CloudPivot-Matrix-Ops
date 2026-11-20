@@ -286,14 +286,16 @@ export function DevicePerformance() {
     return {
       total: nodes.length,
       online: online.length,
-      avgCpu: avg((n) => n.gpu), // 本机 agent 口径：node.gpu 字段上报真实 CPU 利用率（agent 注记）
+      // 落档 56：CPU 口径只取 agent 上报 CPU 的节点（gpuAvailable=false 时 node.gpu 承载 CPU）；
+      // DCGM 节点的 node.gpu 是 GPU，不得混入 CPU 均值
+      avgCpu: avg((n) => (n.gpuAvailable === false ? n.gpu : undefined)),
       avgMem: avg((n) => n.mem),
       avgGpu: avg((n) => {
         const gpus = n.metrics?.gpus;
         if (!gpus?.length) { return undefined; }
         return gpus.reduce((s, g) => s + (g.util ?? 0), 0) / gpus.length;
       }),
-      maxTemp: avg((n) => n.temp),
+      maxTemp: avg((n) => (n.tempAvailable === false ? undefined : n.temp)),
     };
   }, [nodes]);
 
@@ -409,9 +411,9 @@ export function DevicePerformance() {
                     <div>
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-[rgba(224,240,255,0.4)]" style={{ fontSize: "0.6rem" }}>CPU</span>
-                        <span className="text-[#e0f0ff]" style={{ fontSize: "0.7rem" }}>{pct(n.gpu, !n.metrics?.gpus && n.gpu <= 0)}</span>
+                        <span className="text-[#e0f0ff]" style={{ fontSize: "0.7rem" }}>{pct(n.gpuAvailable === false ? n.gpu : undefined)}</span>
                       </div>
-                      <Bar value={n.gpu} color="#00ff88" />
+                      <Bar value={n.gpuAvailable === false ? n.gpu : undefined} color="#00ff88" />
                     </div>
                     <div>
                       <div className="flex items-center justify-between mb-1">

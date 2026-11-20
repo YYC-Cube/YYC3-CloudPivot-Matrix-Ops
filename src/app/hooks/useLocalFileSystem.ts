@@ -131,9 +131,9 @@ function buildReportPreview(config: ReportConfig): string {
 
   if (config.format === "markdown") {
     const nodeLines = nodes.length > 0
-      ? nodes.map((n) => `- ${n.status === "inactive" ? "⚪" : n.status === "warning" ? "⚠️" : "✅"} ${n.id}: GPU ${n.gpu}%, 内存 ${n.mem}%, ${n.temp}°C${n.model ? ` · ${n.model}` : ""}`).join("\n")
+      ? nodes.map((n) => `- ${n.status === "inactive" ? "⚪" : n.status === "warning" ? "⚠️" : "✅"} ${n.id}: GPU ${n.gpuAvailable === false ? "—" : `${n.gpu}%`}, 内存 ${n.mem}%, ${n.tempAvailable === false ? "—" : `${n.temp}°C`}${n.model ? ` · ${n.model}` : ""}`).join("\n")
       : "- （暂无在线节点）";
-    return `# ${sysName} ${typeLabel}报告\n\n> 范围: ${dateLabel} | 生成时间: ${new Date().toLocaleString("zh-CN")}\n\n## 概览\n\n| 指标 | 值 |\n|------|------|\n| 在线节点 | ${derived.activeCount}/${derived.totalCount} |\n| 平均 GPU | ${derived.avgGpu}% |\n| 平均内存 | ${derived.avgMem}% |\n| 平均温度 | ${derived.avgTemp}°C |\n| 运行任务 | ${derived.totalTasks} |\n| 待办工单 | ${pendingTasks} |\n| 错误日志 | ${errorLogs} |\n| 警告日志 | ${warnLogs} |\n\n## 节点状态\n\n${nodeLines}\n`;
+    return `# ${sysName} ${typeLabel}报告\n\n> 范围: ${dateLabel} | 生成时间: ${new Date().toLocaleString("zh-CN")}\n\n## 概览\n\n| 指标 | 值 |\n|------|------|\n| 在线节点 | ${derived.activeCount}/${derived.totalCount} |\n| 平均 GPU | ${derived.gpuNodeCount > 0 ? `${derived.avgGpu}%` : "—（无节点上报 GPU）"} |\n| 平均内存 | ${derived.avgMem}% |\n| 平均温度 | ${derived.avgTemp}°C |\n| 运行任务 | ${derived.totalTasks} |\n| 待办工单 | ${pendingTasks} |\n| 错误日志 | ${errorLogs} |\n| 警告日志 | ${warnLogs} |\n\n## 节点状态\n\n${nodeLines}\n`;
   }
 
   // csv

@@ -51,11 +51,16 @@ export interface NodeLiveMetrics {
 export interface NodeData {
   id: string;
   status: NodeStatusType;
-  gpu: number;       // GPU 利用率 0-100
+  gpu: number;       // GPU 利用率 0-100（gpuAvailable=false 时该值不是 GPU，UI 不得展示为 GPU）
   mem: number;       // 内存利用率 0-100
-  temp: number;      // 温度 °C
+  temp: number;      // 温度 °C（tempAvailable=false 时视为未上报，UI 显示「—」）
   model: string;     // 当前部署模型
   tasks: number;     // 活跃任务数
+  /** 该节点是否上报真实 GPU 指标（落档 56）：缺省 true（用户维护节点）；agent 在无 GPU 采集能力时上报 false，
+   *  此时 `gpu` 字段承载的是 CPU 利用率，仅设备性能页以 CPU 口径展示，首页 GPU 卡片与节点 GPU 条不参与均值 */
+  gpuAvailable?: boolean;
+  /** 该节点是否上报真实温度（落档 56）：缺省 true */
+  tempAvailable?: boolean;
   /** 节点角色描述（用户维护，如「NAS · PG 双库+API 网关」）——批5 全节点清单 */
   role?: string;
   /** 主机地址（Tailscale IP / 主机名）——批5 全节点清单 */

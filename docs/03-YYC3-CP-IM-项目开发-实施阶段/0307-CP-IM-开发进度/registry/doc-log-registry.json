@@ -942,6 +942,24 @@
     }
    ],
    "related_docs": []
+  },
+  {
+   "trace_id": "TRC-20261120008",
+   "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/56-批次B-指标口径纠正-推理真值接入-WS设置生效-20261120.md",
+   "action": "create",
+   "timestamp": "2026-11-20T17:25:00+08:00",
+   "version": "v1.0.0",
+   "checksum": "9c6e90c8b2b6a9cd",
+   "author": "YYC³ Team",
+   "changes": [
+    {
+     "field": "content",
+     "summary": "批次 B：GPU/温度口径纠正（gpuAvailable/tempAvailable + 有证据才统计）+ OpsPanel vLLM 真值接入首页 + WS 四项设置生效与心跳 + 大小写重复主机修复"
+    }
+   ],
+   "related_docs": [
+    "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/55-全局生产落地总览-压缩史-进度矩阵-差距清单-路线图-20261120.md"
+   ]
   }
  ]
 }
