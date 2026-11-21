@@ -60,24 +60,19 @@ export function DatabaseConnectionPanel() {
 
   const { connections, updateConnection, addConnection, removeConnection, setConnectionStatus } = useDbConnSlice();
 
-  // ═══ 连接测试模拟 ═══
+  // ═══ 连接测试（真实边界）═══
+  // 浏览器没有 TCP/数据库驱动能力，无法直连 PostgreSQL/MySQL 等；
+  // 落档 62：不再用随机数伪造成功/失败，如实说明需服务端代理（当前未接）。
   const testConnection = useCallback(async (id: string) => {
     setTestingId(id);
     setConnectionStatus(id, "testing");
-
-    // 模拟 3 步测试: ping → handshake → query
-    const steps = ["网络 Ping...", "握手认证...", "测试查询..."];
-    for (const step of steps) {
-      toast.info(step, { style: toastStyle, duration: 800 });
-      await new Promise((r) => setTimeout(r, 800 + Math.random() * 400));
-    }
-
-    // 随机结果 (80% 成功)
-    const success = Math.random() > 0.2;
-    setConnectionStatus(id, success ? "connected" : "error");
+    await new Promise((r) => setTimeout(r, 300));
+    setConnectionStatus(id, "error");
     setTestingId(null);
-    if (success) {toast.success("连接测试成功", { style: toastStyle });}
-    else {toast.error("连接测试失败: 模拟超时", { style: toastStyle });}
+    toast.warning("连接测试未接后端：浏览器无法直连数据库，需服务端代理（当前未接）", {
+      style: toastStyle,
+      duration: 4000,
+    });
   }, [setConnectionStatus]);
 
   // ═══ CRUD ═══
@@ -460,40 +455,6 @@ interface SQLResult {
   rowCount: number;
 }
 
-const MOCK_SQL_RESULTS: Record<string, SQLResult> = {
-  "SELECT": {
-    columns: ["id", "name", "status", "created_at"],
-    rows: [
-      ["1", "GPU-A100-01", "active", "2026-03-07 10:00:00"],
-      ["2", "GPU-A100-02", "active", "2026-03-07 10:01:00"],
-      ["3", "GPU-A100-03", "warning", "2026-03-07 10:02:00"],
-    ],
-    executionTime: 12,
-    rowCount: 3,
-  },
-  "SHOW": {
-    columns: ["table_name", "table_type", "row_count"],
-    rows: [
-      ["nodes", "BASE TABLE", "13"],
-      ["models", "BASE TABLE", "8"],
-      ["tasks", "BASE TABLE", "256"],
-      ["logs", "BASE TABLE", "15420"],
-    ],
-    executionTime: 5,
-    rowCount: 4,
-  },
-  "DESCRIBE": {
-    columns: ["column", "type", "nullable", "default"],
-    rows: [
-      ["id", "SERIAL", "NO", "auto_increment"],
-      ["hostname", "VARCHAR(255)", "NO", "NULL"],
-      ["gpu_util", "INTEGER", "YES", "0"],
-      ["status", "VARCHAR(50)", "YES", "'active'"],
-    ],
-    executionTime: 3,
-    rowCount: 4,
-  },
-};
 
 function SQLQuickTest({ connections }: { connections: DBConnection[] }) {
   const [expanded, setExpanded] = useState(false);
@@ -515,21 +476,14 @@ function SQLQuickTest({ connections }: { connections: DBConnection[] }) {
     // 保存历史
     addSqlHistory(sqlValue);
 
-    // 模拟执行
-    const delay = env("SQL_TEST_SIMULATE_DELAY");
-    await new Promise((r) => setTimeout(r, delay + Math.random() * (delay * 1.4)));
+    // 落档 62：执行需服务端数据库代理（浏览器无 TCP/驱动）；不再返回模拟结果
+    await new Promise((r) => setTimeout(r, 200));
 
     const upper = sqlValue.trim().toUpperCase();
     if (upper.startsWith("DROP") || upper.startsWith("DELETE") || upper.startsWith("TRUNCATE")) {
       setError("安全拦截: 危险操作 (DROP/DELETE/TRUNCATE) 已被阻止");
-    } else if (upper.startsWith("INSERT") || upper.startsWith("UPDATE")) {
-      setResult({ columns: ["affected_rows"], rows: [["1"]], executionTime: Math.floor(8 + Math.random() * 15), rowCount: 1 });
-    } else if (upper.startsWith("SHOW") || upper.includes("INFORMATION_SCHEMA")) {
-      setResult({ ...MOCK_SQL_RESULTS.SHOW, executionTime: Math.floor(3 + Math.random() * 10) });
-    } else if (upper.startsWith("DESC") || upper.startsWith("EXPLAIN")) {
-      setResult({ ...MOCK_SQL_RESULTS.DESCRIBE, executionTime: Math.floor(2 + Math.random() * 8) });
     } else {
-      setResult({ ...MOCK_SQL_RESULTS.SELECT, executionTime: Math.floor(5 + Math.random() * 25) });
+      setError("SQL 执行未接后端：浏览器无法直连数据库，需服务端代理（当前未接，不返回模拟结果）");
     }
     setExecuting(false);
   }, [sqlValue, addSqlHistory]);

@@ -168,12 +168,27 @@ export function ConnectionMonitorPanel({
   }
 
   if (!connection) {
+    // 落档 62：connectionManager 从未被 db-conn-slice 填充；改为读取真实连接清单，
+    // 并如实说明「健康检查未接后端」，不再显示「连接不存在」。
+    const sliceConn = connections.find((c) => c.id === selectedConnectionId);
     return (
       <GlassCard className="p-6">
-        <div className="flex items-center justify-center h-32">
-          <div className="text-center">
+        <div className="flex items-center justify-center py-10">
+          <div className="text-center max-w-md">
             <Server className="w-12 h-12 text-[rgba(0,212,255,0.3)] mx-auto mb-3" />
-            <p className="text-[rgba(0,212,255,0.5)]">连接不存在</p>
+            {sliceConn ? (
+              <>
+                <p className="text-[#e0f0ff]">{sliceConn.name}</p>
+                <p className="text-[rgba(0,212,255,0.5)] text-sm mt-1">
+                  {sliceConn.type.toUpperCase()} · {sliceConn.host}:{sliceConn.port}
+                </p>
+                <p className="text-[rgba(255,170,0,0.75)] text-xs mt-3">
+                  健康检查未接后端：浏览器无法直连数据库，需服务端探针（当前未接）
+                </p>
+              </>
+            ) : (
+              <p className="text-[rgba(0,212,255,0.5)]">连接不存在</p>
+            )}
           </div>
         </div>
       </GlassCard>

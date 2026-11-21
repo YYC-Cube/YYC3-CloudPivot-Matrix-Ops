@@ -49,7 +49,8 @@ import {
   ARTIST, 
   PHOTOS, 
   VIDEOS, 
-  getAllSongs
+  getAllSongs,
+  getPlaceholderCover,
 } from '../../lib/music/MusicData';
 
 type TabType = 'recommend' | 'mood' | 'activity' | 'albums' | 'artist' | 'search' | 'equalizer' | 'source';
@@ -352,7 +353,7 @@ export const MusicSpacePage: React.FC = () => {
                         alt={album.nameZh}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = 'https://via.placeholder.com/300';
+                          (e.target as HTMLImageElement).src = getPlaceholderCover('封面', 300);
                         }}
                       />
                       <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
@@ -382,7 +383,7 @@ export const MusicSpacePage: React.FC = () => {
                   alt={ARTIST.nameZh}
                   className="w-24 h-24 rounded-full object-cover border-2 border-cyan-500/30"
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = 'https://via.placeholder.com/96';
+                    (e.target as HTMLImageElement).src = getPlaceholderCover('封面', 96);
                   }}
                 />
                 <div className="flex-1">
@@ -417,7 +418,7 @@ export const MusicSpacePage: React.FC = () => {
                       alt={photo.title}
                       className="w-full h-full object-cover hover:scale-105 transition-transform"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'https://via.placeholder.com/200';
+                        (e.target as HTMLImageElement).src = getPlaceholderCover('封面', 200);
                       }}
                     />
                   </div>
@@ -440,7 +441,7 @@ export const MusicSpacePage: React.FC = () => {
                         alt={video.titleZh}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                         onError={(e) => {
-                          (e.target as HTMLImageElement).src = 'https://via.placeholder.com/320x180';
+                          (e.target as HTMLImageElement).src = getPlaceholderCover('封面', 320, 180);
                         }}
                       />
                       <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
@@ -624,7 +625,7 @@ export const MusicSpacePage: React.FC = () => {
                 alt={playerState.currentSong.title}
                 className="w-16 h-16 rounded-lg object-cover"
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = 'https://via.placeholder.com/64';
+                  (e.target as HTMLImageElement).src = getPlaceholderCover('封面', 64);
                 }}
               />
               <div className="flex-1 min-w-0">
