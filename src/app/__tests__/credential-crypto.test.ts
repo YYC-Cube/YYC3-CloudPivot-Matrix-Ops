@@ -110,7 +110,7 @@ describe("credential-crypto 设备绑定加密", () => {
     expect(raw).not.toContain("legacy-plain"); // 磁盘已升级为密文
 
     // 关键回归：二次 reload 不得双重加密——解密后仍是原值
-    const out2 = JSON.parse((await storage.getItem("yyc3-settings-ssot")) ?? "{}");
+    await storage.getItem("yyc3-settings-ssot");
     await new Promise((r) => setTimeout(r, 20));
     const out3 = JSON.parse((await storage.getItem("yyc3-settings-ssot")) ?? "{}");
     expect(out3.state.values.wsToken).toBe("legacy-plain");
