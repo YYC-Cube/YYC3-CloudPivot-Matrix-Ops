@@ -1102,6 +1102,24 @@
    "related_docs": [
     "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/62-数据库真实性移除随机-连接监控接真实清单-音乐占位本地化-20261121.md"
    ]
+  },
+  {
+   "trace_id": "TRC-20261121009",
+   "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/64-凭据加密-设备绑定密钥-AESGCM-非导出CryptoKey-20261121.md",
+   "action": "create",
+   "timestamp": "2026-11-21T14:00:00+08:00",
+   "version": "v1.0.0",
+   "checksum": "cb0e1553505faa24",
+   "author": "YYC³ Team",
+   "changes": [
+    {
+     "field": "content",
+     "summary": "凭据加密落地：设备绑定 AES-GCM 非导出 CryptoKey（credentialVault v6）；provider/SSOT/旧设置三字段磁盘态密文；历史明文升级+双重信封自愈；bug 期 NAS vk/Ollama 占位 key 需重录"
+    }
+   ],
+   "related_docs": [
+    "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/63-数据库连接三套合并-db-conn-slice单一注册表-20261121.md"
+   ]
   }
  ]
 }

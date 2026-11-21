@@ -141,12 +141,14 @@ describe("useSettingsStore", () => {
     expect(importResult!).toBe(false);
   });
 
-  it("should persist settings to localStorage", () => {
+  it("should persist settings to localStorage", async () => {
     const { result } = renderHook(() => useSettingsStore());
 
     act(() => {
       result.current.updateValue("systemName", "Persisted Name");
     });
+    // 落档 64：saveState 为异步加密写入，等一拍再读
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
 
     const stored = localStorage.getItem("yyc3_system_settings");
     expect(stored).toBeDefined();

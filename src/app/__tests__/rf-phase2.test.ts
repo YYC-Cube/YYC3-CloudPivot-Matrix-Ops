@@ -66,7 +66,7 @@ describe("RF-004: ALL_STORES 常量去重", () => {
     const { ALL_STORES } = await import("../lib/yyc3-storage");
     expect(ALL_STORES).toBeDefined();
     expect(Array.isArray(ALL_STORES)).toBe(true);
-    expect(ALL_STORES).toHaveLength(24);
+    expect(ALL_STORES).toHaveLength(25); // 落档 64：+credentialVault
   });
 
   it("ALL_STORES 包含所有预期的 store 名称", async () => {

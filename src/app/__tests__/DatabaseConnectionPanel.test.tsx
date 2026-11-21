@@ -24,6 +24,8 @@ vi.mock("../lib/env-config", () => ({
     if (key === "SYSTEM_NAME") return "YYC3";
     return "";
   }),
+  // 落档 64：settings-ssot 异步水合回调会订阅 env-config 变更
+  onEnvConfigChange: () => () => {},
 }));
 
 vi.mock("sonner", () => ({

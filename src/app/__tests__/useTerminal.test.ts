@@ -39,6 +39,8 @@ vi.mock("../lib/env-config", () => ({
   setEnvConfig: vi.fn((updates) => ({ ...updates })),
   resetEnvConfig: vi.fn(() => ({})),
   exportEnvConfig: vi.fn(() => JSON.stringify({ SYSTEM_NAME: "CP-IM Cloud" }, null, 2)),
+  // 落档 64：settings-ssot 异步水合回调会订阅 env-config 变更
+  onEnvConfigChange: () => () => {},
 }));
 
 import { getEnvConfig, setEnvConfig, resetEnvConfig, exportEnvConfig } from "../lib/env-config";

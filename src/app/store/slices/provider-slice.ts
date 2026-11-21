@@ -17,7 +17,8 @@
  */
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import { createCredentialAwareStorage } from '../../lib/credential-crypto';
 import { env } from '../../lib/env-config';
 import { getOllamaTagsUrl } from '../../lib/ollama-url';
 import { useSettingsSSOT } from './settings-ssot-slice';
@@ -583,6 +584,13 @@ export const useProviderSlice = create<ProviderSlice>()(
     }),
     {
       name: 'yyc3-provider-slice',
+      // 落档 64：凭据设备绑定加密——磁盘态 apiKey 恒为密文，内存态为明文
+      storage: createJSONStorage(() => createCredentialAwareStorage({
+        arrays: [
+          { list: 'configuredModels', field: 'apiKey' },
+          { list: 'providers', field: 'apiKey' },
+        ],
+      })),
       partialize: (state) => ({
         providers: state.providers,
         configuredModels: state.configuredModels,

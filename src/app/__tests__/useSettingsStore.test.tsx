@@ -96,12 +96,14 @@ describe("useSettingsStore", () => {
     expect(result.current.values.systemName).toBe("言语云枢 · YYC³ CloudPivot Matrix Ops 异构算力矩阵运维面板 v3.4.1");
   });
 
-  it("should persist settings to localStorage", () => {
+  it("should persist settings to localStorage", async () => {
     const { result } = renderHook(() => useSettingsStore());
 
     act(() => {
       result.current.updateValue("systemName", "Persisted System");
     });
+    // 落档 64：saveState 为异步加密写入，等一拍再读
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
 
     const stored = localStorage.getItem("yyc3_system_settings");
     expect(stored).toBeDefined();

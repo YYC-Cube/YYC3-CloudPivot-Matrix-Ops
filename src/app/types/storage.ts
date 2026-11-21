@@ -76,7 +76,8 @@ export type StoreName =
   | "family_memories"
   | "family_broadcasts"
   | "music_library"
-  | "comm_stations";
+  | "comm_stations"
+  | "credentialVault";
 
 /** 存储变更事件 (BroadcastChannel) */
 export interface StorageChangeEvent {

@@ -26,7 +26,8 @@
 // ============================================================
 
 const DB_NAME = "yyc3_matrix";
-const DB_VERSION = 5;
+// 落档 64：v6 新增 credentialVault（设备绑定加密密钥库）
+const DB_VERSION = 6;
 
 /** IndexedDB store 名称 — centralized in types/index.ts */
 import type { StorageChangeEvent, StoreName } from "../types";
@@ -64,6 +65,7 @@ export const ALL_STORES: StoreName[] = [
   "family_broadcasts",
   "music_library",
   "comm_stations",
+  "credentialVault",
 ] as const as unknown as StoreName[];
 
 /** 打开数据库，自动创建 object stores */

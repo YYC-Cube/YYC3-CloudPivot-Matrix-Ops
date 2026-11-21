@@ -30,6 +30,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { DEFAULT_WS_ENDPOINT } from "../lib/api-config";
 import { getSharedChannel } from "../lib/broadcast-channel";
+import { decryptCredential, encryptCredential } from "../lib/credential-crypto";
 import { useSettingsSSOT } from "../store/slices/settings-ssot-slice";
 
 /**
@@ -229,10 +230,22 @@ function loadState(): SettingsState {
   return { toggles: { ...DEFAULT_TOGGLES }, values: { ...DEFAULT_VALUES } };
 }
 
+/** 落档 64：旧 store 敏感字段磁盘态加密（wsToken 仅 SSOT 有，此处按存在性处理） */
+const ENCRYPTED_VALUE_KEYS = ["aiApiKey", "wsToken", "dbPassword"] as const;
+
 function saveState(state: SettingsState) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch { /* ignore */ }
+  void (async () => {
+    try {
+      const values: Record<string, string> = { ...state.values };
+      for (const key of ENCRYPTED_VALUE_KEYS) {
+        const v = values[key];
+        if (typeof v === "string") {
+          values[key] = await encryptCredential(v);
+        }
+      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ toggles: state.toggles, values }));
+    } catch { /* ignore */ }
+  })();
 }
 
 // ============================================================
@@ -246,6 +259,31 @@ export function useSettingsStore() {
   useEffect(() => {
     saveState(state);
   }, [state]);
+
+  // 落档 64：磁盘态三字段为密文，挂载后解密回填（内存态明文，UI 正常显示）
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) { return; }
+        const saved = JSON.parse(raw) as { values?: Record<string, string> };
+        const stored = saved.values || {};
+        const patch: Record<string, string> = {};
+        for (const key of ENCRYPTED_VALUE_KEYS) {
+          const v = stored[key];
+          if (typeof v === "string" && v) {
+            const d = await decryptCredential(v);
+            if (d !== v) { patch[key] = d; }
+          }
+        }
+        if (!cancelled && Object.keys(patch).length > 0) {
+          setState((prev) => ({ ...prev, values: { ...prev.values, ...patch } }));
+        }
+      } catch { /* ignore */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   // BroadcastChannel 多标签页同步
   useEffect(() => {

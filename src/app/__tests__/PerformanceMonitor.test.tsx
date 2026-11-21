@@ -39,6 +39,8 @@ vi.mock("sonner", () => ({
 
 vi.mock("../lib/env-config", () => ({
   env: {},
+  // 落档 64：settings-ssot 异步水合回调会订阅 env-config 变更
+  onEnvConfigChange: () => () => {},
 }));
 
 vi.mock("../hooks/useI18n", () => ({

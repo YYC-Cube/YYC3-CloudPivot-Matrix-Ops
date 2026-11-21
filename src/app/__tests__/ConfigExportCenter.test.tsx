@@ -51,6 +51,8 @@ vi.mock("../lib/env-config", () => ({
   exportEnvConfig: vi.fn(() => "{}"),
   importEnvConfig: vi.fn(() => true),
   resetEnvConfig: vi.fn(),
+  // 落档 64：settings-ssot 异步水合回调会订阅 env-config 变更
+  onEnvConfigChange: () => () => {},
 }));
 
 vi.mock("sonner", () => ({

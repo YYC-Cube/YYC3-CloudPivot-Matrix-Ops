@@ -72,6 +72,14 @@ vi.mock("../lib/api-config", () => ({
   }),
   // variable-center（经 settings-ssot-slice 间接引入）依赖的常量导出
   DEFAULT_WS_ENDPOINT: "ws://localhost:3113/ws",
+  // 落档 64：settings-ssot 异步水合回调会订阅 api-config/env-config 变更
+  onAPIConfigChange: () => () => {},
+  setAPIConfig: () => ({}),
+  resetAPIConfig: () => ({}),
+}));
+vi.mock("../lib/env-config", () => ({
+  env: () => "",
+  onEnvConfigChange: () => () => {},
 }));
 
 describe("useWebSocketData", () => {

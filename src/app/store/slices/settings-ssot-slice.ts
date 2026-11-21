@@ -21,8 +21,9 @@
  */
 
 import { create } from 'zustand';
-import { devtools, persist } from 'zustand/middleware';
+import { devtools, persist, createJSONStorage } from 'zustand/middleware';
 import { immer } from 'zustand/middleware/immer';
+import { createCredentialAwareStorage } from '../../lib/credential-crypto';
 import {
   VARIABLE_DEFINITIONS,
   loadVariableValues,
@@ -448,6 +449,10 @@ export const useSettingsSSOT = create<SettingsSSOTSlice>()(
       })),
       {
         name: 'yyc3-settings-ssot',
+        // 落档 64：凭据设备绑定加密——磁盘态 aiApiKey/wsToken/dbPassword 恒为密文
+        storage: createJSONStorage(() => createCredentialAwareStorage({
+          fields: [{ obj: 'values', keys: ['aiApiKey', 'wsToken', 'dbPassword'] }],
+        })),
         // 批6：v2→v3 触发 migrate 为旧 persist 补新字段默认值
         // （zustand persist 在 version 相同时走浅合并，values/toggles 整体被旧结构
         //  替换 → 新增字段运行时为 undefined——OpsPanel 端点/开关即因此失效）

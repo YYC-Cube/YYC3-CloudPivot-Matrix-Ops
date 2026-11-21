@@ -30,6 +30,15 @@ if (isJsdom) {
 // fake-indexeddb polyfill for jsdom (IndexedDB mock)
 import "fake-indexeddb/auto";
 
+// 落档 64：jsdom 的 crypto 无 subtle —— 用 Node webcrypto 补齐（凭据加密测试依赖）
+if (isJsdom && typeof crypto !== "undefined" && !(crypto as Crypto).subtle) {
+  const { webcrypto } = await import("node:crypto");
+  Object.defineProperty(globalThis, "crypto", {
+    configurable: true,
+    value: webcrypto as unknown as Crypto,
+  });
+}
+
 // Mock Observer classes for jsdom
 class MockResizeObserver implements ResizeObserver {
   observe() { }
