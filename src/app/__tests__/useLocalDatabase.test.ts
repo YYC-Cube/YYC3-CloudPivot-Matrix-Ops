@@ -61,6 +61,7 @@ vi.mock("../lib/api-config", () => ({
 }));
 
 import { useLocalDatabase, SQL_TEMPLATES, calcBackoffDelay } from "../hooks/useLocalDatabase";
+import { useDbConnSlice } from "../store/slices/db-conn-slice";
 import { enableDemoModeForTests } from "./helpers/demo-mode";
 
 // 演示模式：存量断言基于模拟数据行为，逐文件显式开启（生产默认关闭）
@@ -69,6 +70,8 @@ enableDemoModeForTests();
 describe("useLocalDatabase", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // 落档 63：连接清单以 db-conn-slice 为唯一注册表，逐例重置避免跨用例累积
+    useDbConnSlice.setState({ connections: [], sqlHistory: [] });
     // 默认 enableBackend = false (Mock 模式)
     mockGetAPIConfig.mockReturnValue({ ...DEFAULT_API_CONFIG });
   });

@@ -11,8 +11,9 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import { toast } from "sonner";
-import { idbGetAll, idbPut, idbPutMany, idbDelete, idbClear } from "../lib/yyc3-storage";
+import { idbGetAll, idbPut, idbClear } from "../lib/yyc3-storage";
 import { getAPIConfig } from "../lib/api-config";
+import { useDbConnSlice } from "../store/slices/db-conn-slice";
 import { useSettingsSSOT } from "../store/slices/settings-ssot-slice";
 import type {
   DatabaseType,
@@ -339,25 +340,6 @@ async function deriveKey(): Promise<CryptoKey> {
   );
 }
 
-async function encodePassword(pw: string): Promise<string> {
-  if (!pw) { return ""; }
-  try {
-    const key = await deriveKey();
-    const iv = crypto.getRandomValues(new Uint8Array(12));
-    const encrypted = await crypto.subtle.encrypt(
-      { name: 'AES-GCM', iv },
-      key,
-      new TextEncoder().encode(pw),
-    );
-    const combined = new Uint8Array(iv.length + new Uint8Array(encrypted).length);
-    combined.set(iv);
-    combined.set(new Uint8Array(encrypted), iv.length);
-    return btoa(String.fromCharCode(...combined));
-  } catch {
-    return btoa(pw); // fallback to base64
-  }
-}
-
 async function decodePassword(encoded: string): Promise<string> {
   if (!encoded) { return ""; }
   try {
@@ -397,24 +379,37 @@ export function useLocalDatabase() {
   const [testing, setTesting] = useState<string | null>(null);
   const initializedRef = useRef(false);
 
-  // ── IndexedDB 持久化: 加载 ──
+  // ── 连接清单：db-conn-slice 为唯一注册表（落档 63）──
   useEffect(() => {
     if (initializedRef.current) {return;}
     initializedRef.current = true;
 
-    // 加载连接 (解码密码)
+    const fromSlice = useDbConnSlice.getState().connections.map((c) => ({
+      ...c,
+      status: "disconnected" as DBConnectionStatus,
+    }));
+    if (fromSlice.length > 0) { setConnections(fromSlice); }
+
+    // 旧 IDB dbConnections 一次性并入 slice（不丢历史连接），随后清空该 store
     idbGetAll<DBConnection>("dbConnections").then(async (saved) => {
-      if (saved.length > 0) {
-        const decoded = await Promise.all(saved.map(async (c) => ({
-          ...c,
-          password: await decodePassword(c.password),
-          status: "disconnected" as DBConnectionStatus,
-        })));
-        setConnections(decoded);
+      if (!saved.length) { return; }
+      const decoded = await Promise.all(saved.map(async (c) => ({
+        ...c,
+        password: await decodePassword(c.password),
+        status: "disconnected" as DBConnectionStatus,
+      })));
+      const slice = useDbConnSlice.getState();
+      const existing = new Set(slice.connections.map((c) => c.id));
+      const merged = [...slice.connections];
+      for (const c of decoded) {
+        if (!existing.has(c.id)) { merged.push(c); }
       }
+      slice.replaceConnections(merged);
+      setConnections(merged.map((c) => ({ ...c, status: "disconnected" as DBConnectionStatus })));
+      try { await idbClear("dbConnections"); } catch { /* ignore */ }
     });
 
-    // 加载查询历史
+    // 加载查询历史（仍是 IDB）
     idbGetAll<QueryResult & { id: string }>("queryHistory").then((saved) => {
       if (saved.length > 0) {
         setQueryHistory(saved.sort((a, b) => b.executedAt - a.executedAt).slice(0, 100));
@@ -422,23 +417,18 @@ export function useLocalDatabase() {
     });
   }, []);
 
-  // ── 持久化连接到 IndexedDB ──
+  // ── 连接持久化：写 db-conn-slice（唯一注册表；密码仅内存，slice 持久化时剥离）──
   const persistConnection = useCallback(async (conn: DBConnection) => {
-    await idbPut("dbConnections", {
-      ...conn,
-      password: await encodePassword(conn.password),
-      status: "disconnected",
-    });
+    const slice = useDbConnSlice.getState();
+    if (slice.connections.some((c) => c.id === conn.id)) {
+      slice.updateConnection(conn.id, conn);
+    } else {
+      slice.addConnection(conn);
+    }
   }, []);
 
   const persistAllConnections = useCallback(async (conns: DBConnection[]) => {
-    await idbClear("dbConnections");
-    const encoded = await Promise.all(conns.map(async (c) => ({
-      ...c,
-      password: await encodePassword(c.password),
-      status: "disconnected" as DBConnectionStatus,
-    })));
-    await idbPutMany("dbConnections", encoded);
+    useDbConnSlice.getState().replaceConnections(conns);
   }, []);
 
   // ── 自动检测本地数据库 ──
@@ -574,7 +564,7 @@ export function useLocalDatabase() {
   // ── 删除连接 ──
   const removeConnection = useCallback(async (id: string) => {
     setConnections(prev => prev.filter(c => c.id !== id));
-    await idbDelete("dbConnections", id);
+    useDbConnSlice.getState().removeConnection(id);
     if (activeConnectionId === id) {
       setActiveConnectionId(null);
       setTables([]);
@@ -608,7 +598,7 @@ export function useLocalDatabase() {
       if (tablesRes.ok && tablesRes.data) {
         setTables(tablesRes.data);
       }
-      persistConnection({ ...conn, lastConnected: Date.now() });
+      persistConnection({ ...conn, status: "connected", lastConnected: Date.now() });
       toast.success(`已连接: ${conn.name}`);
       return;
     }
@@ -618,6 +608,7 @@ export function useLocalDatabase() {
       setConnections(prev =>
         prev.map(c => c.id === id ? { ...c, status: "disconnected" as DBConnectionStatus } : c)
       );
+      useDbConnSlice.getState().setConnectionStatus(id, "disconnected");
       toast.error(`连接失败: 数据库服务不可达 (${conn.host}:${conn.port})`);
       return;
     }
@@ -631,7 +622,7 @@ export function useLocalDatabase() {
     });
     setActiveConnectionId(id);
     setTables(MOCK_TABLES);
-    persistConnection({ ...conn, lastConnected: Date.now() });
+    persistConnection({ ...conn, status: "connected", lastConnected: Date.now() });
     toast.success(`已连接: ${conn.name} (模拟模式)`);
   }, [connections, demoMode, persistConnection]);
 
@@ -641,6 +632,7 @@ export function useLocalDatabase() {
     setConnections(prev =>
       prev.map(c => c.id === id ? { ...c, status: "disconnected" as DBConnectionStatus } : c)
     );
+    useDbConnSlice.getState().setConnectionStatus(id, "disconnected");
     if (activeConnectionId === id) {
       setActiveConnectionId(null);
       setTables([]);

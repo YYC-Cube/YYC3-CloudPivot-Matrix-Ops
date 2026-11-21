@@ -39,20 +39,8 @@ export interface PoolConfig {
 // 默认值
 // ============================================================
 
-const DEFAULT_CONNECTIONS: DBConnection[] = [
-  {
-    id: "db-pg-main",
-    name: "主数据库 (PostgreSQL)",
-    type: "postgresql",
-    host: "localhost",
-    port: 5433,
-    database: "yyc3_matrix",
-    username: "admin",
-    password: "",
-    status: "disconnected",
-    options: "sslmode=disable",
-  },
-];
+// 落档 63：不再内置 localhost:5433 假连接种子——连接清单由用户/真实探测产生
+const DEFAULT_CONNECTIONS: DBConnection[] = [];
 
 const DEFAULT_POOL_CONFIG: PoolConfig = {
   minConnections: 2,
@@ -76,10 +64,12 @@ interface DbConnSlice {
   sqlHistory: string[];
 
   // 连接操作
-  addConnection: (conn: Omit<DBConnection, 'id'>) => void;
+  addConnection: (conn: Omit<DBConnection, 'id'> & { id?: string }) => DBConnection;
   updateConnection: (id: string, updates: Partial<DBConnection>) => void;
   removeConnection: (id: string) => void;
   setConnectionStatus: (id: string, status: DBConnection['status']) => void;
+  /** 落档 63：整表替换（探测导入 / 旧 IDB 迁移用） */
+  replaceConnections: (connections: DBConnection[]) => void;
 
   // 连接池操作
   setPoolConfig: (config: Partial<PoolConfig>) => void;
@@ -102,9 +92,14 @@ export const useDbConnSlice = create<DbConnSlice>()(
       sqlHistory: [],
 
       // 连接操作
-      addConnection: (conn) => set((s) => ({
-        connections: [...s.connections, { ...conn, id: `db-${Date.now()}` }],
-      })),
+      addConnection: (conn) => {
+        const created: DBConnection = {
+          ...conn,
+          id: conn.id || `db-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        };
+        set((s) => ({ connections: [...s.connections, created] }));
+        return created;
+      },
       updateConnection: (id, updates) => set((s) => ({
         connections: s.connections.map((c) => c.id === id ? { ...c, ...updates } : c),
       })),
@@ -114,6 +109,7 @@ export const useDbConnSlice = create<DbConnSlice>()(
       setConnectionStatus: (id, status) => set((s) => ({
         connections: s.connections.map((c) => c.id === id ? { ...c, status } : c),
       })),
+      replaceConnections: (connections) => set({ connections }),
 
       // 连接池操作
       setPoolConfig: (updates) => set((s) => ({

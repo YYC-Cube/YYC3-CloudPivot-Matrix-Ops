@@ -1084,6 +1084,24 @@
    "related_docs": [
     "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/61-存储收尾-IDB历史上限-Family绑定单源-WiFi密码不落盘-部署路径对齐-20261121.md"
    ]
+  },
+  {
+   "trace_id": "TRC-20261121008",
+   "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/63-数据库连接三套合并-db-conn-slice单一注册表-20261121.md",
+   "action": "create",
+   "timestamp": "2026-11-21T12:45:00+08:00",
+   "version": "v1.0.0",
+   "checksum": "743493bfd0cec5b7",
+   "author": "YYC³ Team",
+   "changes": [
+    {
+     "field": "content",
+     "summary": "数据库连接三套合并：db-conn-slice 单一注册表，useLocalDatabase 水合+镜像 CRUD/状态，旧 IDB 一次性并入后清空，删除 localhost:5433 假种子"
+    }
+   ],
+   "related_docs": [
+    "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/62-数据库真实性移除随机-连接监控接真实清单-音乐占位本地化-20261121.md"
+   ]
   }
  ]
 }
