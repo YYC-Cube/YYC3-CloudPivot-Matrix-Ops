@@ -3,7 +3,7 @@ file: 72-E阶段治理第一批-Playwright冒烟入CI-覆盖率棘轮上调-2026
 title: 落档 72 · E 阶段治理第一批 — Playwright 冒烟入 CI + 覆盖率棘轮上调
 description: 主控授权 E 阶段：Playwright 脚手架（chromium + webServer=deploy/server.mjs PORT=3999）+ 冒烟 4 例（首启初始化模式/Ghost 关停断言、初始化管理员进主界面、告警同步 chip、数据源页渲染；每用例独立 context 会话前缀）；ci.yml 新增 e2e job（复用 build 产物 + chromium 安装 + 报告归档）；覆盖率棘轮 45/44/31/44 → 55/56/41/54（实测 54.28/41.91/56.11/55.21 过线）；Mimosa 深扫完成= inconclusive（复查范围 0 发现，非运行时验证）
 author: YYC³ Team <admin@0379.email>
-version: v1.0.0
+version: v1.0.1
 created: 2026-11-24
 updated: 2026-11-24
 status: stable
@@ -68,13 +68,22 @@ G0 全绿（tsc 0E / 282 文件 4744 用例 / coverage 新棘轮通过 / build �
 - 覆盖率下一棘轮档位（如 60/50/45/58）待测试补齐后上调。
 - Mimosa inconclusive 的调用图盲区：动态行为以 E2E + curl 回执作为互补核验（已具备）。
 
----
+## 七、v1.0.1 增补（2026-11-24）：agent 联动用例 + CryptoKey 跨 reload 实证
 
-## 变更历史
+**CI 首跑**（push `7557fa4`，run 45234156685）：四 job 全绿——Quality Gates ✓ / Test & Coverage ✓（新棘轮生效）/ Build ✓ / **E2E Smoke (Playwright) ✓**（GitHub Actions 真实浏览器通过）。
+
+**agent 联动用例**（`e2e/agent-linked.spec.ts` v1.1.0，`E2E_AGENT=1` 门控、CI 自动跳过）：
+1. WS 令牌注入 → 首页「已连接」+ 节点矩阵渲染真实节点；
+2. 操作中心「DGX 健康探针」真实执行 → 回执 toast 含 exit=0。
+
+**重要实测发现（落档 64 降级路径的真实实例）**：Playwright 的 Chromium CFT 构建 **CryptoKey 经 IDB 跨 reload 不可用**——同载写读加密成功，跨载读钥解密 OperationError。后果：该类构建内凭据信封每载解密回空（WS/动作报「未配置令牌」），localStorage+reload 注入方案失效。**处置**：新增 `yyc3_e2e_hook` 守卫钩子（App 启动按本地标志 `yyc3_e2e_hook=1` 暴露，生产日常不设标志即不暴露）→ Playwright 登录后 `__yyc3E2E.setWsToken()` 直写 SSOT 内存态（WS 重连窗口 ≤10×5s 内生效）。**常规浏览器不受影响**（主控凭据多日跨会话实证有效）。2/2 本地全绿（WS 已连接 6.7s；探针回执 1.7s）。
+
+## 变更历史（v1.0.1 追加）
 
 | 版本 | 日期 | 变更内容 | 作者 |
 | ---- | ---- | ---- | ---- |
 | v1.0.0 | 2026-11-24 | 初始版本 — Playwright 冒烟入 CI + 覆盖率棘轮上调 + Mimosa 深扫登记；TRC-20261123007 | YYC³ Team |
+| v1.0.1 | 2026-11-24 | 增补 — 远端 CI 首跑四 job 全绿；agent 联动用例 2 例（守卫钩子内存态注入令牌）；CryptoKey 跨 reload 在 CFT 构建不可用的实证与处置 | YYC³ Team |
 
 ---
 

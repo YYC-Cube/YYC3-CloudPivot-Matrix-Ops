@@ -1301,6 +1301,24 @@
    "related_docs": [
     "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/71-存储外联收尾-Family同步队列拆命名空间-soundhelix零外联空态-20261123.md"
    ]
+  },
+  {
+   "trace_id": "TRC-20261123007",
+   "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/72-E阶段治理第一批-Playwright冒烟入CI-覆盖率棘轮上调-20261124.md",
+   "action": "update",
+   "timestamp": "2026-11-24T02:30:00+08:00",
+   "version": "v1.0.1",
+   "checksum": "b4e8530c12491712",
+   "author": "YYC³ Team",
+   "changes": [
+    {
+     "field": "content",
+     "summary": "增补：远端 CI 首跑四 job 全绿（含 E2E Smoke）；agent 联动用例 2 例（yyc3_e2e_hook 守卫钩子登录后内存态注入令牌）；CryptoKey 跨 reload 在 Chromium CFT 构建不可用实证（OperationError）与处置登记"
+    }
+   ],
+   "related_docs": [
+    "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/71-存储外联收尾-Family同步队列拆命名空间-soundhelix零外联空态-20261123.md"
+   ]
   }
  ]
 }

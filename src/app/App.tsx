@@ -156,6 +156,17 @@ export default function App() {
       setUserRole(session.user?.role ?? "admin");
       setIsGhost(isGhostMode());
     }
+    // E2E 测试钩子（落档 72 v1.0.1）：仅当本地显式放置标志时暴露——
+    // 供 Playwright 在「CryptoKey 不跨 reload」的浏览器构建（如 CFT）里
+    // 于登录后内存态注入 WS 令牌；生产日常使用不设标志即不暴露。
+    if (localStorage.getItem("yyc3_e2e_hook") === "1") {
+      void import("./store/slices/settings-ssot-slice").then(({ useSettingsSSOT }) => {
+        (window as unknown as Record<string, unknown>).__yyc3E2E = {
+          setWsToken: (tk: string) => useSettingsSSOT.getState().updateValue("wsToken", tk),
+          getWsToken: () => useSettingsSSOT.getState().values.wsToken ?? "",
+        };
+      });
+    }
   }, []);
 
   const handleLoginSuccess = useCallback(() => {
