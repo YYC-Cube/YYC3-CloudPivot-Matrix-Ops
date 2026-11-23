@@ -27,11 +27,19 @@ import { join } from "node:path";
 /** 需本机 agent：无 E2E_AGENT=1 时整组跳过（CI 无外部服务依赖，不跑） */
 test.skip(!process.env.E2E_AGENT, "agent 联动用例：E2E_AGENT=1 + 本机 agent 在跑时执行");
 
-/** 从本机 agent-token 文件读取令牌（不落日志/不写死） */
-const AGENT_TOKEN = readFileSync(
-  join(homedir(), ".yyc3-cloud-matrix", "agent-token"),
-  "utf8",
-).trim();
+/** 从本机 agent-token 文件读取令牌（不落日志/不写死）。
+ *  惰性读取：CI runner 无该文件——模块顶层 readFileSync 会在 skip 判定前
+ *  ENOENT 崩掉整个收集阶段（远端 CI 首跑实测），故仅在实际执行的用例内取用。 */
+function agentToken(): string {
+  try {
+    return readFileSync(
+      join(homedir(), ".yyc3-cloud-matrix", "agent-token"),
+      "utf8",
+    ).trim();
+  } catch {
+    return "";
+  }
+}
 
 const E2E_PWD = ["e2e", "smoke", "pwd", "2026"].join("-");
 
@@ -59,7 +67,7 @@ async function ensureAgentSession(page: import("@playwright/test").Page): Promis
     if (!hook) { return "hook-missing"; }
     hook.setWsToken(tk);
     return "injected:len" + hook.getWsToken().length;
-  }, AGENT_TOKEN);
+  }, agentToken());
   expect(injected).toContain("injected:len");
 }
 
@@ -107,7 +115,7 @@ test("告警规则创建 → 下发 → agent 回读全链路（落档 73）", a
   // Node 侧回读 agent 权威数据（闭环的外部证据）
   await expect
     .poll(async () => {
-      const r = await fetch(`http://localhost:3113/rules?token=${encodeURIComponent(AGENT_TOKEN)}`);
+      const r = await fetch(`http://localhost:3113/rules?token=${encodeURIComponent(agentToken())}`);
       const d = (await r.json()) as { rules?: Array<{ name?: string }> };
       return (d.rules ?? []).some((x) => x.name === "e2e-closure-rule");
     }, { timeout: 15_000, intervalMs: 1_000 })
@@ -119,7 +127,7 @@ test("告警规则创建 → 下发 → agent 回读全链路（落档 73）", a
   await card.getByTestId("delete-rule-btn").click();
   await expect
     .poll(async () => {
-      const r = await fetch(`http://localhost:3113/rules?token=${encodeURIComponent(AGENT_TOKEN)}`);
+      const r = await fetch(`http://localhost:3113/rules?token=${encodeURIComponent(agentToken())}`);
       const d = (await r.json()) as { rules?: Array<{ name?: string }> };
       return (d.rules ?? []).some((x) => x.name === "e2e-closure-rule");
     }, { timeout: 15_000, intervalMs: 1_000 })
