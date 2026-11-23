@@ -1120,6 +1120,169 @@
    "related_docs": [
     "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/63-数据库连接三套合并-db-conn-slice单一注册表-20261121.md"
    ]
+  },
+  {
+   "trace_id": "TRC-20261121010",
+   "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/65-数据源控制面-服务商Key传播-3118运行时上游-上游错误语义-20261121.md",
+   "action": "create",
+   "timestamp": "2026-11-21T14:35:00+08:00",
+   "version": "v1.0.0",
+   "checksum": "abe67669c4e21e95",
+   "author": "YYC³ Team",
+   "changes": [
+    {
+     "field": "content",
+     "summary": "数据源控制面：服务商级 Key 传播到模型（认证 SSOT 断链根因）+ 系统设置新增数据源页签 + 3118 运行时上游配置 API（私网校验/原子落盘/立即生效）+ 模型服务编辑与真实测试 + 上游错误语义（guardrail/未授权模型/上游未启动）+ 反代基址同源化"
+    }
+   ],
+   "related_docs": [
+    "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/64-凭据加密-设备绑定密钥-AESGCM-非导出CryptoKey-20261121.md"
+   ]
+  },
+  {
+   "trace_id": "TRC-20261121010",
+   "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/65-数据源控制面-服务商Key传播-3118运行时上游-上游错误语义-20261121.md",
+   "action": "update",
+   "timestamp": "2026-11-23T06:00:00+08:00",
+   "version": "v1.0.1",
+   "checksum": "c1047e0abf3b533d",
+   "author": "YYC³ Team",
+   "changes": [
+    {
+     "field": "content",
+     "summary": "主控裁定整改：撤除数据源页「模型服务」重复块（模型/Key 唯一编辑面=模型管理）；撤除 origin 误判提示（我方检测在 ZCode 内置浏览器独立存储，不代表主控浏览器）；NAS 网关启动后 3118→NAS 401 可达复核"
+    }
+   ],
+   "related_docs": [
+    "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/64-凭据加密-设备绑定密钥-AESGCM-非导出CryptoKey-20261121.md"
+   ]
+  },
+  {
+   "trace_id": "TRC-20261123001",
+   "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/66-全局架构数据链路API路由实时审核-评测门禁执行契约-20261123.md",
+   "action": "create",
+   "timestamp": "2026-11-23T06:40:00+08:00",
+   "version": "v1.0.0",
+   "checksum": "5bc8adbcac0a8163",
+   "author": "YYC³ Team",
+   "changes": [
+    {
+     "field": "content",
+     "summary": "实时基线冻结（53 前端路由/54 导航项/17 slice/25 IDB store/133 模块/9 条本地 API 逐条探测/6 条数据链路四元组）+ 评测门禁执行契约 G0~G4（质量/架构完整性/链路真实性/路由可达/真实性抽查，命令级口径，违约不提交不出报告）"
+    }
+   ],
+   "related_docs": [
+    "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/65-数据源控制面-服务商Key传播-3118运行时上游-上游错误语义-20261121.md",
+    "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/56-批次B-指标口径纠正-推理真值接入-WS设置生效-20261120.md"
+   ]
+  },
+  {
+   "trace_id": "TRC-20261123001",
+   "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/66-全局架构数据链路API路由实时审核-评测门禁执行契约-20261123.md",
+   "action": "update",
+   "timestamp": "2026-11-23T07:00:00+08:00",
+   "version": "v1.0.1",
+   "checksum": "826a40dc54919a9d",
+   "author": "YYC³ Team",
+   "changes": [
+    {
+     "field": "content",
+     "summary": "主控提醒核实：L6 补数据库真实拓扑（NAS yyc3-45:5433 主库唯一写入口 · 本机 yyc3-22:5433 只读从库，双端在线实测，权威源 OPS connections.env）；数据源注册表 src-db 条目刷新（persist v2 内置说明字段以代码为准）；全量门禁重跑全绿"
+    }
+   ],
+   "related_docs": [
+    "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/65-数据源控制面-服务商Key传播-3118运行时上游-上游错误语义-20261121.md"
+   ]
+  },
+  {
+   "trace_id": "TRC-20261123002",
+   "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/67-设备矩阵阶段收口-WS单实例化-矩阵卡0值门控-20261123.md",
+   "action": "create",
+   "timestamp": "2026-11-23T08:00:00+08:00",
+   "version": "v1.0.0",
+   "checksum": "a64bc45d189eaa83",
+   "author": "YYC³ Team",
+   "changes": [
+    {
+     "field": "content",
+     "summary": "设备矩阵阶段收口：WS 单实例化（模块级控制器+useSyncExternalStore 分发，6 消费者=1 连接，端点变更整代重启/dispose 防僵尸订阅）+ 矩阵卡 GPU/温度无证据显「—」（0%/0°C 漂移清零）+ 契约测试 4 例；E2E 已连接·7/7 节点·36.9s 真值"
+    }
+   ],
+   "related_docs": [
+    "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/66-全局架构数据链路API路由实时审核-评测门禁执行契约-20261123.md"
+   ]
+  },
+  {
+   "trace_id": "TRC-20261123003",
+   "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/68-C2认证-本地账号PBKDF2-关Ghost-WS反代-20261123.md",
+   "action": "create",
+   "timestamp": "2026-11-23T09:30:00+08:00",
+   "version": "v1.0.0",
+   "checksum": "bb83b2d519b66c59",
+   "author": "YYC³ Team",
+   "changes": [
+    {
+     "field": "content",
+     "summary": "C-2 认证落地：本地账号 PBKDF2-SHA256（120k 迭代零明文，passwordHash 键备份自动脱敏）+ 登录页双模式（初始化管理员/登录，恒定拒止文案）+ Ghost 旁路关停（.env 关闸/App 断入口/历史 ghost 会话作废）+ 3118 /ws 升级反代（agent 令牌透传，落档 57 挂账清账）；E2E 全流程实证"
+    }
+   ],
+   "related_docs": [
+    "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/67-设备矩阵阶段收口-WS单实例化-矩阵卡0值门控-20261123.md"
+   ]
+  },
+  {
+   "trace_id": "TRC-20261123004",
+   "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/69-D阶段开局-告警闭环回读对账-用户改密入口-20261123.md",
+   "action": "create",
+   "timestamp": "2026-11-23T23:00:00+08:00",
+   "version": "v1.0.0",
+   "checksum": "d67fe0cc5bc5fa18",
+   "author": "YYC³ Team",
+   "changes": [
+    {
+     "field": "content",
+     "summary": "D 阶段开局：告警下行链路 PUT 后 GET /rules 回读对账（双侧数量一致才称已同步，不一致如实标注）+ 面板同步状态回显与手动回读按钮 + 用户管理设置/修改登录口令入口（PBKDF2，C-2 剩余清账）；E2E 数量不一致回显与口令轮换旧拒新进全通"
+    }
+   ],
+   "related_docs": [
+    "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/68-C2认证-本地账号PBKDF2-关Ghost-WS反代-20261123.md"
+   ]
+  },
+  {
+   "trace_id": "TRC-20261123005",
+   "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/70-D阶段运维闭环第一批-agent动作白名单-Ollama拉起-20261123.md",
+   "action": "create",
+   "timestamp": "2026-11-23T23:30:00+08:00",
+   "version": "v1.0.0",
+   "checksum": "9fe108cfde1d0fc8",
+   "author": "YYC³ Team",
+   "changes": [
+    {
+     "field": "content",
+     "summary": "运维闭环第一批（不经 OpsPanel）：agent 动作白名单框架（GET /actions · POST /actions/exec 回执 · history，sha256 钉扎/超时强杀/并发锁/回执持久化，actions.json 源控）+ DGX 四脚本接入 + 操作中心 qa1/qa3/qa6/qa10 真实执行、未接动作如实标注（C13 收口）+ Ollama 授权拉起 + 单用户三项豁免登记"
+    }
+   ],
+   "related_docs": [
+    "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/69-D阶段开局-告警闭环回读对账-用户改密入口-20261123.md"
+   ]
+  },
+  {
+   "trace_id": "TRC-20261123006",
+   "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/71-存储外联收尾-Family同步队列拆命名空间-soundhelix零外联空态-20261123.md",
+   "action": "create",
+   "timestamp": "2026-11-24T00:00:00+08:00",
+   "version": "v1.0.0",
+   "checksum": "bf35d0d17cdd3569",
+   "author": "YYC³ Team",
+   "changes": [
+    {
+     "field": "content",
+     "summary": "落档 61 挂账清账两件：Family 同步队列拆独立命名空间 yyc3_family_sync_queue（形态识别迁移，旧键归还 backgroundSync）+ soundhelix 外联归零（getDemoAudioUrl 空串空态，useAudioEngine/useMusicSpace 如实提示，E2E soundhelix 请求 0）；agent WS token 改协议头永久关闭（浏览器 API 不可行）"
+    }
+   ],
+   "related_docs": [
+    "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/70-D阶段运维闭环第一批-agent动作白名单-Ollama拉起-20261123.md"
+   ]
   }
  ]
 }
