@@ -69,10 +69,42 @@ export interface SyncResult {
   ok: boolean;
   /** skipped=no-token/no-endpoint；network=连接失败；http-<code>=agent 拒绝 */
   reason?: string;
+  /** 同步后 agent 侧回读的规则数（GET /rules 回读，落档 69） */
+  agentRuleCount?: number;
+  /** 本地下发时的规则数（便于两侧对账） */
+  localRuleCount?: number;
 }
 
 /**
- * 将完整规则列表下发到 agent（全量替换语义）
+ * GET /rules 回读（落档 69）：读取 agent 当前生效规则与数量。
+ * 用于「下行 → 落盘 → 回读」的闭环验证与面板状态回显。
+ */
+export async function fetchAgentRules(): Promise<SyncResult & { rules?: AgentRuleWire[] }> {
+  const token = useSettingsSSOT.getState().values.wsToken?.trim();
+  if (!token) { return { ok: false, reason: "no-token" }; }
+  const base = deriveAgentHttpBase(
+    useSettingsSSOT.getState().values.wsEndpoint || getAPIConfig().wsEndpoint,
+  );
+  if (!base) { return { ok: false, reason: "no-endpoint" }; }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 3000);
+  try {
+    const res = await fetch(`${base}/rules?token=${encodeURIComponent(token)}`, {
+      signal: controller.signal,
+    });
+    if (!res.ok) { return { ok: false, reason: `http-${res.status}` }; }
+    const data = await res.json() as { rules?: AgentRuleWire[] };
+    const rules = Array.isArray(data.rules) ? data.rules : [];
+    return { ok: true, rules, agentRuleCount: rules.length };
+  } catch {
+    return { ok: false, reason: "network" };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * 将完整规则列表下发到 agent（全量替换语义），成功后立即 GET 回读对账。
  * 设计为 fire-and-forget：调用方无需 await，失败仅返回原因
  */
 export async function syncAlertRulesToAgent(rules: AlertRule[]): Promise<SyncResult> {
@@ -94,10 +126,17 @@ export async function syncAlertRulesToAgent(rules: AlertRule[]): Promise<SyncRes
       body: JSON.stringify({ rules: rules.map(toAgentWire) }),
       signal: controller.signal,
     });
-    if (!res.ok) { return { ok: false, reason: `http-${res.status}` }; }
-    return { ok: true };
+    if (!res.ok) { return { ok: false, reason: `http-${res.status}`, localRuleCount: rules.length }; }
+    // 落档 69：PUT 成功后 GET 回读对账（下行→落盘→回读闭环）
+    const readback = await fetchAgentRules();
+    return {
+      ok: true,
+      localRuleCount: rules.length,
+      agentRuleCount: readback.agentRuleCount,
+      reason: readback.ok ? undefined : `readback-${readback.reason}`,
+    };
   } catch {
-    return { ok: false, reason: "network" };
+    return { ok: false, reason: "network", localRuleCount: rules.length };
   } finally {
     clearTimeout(timer);
   }

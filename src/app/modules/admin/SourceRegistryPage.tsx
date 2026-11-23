@@ -9,15 +9,17 @@
  * @tags: [page],[admin],[data-source]
  */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Check, Database, Pencil, PlugZap, Plus, RefreshCw, ShieldCheck, Trash2, X,
 } from "lucide-react";
+import { toast } from "sonner";
 import {
   resolveSourceUrl, setSourceUrl, useSourceRegistry,
   type DataSourceEntry, type SourceKind, type SourceTestResult,
 } from "../../store/slices/source-registry-slice";
 import { useSettingsSSOT } from "../../store/slices/settings-ssot-slice";
+import { useProviderSlice } from "../../store/slices/provider-slice";
 import { GlassCard } from "../shared/GlassCard";
 
 const KIND_LABELS: Record<SourceKind, string> = {
@@ -37,6 +39,20 @@ const KIND_TEST_PATH: Partial<Record<SourceKind, string>> = {
   "nas-gateway": "/v1/models",
   "dgx-vllm": "/v1/models",
   "reverse-proxy": "/",
+};
+
+/** 需写入 3118 运行态上游的源（落档 65：编辑即生效，不再只是登记） */
+const RUNTIME_KEY_BY_KIND: Partial<Record<SourceKind, "nas" | "dgx" | "ollama">> = {
+  "nas-gateway": "nas",
+  "dgx-vllm": "dgx",
+  ollama: "ollama",
+};
+
+/** 经 3118 同源反代测试真实链路（同时验证「运行态上游」是否可达） */
+const PROXY_TEST_BY_KIND: Partial<Record<SourceKind, string>> = {
+  "nas-gateway": "/api/v1/llm/nas/v1/models",
+  "dgx-vllm": "/api/v1/llm/dgx/v1/models",
+  ollama: "/api/v1/llm/ollama/tags",
 };
 
 /** 私网 / 本机 / Tailscale 判定：本地自用项目只允许这些目标 */
@@ -69,15 +85,24 @@ function validateSourceUrl(raw: string, kind: SourceKind): string | null {
   return null;
 }
 
-async function testHttp(url: string, path: string): Promise<SourceTestResult> {
+/**
+ * 探测 HTTP 端点。
+ * - `url` 为空表示走同源相对路径（用于验证 3118 反代的真实生效上游）
+ * - `authIsReachable`：401/403 视为「上游可达、凭据另管」，仍判 ok
+ */
+async function testHttp(url: string, path: string, authIsReachable = false): Promise<SourceTestResult> {
   const started = performance.now();
+  const target = url ? `${url.replace(/\/+$/, "")}${path}` : path;
   try {
-    const res = await fetch(`${url.replace(/\/+$/, "")}${path}`, { signal: AbortSignal.timeout(6000) });
+    const res = await fetch(target, { signal: AbortSignal.timeout(6000) });
     const latencyMs = Math.round(performance.now() - started);
+    const authOnly = authIsReachable && (res.status === 401 || res.status === 403);
     return {
       at: Date.now(),
-      ok: res.ok,
-      detail: `HTTP ${res.status} · ${path}`,
+      ok: res.ok || authOnly,
+      detail: authOnly
+        ? `HTTP ${res.status} · 上游可达（凭据在「模型管理」维护）· ${target}`
+        : `HTTP ${res.status} · ${target}`,
       latencyMs,
     };
   } catch (err) {
@@ -122,13 +147,33 @@ function testAgentWs(url: string, token: string): Promise<SourceTestResult> {
   });
 }
 
-export function SourceRegistryPage() {
+export function SourceRegistryPage({ embedded = false }: { embedded?: boolean }) {
   const sources = useSourceRegistry((s) => s.sources);
   const addSource = useSourceRegistry((s) => s.addSource);
   const updateSource = useSourceRegistry((s) => s.updateSource);
   const removeSource = useSourceRegistry((s) => s.removeSource);
   const recordTest = useSourceRegistry((s) => s.recordTest);
   const wsToken = useSettingsSSOT((s) => s.values.wsToken);
+
+  // 3118 运行态上游（落档 65）：服务端持有，前端只读回显 + 写入；改完立即生效
+  const [runtime, setRuntime] = useState<Record<string, string> | null>(null);
+  const [runtimeError, setRuntimeError] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/config/sources")
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((d: { sources?: Record<string, string> }) => {
+        if (cancelled) { return; }
+        setRuntime(d.sources || null);
+        setRuntimeError(null);
+      })
+      .catch((e: unknown) => {
+        if (cancelled) { return; }
+        setRuntime(null);
+        setRuntimeError(`运行态配置不可读：${e instanceof Error ? e.message : String(e)}`);
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
@@ -151,6 +196,8 @@ export function SourceRegistryPage() {
   const runTest = async (entry: DataSourceEntry) => {
     setTestingId(entry.id);
     const url = resolveSourceUrl(entry);
+    const runtimeKey = RUNTIME_KEY_BY_KIND[entry.kind];
+    const proxyPath = PROXY_TEST_BY_KIND[entry.kind];
     let result: SourceTestResult;
     if (entry.kind === "agent-ws") {
       result = await testAgentWs(url, wsToken?.trim() || "");
@@ -158,6 +205,12 @@ export function SourceRegistryPage() {
       result = { at: Date.now(), ok: false, detail: "未接：仓库内无 /api/db 后端，先补服务端再启用", latencyMs: 0 };
     } else if (entry.kind === "fs") {
       result = await testHttp(url, `/files${wsToken ? `?token=${encodeURIComponent(wsToken)}` : ""}`);
+    } else if (proxyPath && !entry.binding) {
+      // 走 3118 反代的真实生效链路（同时验证运行态上游地址）
+      result = await testHttp("", proxyPath, true);
+      if (runtimeKey && runtime?.[runtimeKey]) {
+        result.detail = `${result.detail} · 运行态上游 ${runtime[runtimeKey]}`;
+      }
     } else {
       result = await testHttp(url, KIND_TEST_PATH[entry.kind] || "/");
     }
@@ -180,9 +233,36 @@ export function SourceRegistryPage() {
     setError(null);
   };
 
-  const saveEdit = (entry: DataSourceEntry) => {
+  const saveEdit = async (entry: DataSourceEntry) => {
     const invalid = validateSourceUrl(draft, entry.kind);
     if (invalid) { setError(invalid); return; }
+    const runtimeKey = RUNTIME_KEY_BY_KIND[entry.kind];
+    if (runtimeKey && !entry.binding) {
+      // 落档 65：基础设施源的地址必须写入 3118 运行态（此前只改登记、调用仍走旧地址）
+      try {
+        const res = await fetch("/api/config/sources", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sources: { [runtimeKey]: draft.trim() } }),
+        });
+        const data = await res.json() as { ok?: boolean; error?: string; sources?: Record<string, string> };
+        if (!res.ok || data.ok === false) {
+          setError(`写入运行态失败：${data.error || `HTTP ${res.status}`}`);
+          return;
+        }
+        if (data.sources) { setRuntime(data.sources); }
+        setRuntimeError(null);
+        // Ollama 的聊天走 provider baseUrl——同一地址写回，避免第二套事实源
+        if (runtimeKey === "ollama") {
+          const ollamaProvider = useProviderSlice.getState().providers.find((p) => p.id === "ollama");
+          if (ollamaProvider) { useProviderSlice.getState().updateProvider("ollama", { baseUrl: draft.trim() }); }
+        }
+        toast.success(`已写入运行态：${runtimeKey} → ${draft.trim()}`);
+      } catch (e) {
+        setError(`无法连接 3118 配置接口（${e instanceof Error ? e.message : String(e)}）`);
+        return;
+      }
+    }
     setSourceUrl(entry, draft);
     setEditingId(null);
     setError(null);
@@ -196,7 +276,7 @@ export function SourceRegistryPage() {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-4" data-testid="source-registry-page">
+    <div className={embedded ? "space-y-4" : "p-4 md:p-6 space-y-4"} data-testid="source-registry-page">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-[rgba(0,212,255,0.1)] flex items-center justify-center">
@@ -205,7 +285,7 @@ export function SourceRegistryPage() {
           <div>
             <h2 className="text-[#e0f0ff]" style={{ fontSize: "1.1rem" }}>数据源</h2>
             <p className="text-[rgba(0,212,255,0.35)]" style={{ fontSize: "0.7rem" }}>
-              本地自用 · 数据不出本地 · 只允许本机 / 局域网 / Tailscale；增删改测均在此完成
+              连接源唯一台账：agent / OpsPanel / Ollama / NAS / DGX / 3118 反代 —— 增删改测在此完成；NAS/DGX/Ollama 地址写入 3118 运行态，立即生效。模型与 API Key 在「模型管理」维护（唯一编辑面）。
             </p>
           </div>
         </div>
@@ -220,9 +300,15 @@ export function SourceRegistryPage() {
         </button>
       </div>
 
+      {runtimeError && (
+        <div className="p-3 rounded-xl border border-[rgba(255,221,0,0.25)] bg-[rgba(255,221,0,0.06)] text-[rgba(255,221,0,0.85)]" style={{ fontSize: "0.72rem" }}>
+          {runtimeError}（地址编辑仍会尝试写入；静态托管模式请用 `node deploy/server.mjs` 启动）
+        </div>
+      )}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         {[
-          { label: "数据源总数", value: stats.total, color: "#00d4ff" },
+          { label: "连接源", value: stats.total, color: "#00d4ff" },
           { label: "已启用", value: stats.enabled, color: "#00ff88" },
           { label: "已测试", value: stats.tested, color: "#aa55ff" },
           { label: "测试通过", value: stats.ok, color: "#ffdd00" },
@@ -292,6 +378,14 @@ export function SourceRegistryPage() {
 
                     {entry.note && (
                       <p className="mt-1 text-[rgba(0,212,255,0.28)]" style={{ fontSize: "0.65rem" }}>{entry.note}</p>
+                    )}
+
+                    {RUNTIME_KEY_BY_KIND[entry.kind] && !entry.binding && (
+                      <p className="mt-1" style={{ fontSize: "0.62rem" }}>
+                        {runtime?.[RUNTIME_KEY_BY_KIND[entry.kind] as "nas" | "dgx" | "ollama"]
+                          ? <span className="text-[rgba(0,255,136,0.7)]">生效：3118 反代 → {runtime[RUNTIME_KEY_BY_KIND[entry.kind] as "nas" | "dgx" | "ollama"]}</span>
+                          : <span className="text-[rgba(255,221,0,0.6)]">运行态未读取（编辑并保存后写入 3118）</span>}
+                      </p>
                     )}
 
                     <p className="mt-1" style={{ fontSize: "0.65rem" }}>
@@ -399,7 +493,7 @@ export function SourceRegistryPage() {
         </div>
         <p className="mt-2 flex items-center gap-1 text-[rgba(0,212,255,0.3)]" style={{ fontSize: "0.65rem" }}>
           <ShieldCheck className="w-3 h-3" />
-          公网地址会被拒绝；绑定源（agent / OpsPanel）请在「系统设置 → WebSocket」修改，页面内也可直接编辑，写回同一事实源。
+          公网地址会被拒绝；绑定源（agent / OpsPanel）请在「系统设置 → WebSocket」修改，页面内也可直接编辑，写回同一事实源。模型与 API Key 的增删改测在「系统管理 → 模型管理」（唯一编辑面）。
         </p>
       </GlassCard>
     </div>

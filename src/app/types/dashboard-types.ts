@@ -88,6 +88,8 @@ export interface UserRecord {
   sessions: number;
   apiCalls: number;
   locked: boolean;
+  /** 本地认证口令哈希（PBKDF2 记录，零明文；键名含 password 供备份自动脱敏）落档 68 */
+  passwordHash?: { saltB64: string; hashB64: string; iterations: number };
 }
 
 /** WiFi 自动重连设置 */

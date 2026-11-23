@@ -23,6 +23,8 @@ export interface UserMgmtSlice {
   updateUser: (id: string, updates: Partial<UserRecord>) => void;
   removeUser: (id: string) => void;
   toggleLock: (id: string) => void;
+  /** 本地认证（落档 68 / C-2）：写入/更新账号口令哈希（PBKDF2 记录，零明文） */
+  setUserCredentials: (id: string, hash: NonNullable<UserRecord['passwordHash']>) => void;
 }
 
 export const useUserMgmtSlice = create<UserMgmtSlice>()(
@@ -34,18 +36,23 @@ export const useUserMgmtSlice = create<UserMgmtSlice>()(
       updateUser: (id, updates) => set((s) => ({ users: s.users.map((u) => u.id === id ? { ...u, ...updates } : u) })),
       removeUser: (id) => set((s) => ({ users: s.users.filter((u) => u.id !== id) })),
       toggleLock: (id) => set((s) => ({ users: s.users.map((u) => u.id === id ? { ...u, locked: !u.locked } : u) })),
+      setUserCredentials: (id, hash) => set((s) => ({
+        users: s.users.map((u) => u.id === id ? { ...u, passwordHash: hash } : u),
+      })),
     }),
     {
       name: 'yyc3-user-mgmt-slice',
-      version: 1,
+      version: 2,
       partialize: (state) => ({ users: state.users }),
-      migrate: (persisted, version) => {
+      migrate: (persisted) => {
         const state = persisted as { users?: UserRecord[] } | undefined;
-        if (version < 1 && state?.users) {
-          // 精确清除历史假种子，保留管理员自建用户
-          return { users: state.users.filter((u) => !LEGACY_FAKE_USER_IDS.has(u.id)) };
+        if (state?.users) {
+          // 精确清除历史假种子，保留管理员自建用户；v2 起携带 passwordHash（PBKDF2 记录）
+          const cleaned = state.users.filter((u) => !LEGACY_FAKE_USER_IDS.has(u.id))
+            .map((u) => ({ ...u, passwordHash: u.passwordHash }));
+          return { users: cleaned };
         }
-        return state as { users: UserRecord[] };
+        return { users: [] };
       },
     }
   )

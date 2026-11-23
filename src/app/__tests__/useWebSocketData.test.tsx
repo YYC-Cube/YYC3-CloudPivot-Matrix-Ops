@@ -12,7 +12,7 @@
 // @vitest-environment jsdom
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useWebSocketData } from "../hooks/useWebSocketData";
+import { useWebSocketData, __resetWebSocketDataControllerForTests } from "../hooks/useWebSocketData";
 import { useSettingsSSOT } from "../store/slices/settings-ssot-slice";
 import { useNodeSlice } from "../store/slices/node-slice";
 import { enableDemoModeForTests } from "./helpers/demo-mode";
@@ -87,6 +87,8 @@ describe("useWebSocketData", () => {
     vi.clearAllMocks();
     vi.useFakeTimers();
     mockWSInstance = null;
+    // 落档 67 单实例化：每用例重置模块级控制器，恢复「每挂载即新连接代」语义
+    __resetWebSocketDataControllerForTests();
     // 重置设置 SSOT 运行时，避免跨用例污染（默认值：autoRefresh=true / 5000ms）
     useSettingsSSOT.getState().updateRuntime({ autoRefresh: true, refreshInterval: 5000 });
     (globalThis as any).WebSocket = class extends MockWebSocket {
@@ -99,6 +101,7 @@ describe("useWebSocketData", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    __resetWebSocketDataControllerForTests();
   });
 
   describe("初始化", () => {
@@ -635,7 +638,7 @@ describe("useWebSocketData", () => {
       expect(() => unmount()).not.toThrow();
     });
 
-    it("should close WebSocket on unmount", () => {
+    it("单实例化后消费者卸载不断开（连接常驻，落档 67）", () => {
       const { unmount } = renderHook(() => useWebSocketData());
 
       act(() => {
@@ -649,7 +652,9 @@ describe("useWebSocketData", () => {
         unmount();
       });
 
-      expect(mockWSInstance?.readyState).toBe(MockWebSocket.CLOSED);
+      // v4.0 单实例：连接生命周期归模块级控制器（Layout 恒挂载，无反复重连开销），
+      // 单个消费者卸载不再关闭共享连接——其余消费者（告警/跟进/巡查等）继续消费同一份状态
+      expect(mockWSInstance?.readyState).toBe(MockWebSocket.OPEN);
     });
   });
 

@@ -1,29 +1,32 @@
 /**
  * @file: useWebSocketData.ts
- * @description: WebSocket 实时数据推送 Hook · 管理连接、消息路由、断线降级
+ * @description: WebSocket 实时数据推送（模块级单实例）· 多消费者共享一条连接
  * @author: YanYuCloudCube Team
- * @version: v3.0.0
+ * @version: v4.0.0
  * @created: 2026-02-26
- * @updated: 2026-04-30
+ * @updated: 2026-11-23
  * @status: active
- * @tags: [hook],[websocket],[realtime]
+ * @tags: [hook],[websocket],[realtime],[singleton]
  *
- * @brief: WebSocket 实时数据推送管理（已接入 DataBus 统一数据层）
+ * @brief: WebSocket 实时数据推送管理（落档 67 单实例化：全应用仅一条 WS 连接）
  *
  * @details:
- * - WebSocket 连接管理（生命周期、自动重连、心跳）
- * - 消息类型路由（qps_update / latency_update / node_status / alert）
- * - ★ 节点数据通过 DataBus.mergeNodeData() 合并后写入 useNodeSlice
- * - ★ 用户编辑的字段在 WS 推送时不会被覆盖（smartMerge 策略）
- * - ★ v3.0: 状态机修复 — WS优先，失败后明确降级到模拟模式
- * - ★ v3.0: isSimulated 标志位 — UI 可据此显示"模拟数据"标识
- * - 断线降级：自动切换本地模拟数据
+ * - ★ v4.0（落档 67 / C-1）：连接生命周期收敛到模块级单例控制器，
+ *   所有 useWebSocketData() 消费者经 useSyncExternalStore 订阅同一份快照 —
+ *   此前 Layout/告警/跟进/巡查/诊断/浮窗各建一条连接（6 处 = 6 条 TCP）。
+ * - 生命周期：首个消费者挂载即启动；连接常驻（Layout 恒挂载，无反复重连开销）。
+ * - 设置驱动（Settings SSOT 订阅）：端点变更即重连；重连间隔/最大次数取设置
+ *   （超限如实断开）；应用层心跳（agent 回 heartbeat_ack）；演示模式关闭时
+ *   WS 不可达如实断开、不产模拟数据。
+ * - 消息路由：qps_update / latency_update / node_status（authoritative 全量快照）
+ *   / alert（跟进工单+日志+操作流三域持久化）/ throughput_history / system_stats。
+ * - 断链语义：连接失败空态呈现（0/占位符），绝不以模拟数据顶替真实链路。
  *
- * @dependencies: React, WebSocket API, DataBus, useNodeSlice
- * @exports: useWebSocketData, WebSocketContext
+ * @dependencies: React, WebSocket API, DataBus, useNodeSlice, Settings SSOT
+ * @exports: useWebSocketData, __resetWebSocketDataControllerForTests
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 
 import type {
   AlertData,
@@ -43,14 +46,9 @@ import { useAppSlice } from "../store/slices/app-slice";
 import { useSettingsSSOT } from "../store/slices/settings-ssot-slice";
 
 // ============================================================
-// Simulated Data Generator — 从 useNodeSlice 读取初始数据
+// Simulated Data Generator — 演示模式专属（demoMode 才可达）
 // ============================================================
 
-/**
- * 演示模式专属模拟种子（2026-11-11 自 node-slice 迁入）。
- * 仅在 demoMode 开启且 WS 不可达时作为抖动基准，绝不进入 slice 默认值；
- * 关闭演示模式后模拟器停止，真实 WS 快照到达即被 authoritative 替换。
- */
 const SIM_DEMO_NODES: NodeData[] = [
   { id: "DEMO-GPU-01", status: "active",   gpu: 87, mem: 72, temp: 68, model: "demo-70b",  tasks: 128 },
   { id: "DEMO-GPU-02", status: "active",   gpu: 92, mem: 85, temp: 74, model: "demo-72b",  tasks: 156 },
@@ -88,388 +86,435 @@ function generateThroughputPoint(): ThroughputPoint {
 }
 
 // ============================================================
-// Hook
+// 模块级单例控制器
 // ============================================================
 
 const MAX_THROUGHPUT_HISTORY = 60;
 const DEFAULT_SIMULATE_INTERVAL_MS = 2000;
 const RECONNECT_DELAY_MS = 5000;
 
-export function useWebSocketData(): WebSocketDataState {
-  const [connectionState, setConnectionState] = useState<ConnectionState>("connecting");
-  const [reconnectCount, setReconnectCount] = useState(0);
-  // 初值空态化：一切数据禁止硬编码，WS 真实快照到达前显示空态而非编造数字
-  const [liveQPS, setLiveQPS] = useState(0);
-  const [qpsTrend, setQpsTrend] = useState("-");
-  const [liveLatency, setLiveLatency] = useState(0);
-  const [latencyTrend, setLatencyTrend] = useState("-");
-  const [activeNodes, setActiveNodes] = useState("0/0");
-  const [gpuUtil, setGpuUtil] = useState("-");
-  const [tokenThroughput, setTokenThroughput] = useState("-");
-  const [storageUsed, setStorageUsed] = useState("-");
-  const [throughputHistory, setThroughputHistory] = useState<ThroughputPoint[]>([]);
-  const [alerts, setAlerts] = useState<AlertData[]>([]);
-  const [lastSyncTime, setLastSyncTime] = useState(
-    new Date().toLocaleString("zh-CN", { hour12: false })
-  );
+const RECONNECT_DEFAULT_MAX = 10;
+const HEARTBEAT_DEFAULT_MS = 30000;
 
-  // ★ 核心：接入统一节点 Store — 节点数据从此处获取
-  const { nodes: sliceNodes, mergeFromWS } = useNodeSlice();
+interface ControllerSettings {
+  endpoint: string;
+  token: string;
+  demoMode: boolean;
+  autoRefresh: boolean;
+  simulateIntervalMs: number;
+  autoReconnect: boolean;
+  reconnectDelayMs: number;
+  maxReconnect: number;
+  heartbeatEnabled: boolean;
+  heartbeatIntervalMs: number;
+}
 
-  // 设置 SSOT 驱动：刷新间隔与自动刷新开关（统一设置面板修改即时生效）
-  const autoRefresh = useSettingsSSOT((s) => s.runtime.autoRefresh);
-  const refreshInterval = useSettingsSSOT((s) => s.runtime.refreshInterval);
-  // 演示模式总开关：关闭时 WS 不可达不启动模拟器（如实显示断开状态）
-  const demoMode = useSettingsSSOT((s) => s.toggles.demoMode);
-  // WS 访问令牌（配合 yyc3-agent 鉴权，空表示未配置）
-  const wsToken = useSettingsSSOT((s) => s.values.wsToken);
-  // 落档 56：以下四项设置此前只存不用，现真正驱动连接（端点变更即重连）
-  const wsEndpoint = useSettingsSSOT((s) => s.values.wsEndpoint);
-  const wsReconnectInterval = useSettingsSSOT((s) => Number(s.values.wsReconnectInterval) || RECONNECT_DELAY_MS);
-  const wsMaxReconnect = useSettingsSSOT((s) => {
-    const n = Number(s.values.wsMaxReconnect);
-    return Number.isFinite(n) && n > 0 ? n : 10;
+function readSettings(): ControllerSettings {
+  const s = useSettingsSSOT.getState();
+  return {
+    endpoint: s.values.wsEndpoint,
+    token: s.values.wsToken ?? "",
+    demoMode: s.toggles.demoMode,
+    autoRefresh: s.runtime.autoRefresh,
+    simulateIntervalMs:
+      Number.isFinite(s.runtime.refreshInterval) && s.runtime.refreshInterval >= 500
+        ? s.runtime.refreshInterval
+        : DEFAULT_SIMULATE_INTERVAL_MS,
+    autoReconnect: s.toggles.wsAutoReconnect,
+    reconnectDelayMs: Number(s.values.wsReconnectInterval) || RECONNECT_DELAY_MS,
+    maxReconnect: Number.isFinite(Number(s.values.wsMaxReconnect)) && Number(s.values.wsMaxReconnect) > 0
+      ? Number(s.values.wsMaxReconnect)
+      : RECONNECT_DEFAULT_MAX,
+    heartbeatEnabled: s.toggles.wsHeartbeat,
+    heartbeatIntervalMs: Number.isFinite(Number(s.values.wsHeartbeatInterval)) && Number(s.values.wsHeartbeatInterval) >= 5000
+      ? Number(s.values.wsHeartbeatInterval)
+      : HEARTBEAT_DEFAULT_MS,
+  };
+}
+
+interface WSController {
+  getSnapshot: () => WebSocketDataState;
+  subscribe: (cb: () => void) => () => void;
+  ensureStarted: () => void;
+  manualReconnect: () => void;
+  clearAlerts: () => void;
+  /** 测试专用：解除 store 订阅并停表断连（生产不调用） */
+  dispose: () => void;
+}
+
+let controller: WSController | null = null;
+
+function getController(): WSController {
+  if (controller) { return controller; }
+
+  // ----- 可变内部态（每次 commit 生成新快照） -----
+  let connectionState: ConnectionState = "connecting";
+  let reconnectCount = 0;
+  let lastSyncTime = new Date().toLocaleString("zh-CN", { hour12: false });
+  let liveQPS = 0;
+  let qpsTrend = "-";
+  let liveLatency = 0;
+  let latencyTrend = "-";
+  let activeNodes = "0/0";
+  let gpuUtil = "-";
+  let tokenThroughput = "-";
+  let storageUsed = "-";
+  let throughputHistory: ThroughputPoint[] = [];
+  let alerts: AlertData[] = [];
+  let nodesCache: NodeData[] = useNodeSlice.getState().nodes;
+
+  let snapshot: WebSocketDataState = {
+    connectionState, isSimulated: false, reconnectCount, lastSyncTime,
+    liveQPS, qpsTrend, liveLatency, latencyTrend, activeNodes, gpuUtil,
+    tokenThroughput, storageUsed, nodes: nodesCache, throughputHistory,
+    alerts, manualReconnect: () => {}, clearAlerts: () => {},
+  };
+  const listeners = new Set<() => void>();
+
+  let ws: WebSocket | null = null;
+  let simulateTimer: ReturnType<typeof setInterval> | null = null;
+  let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+  let reconnectAttempts = 0;
+  let started = false;
+  let generation = 0;          // 每次 start 递增；异步回调比对防串代
+  let connectCycleConnected = false; // 当前连接代是否成功 open 过
+
+  let settings = readSettings();
+
+  const manualReconnect = () => {
+    if (ws) { ws.close(); }
+    if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+    connectionState = "reconnecting";
+    commit();
+    start();
+  };
+  const clearAlerts = () => { alerts = []; commit(); };
+
+  function commit(): void {
+    snapshot = {
+      connectionState,
+      isSimulated: connectionState === "simulated",
+      reconnectCount,
+      lastSyncTime,
+      liveQPS,
+      qpsTrend,
+      liveLatency,
+      latencyTrend,
+      activeNodes,
+      gpuUtil,
+      tokenThroughput,
+      storageUsed,
+      nodes: nodesCache,
+      throughputHistory,
+      alerts,
+      manualReconnect,
+      clearAlerts,
+    };
+    for (const cb of listeners) { cb(); }
+  }
+
+  // ----- 节点切片订阅：快照.nodes 恒为统一 Store 同一份 -----
+  const unsubscribeNodes = useNodeSlice.subscribe((s) => {
+    if (s.nodes !== nodesCache) {
+      nodesCache = s.nodes;
+      commit();
+    }
   });
-  const wsHeartbeatInterval = useSettingsSSOT((s) => {
-    const n = Number(s.values.wsHeartbeatInterval);
-    return Number.isFinite(n) && n >= 5000 ? n : 30000;
+
+  // ----- 设置订阅：SSOT 变更即时生效（落档 56/57 语义保留） -----
+  const unsubscribeSettings = useSettingsSSOT.subscribe(() => {
+    const next = readSettings();
+    const prev = settings;
+    settings = next;
+    if (next.endpoint !== prev.endpoint) {
+      // 端点变更：整代重启（关闭旧连接、清重连计时，按新端点重连）
+      restart();
+      return;
+    }
+    if (!next.autoReconnect && reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+    if (next.heartbeatEnabled !== prev.heartbeatEnabled
+      || next.heartbeatIntervalMs !== prev.heartbeatIntervalMs) {
+      restartHeartbeat();
+    }
+    if (connectionState === "simulated") {
+      if (!next.demoMode) {
+        stopSimulation();
+        connectionState = "disconnected";
+        commit();
+        return;
+      }
+      if (next.autoRefresh
+        && (next.simulateIntervalMs !== prev.simulateIntervalMs || next.autoRefresh !== prev.autoRefresh)) {
+        stopSimulation();
+        simulateTimer = setInterval(runSimulation, next.simulateIntervalMs);
+      } else if (!next.autoRefresh && simulateTimer) {
+        clearInterval(simulateTimer);
+        simulateTimer = null;
+      }
+    }
   });
-  const wsAutoReconnect = useSettingsSSOT((s) => s.toggles.wsAutoReconnect);
-  const wsHeartbeatEnabled = useSettingsSSOT((s) => s.toggles.wsHeartbeat);
-  const autoReconnectRef = useRef(wsAutoReconnect);
-  autoReconnectRef.current = wsAutoReconnect;
-  const heartbeatEnabledRef = useRef(wsHeartbeatEnabled);
-  heartbeatEnabledRef.current = wsHeartbeatEnabled;
-  const endpointRef = useRef(wsEndpoint);
-  endpointRef.current = wsEndpoint;
-  const reconnectDelayRef = useRef(wsReconnectInterval);
-  reconnectDelayRef.current = wsReconnectInterval;
-  const maxReconnectRef = useRef(wsMaxReconnect);
-  maxReconnectRef.current = wsMaxReconnect;
-  const heartbeatIntervalRef = useRef(wsHeartbeatInterval);
-  heartbeatIntervalRef.current = wsHeartbeatInterval;
-  const demoModeRef = useRef(demoMode);
-  demoModeRef.current = demoMode;
-  const wsTokenRef = useRef(wsToken);
-  wsTokenRef.current = wsToken;
-  const simulateIntervalMs =
-    Number.isFinite(refreshInterval) && refreshInterval >= 500
-      ? refreshInterval
-      : DEFAULT_SIMULATE_INTERVAL_MS;
-  const autoRefreshRef = useRef(autoRefresh);
-  autoRefreshRef.current = autoRefresh;
-  const simulateIntervalRef = useRef(simulateIntervalMs);
-  simulateIntervalRef.current = simulateIntervalMs;
 
-  const wsRef = useRef<WebSocket | null>(null);
-  const simulateTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const heartbeatTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const reconnectAttemptsRef = useRef(0);
-  const connectWSRef = useRef<(() => void) | null>(null);
+  function restartHeartbeat(): void {
+    if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
+    if (settings.heartbeatEnabled && ws && ws.readyState === WebSocket.OPEN) {
+      heartbeatTimer = setInterval(() => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: "heartbeat" }));
+        }
+      }, settings.heartbeatIntervalMs);
+    }
+  }
 
-  // ----- simulated data updater -----
-  const runSimulation = useCallback(() => {
+  function stopSimulation(): void {
+    if (simulateTimer) { clearInterval(simulateTimer); simulateTimer = null; }
+  }
+
+  function runSimulation(): void {
     const sliceState = useNodeSlice.getState().nodes;
     // slice 为空时以演示种子为基准（仅 demoMode 模拟路径可达此处）
     const baseNodes = sliceState.length > 0 ? sliceState : SIM_DEMO_NODES;
     const newNodes = generateSimulatedNodes(baseNodes);
-
-    // ★ 关键改动：模拟数据也通过 DataBus 合并，保留用户编辑
-    mergeFromWS(newNodes);
+    // 模拟数据同样经 DataBus 合并，保留用户编辑
+    useNodeSlice.getState().mergeFromWS(newNodes);
 
     const active = newNodes.filter((n) => n.status !== "inactive");
-    setActiveNodes(`${active.length}/${newNodes.length}`);
-
+    activeNodes = `${active.length}/${newNodes.length}`;
     const avgGpu = active.reduce((s, n) => s + n.gpu, 0) / (active.length || 1);
-    setGpuUtil(`${avgGpu.toFixed(1)}%`);
+    gpuUtil = `${avgGpu.toFixed(1)}%`;
 
     const newQps = Math.round(jitter(3800, 400));
-    setLiveQPS(newQps);
-    setQpsTrend(newQps > 3800 ? `+${((newQps / 3800 - 1) * 100).toFixed(1)}%` : `-${((1 - newQps / 3800) * 100).toFixed(1)}%`);
+    liveQPS = newQps;
+    qpsTrend = newQps > 3800 ? `+${((newQps / 3800 - 1) * 100).toFixed(1)}%` : `-${((1 - newQps / 3800) * 100).toFixed(1)}%`;
 
     const newLatency = Math.round(jitter(48, 8));
-    setLiveLatency(newLatency);
-    setLatencyTrend(newLatency < 48 ? `-${((1 - newLatency / 48) * 100).toFixed(1)}%` : `+${((newLatency / 48 - 1) * 100).toFixed(1)}%`);
+    liveLatency = newLatency;
+    latencyTrend = newLatency < 48 ? `-${((1 - newLatency / 48) * 100).toFixed(1)}%` : `+${((newLatency / 48 - 1) * 100).toFixed(1)}%`;
 
     const tp = Math.round(jitter(138, 15));
-    setTokenThroughput(`${tp}K/s`);
+    tokenThroughput = `${tp}K/s`;
 
-    const point = generateThroughputPoint();
-    setThroughputHistory((prev) => {
-      const next = [...prev, point];
-      return next.length > MAX_THROUGHPUT_HISTORY ? next.slice(-MAX_THROUGHPUT_HISTORY) : next;
-    });
+    throughputHistory = [...throughputHistory, generateThroughputPoint()].slice(-MAX_THROUGHPUT_HISTORY);
+    lastSyncTime = new Date().toLocaleString("zh-CN", { hour12: false });
+    commit();
+  }
 
-    setLastSyncTime(new Date().toLocaleString("zh-CN", { hour12: false }));
-  }, [mergeFromWS]);
-
-  // 设置变更即时生效：间隔/开关变化时重启模拟定时器
-  // ★ 仅在模拟态（connectionState === "simulated"）管理定时器；
-  //   WS 真连态绝不启动模拟器，避免污染真实数据
-  // ★ 演示模式关闭时：停掉模拟器并转为断开态（不产出模拟数据）
-  useEffect(() => {
-    if (connectionState !== "simulated") { return; }
-    if (!demoMode) {
-      if (simulateTimerRef.current) {
-        clearInterval(simulateTimerRef.current);
-        simulateTimerRef.current = null;
-      }
-      setConnectionState("disconnected");
+  function startSimulation(): void {
+    if (simulateTimer) { return; }
+    if (!settings.demoMode) {
+      // 演示模式关闭：WS 不可达时如实显示断开状态，不生成模拟数据
+      connectionState = "disconnected";
+      commit();
       return;
     }
-    if (simulateTimerRef.current) {
-      clearInterval(simulateTimerRef.current);
-      simulateTimerRef.current = null;
+    connectionState = "simulated";
+    if (settings.autoRefresh) {
+      simulateTimer = setInterval(runSimulation, settings.simulateIntervalMs);
     }
-    if (autoRefresh) {
-      simulateTimerRef.current = setInterval(runSimulation, simulateIntervalMs);
-    }
-  }, [connectionState, autoRefresh, simulateIntervalMs, demoMode, runSimulation]);
+    runSimulation();
+    if (!settings.autoRefresh) { stopSimulation(); }
+  }
 
-  // ----- lifecycle -----
-  // ★ v3.0 修复：先尝试WS连接，仅在失败后启动模拟器
-  // 不再"启动即双跑"，消除模拟数据污染真实数据的竞争窗口
-  useEffect(() => {
-    let wsConnected = false;
-    let cancelled = false;
+  function start(): void {
+    generation += 1;
+    const gen = generation;
+    connectCycleConnected = false;
+    connectionState = "connecting";
+    commit();
 
-    const startSimulation = () => {
-      if (cancelled) { return; }
-      if (simulateTimerRef.current) { return; }
-      if (!demoModeRef.current) {
-        // 演示模式关闭：WS 不可达时如实显示断开状态，不生成模拟数据
-        setConnectionState("disconnected");
-        return;
-      }
-      if (!autoRefreshRef.current) {
-        // 自动刷新关闭：仅补一帧数据，不启动周期模拟
-        setConnectionState("simulated");
-        runSimulation();
-        return;
-      }
-      setConnectionState("simulated");
-      simulateTimerRef.current = setInterval(runSimulation, simulateIntervalRef.current);
-      runSimulation();
-    };
+    const base = (settings.endpoint || getAPIConfig().wsEndpoint || "").trim();
+    const token = settings.token.trim();
+    const wsUrl = token
+      ? `${base}${base.includes("?") ? "&" : "?"}token=${encodeURIComponent(token)}`
+      : base;
 
-    const tryConnectWS = () => {
-      if (cancelled) { return; }
-      const base = (endpointRef.current || getAPIConfig().wsEndpoint || "").trim();
-      // WS 访问令牌：非空时拼接到连接 URL（yyc3-agent 校验）
-      const token = wsTokenRef.current?.trim();
-      const wsUrl = token
-        ? `${base}${base.includes("?") ? "&" : "?"}token=${encodeURIComponent(token)}`
-        : base;
-      setConnectionState("connecting");
+    try {
+      const socket = new WebSocket(wsUrl);
+      ws = socket;
 
-      try {
-        const ws = new WebSocket(wsUrl);
-        wsRef.current = ws;
+      const connectTimeout = setTimeout(() => {
+        if (gen === generation && !connectCycleConnected && socket.readyState !== WebSocket.OPEN) {
+          socket.close();
+        }
+      }, 8000);
 
-        const connectTimeout = setTimeout(() => {
-          if (!wsConnected && ws.readyState !== WebSocket.OPEN) {
-            ws.close();
+      socket.onopen = () => {
+        clearTimeout(connectTimeout);
+        if (gen !== generation) { socket.close(); return; }
+        connectCycleConnected = true;
+        reconnectAttempts = 0;
+        connectionState = "connected";
+        reconnectCount = 0;
+        stopSimulation();
+        restartHeartbeat();
+        dataBus.registerWSSender((msg) => {
+          if (socket.readyState === WebSocket.OPEN) {
+            socket.send(JSON.stringify(msg));
+            return true;
           }
-        }, 8000);
+          return false;
+        });
+        commit();
+      };
 
-        ws.onopen = () => {
-          clearTimeout(connectTimeout);
-          if (cancelled) { ws.close(); return; }
-          wsConnected = true;
-          reconnectAttemptsRef.current = 0;
-          setConnectionState("connected");
-          setReconnectCount(0);
-          if (simulateTimerRef.current) {
-            clearInterval(simulateTimerRef.current);
-            simulateTimerRef.current = null;
-          }
-          // 落档 56/57：应用层心跳（agent 收到 heartbeat 回 heartbeat_ack），开关与间隔取设置
-          if (heartbeatTimerRef.current) {
-            clearInterval(heartbeatTimerRef.current);
-            heartbeatTimerRef.current = null;
-          }
-          if (heartbeatEnabledRef.current) {
-            heartbeatTimerRef.current = setInterval(() => {
-              if (ws.readyState === WebSocket.OPEN) {
-                ws.send(JSON.stringify({ type: "heartbeat" }));
-              }
-            }, heartbeatIntervalRef.current);
-          }
-          dataBus.registerWSSender((msg) => {
-            if (ws.readyState === WebSocket.OPEN) {
-              ws.send(JSON.stringify(msg));
-              return true;
+      socket.onmessage = (event) => {
+        if (gen !== generation) { return; }
+        try {
+          const msg: WSMessage = JSON.parse(event.data);
+          dataBus.ingestWSMessage(msg);
+          switch (msg.type) {
+            case "qps_update":
+              liveQPS = msg.payload.qps;
+              qpsTrend = msg.payload.trend;
+              break;
+            case "latency_update":
+              liveLatency = msg.payload.latency;
+              latencyTrend = msg.payload.trend;
+              break;
+            case "node_status":
+              // 真实 WS 全量快照：权威替换，清除模拟种子与已下线节点
+              useNodeSlice.getState().mergeFromWS(msg.payload as NodeData[], { authoritative: true });
+              break;
+            case "alert": {
+              const alertPayload = msg.payload;
+              alerts = [alertPayload, ...alerts].slice(0, 100);
+              // 真实告警 → 告警工单域持久化（幂等去重），TopBar/巡查/协同全局面板共享
+              useFollowUpSlice.getState().ingestWSAlert(alertPayload);
+              // 真实告警 → 日志域（persist，保留最近 200 条）
+              useLogSlice.getState().addLog({
+                timestamp: alertPayload.timestamp || Date.now(),
+                level: alertPayload.level === "critical" || alertPayload.level === "error"
+                  ? "error"
+                  : alertPayload.level === "warning" ? "warn" : "info",
+                source: alertPayload.source,
+                message: alertPayload.message,
+              });
+              // 真实告警 → 操作流域（会话级实时事件流）
+              useAppSlice.getState().addRecentOp({
+                id: `OP-ALERT-${alertPayload.source}-${alertPayload.id}`,
+                action: "系统告警",
+                target: alertPayload.message,
+                user: alertPayload.source,
+                time: new Date(alertPayload.timestamp || Date.now()).toLocaleTimeString("zh-CN", { hour12: false }),
+                status: alertPayload.level === "critical" || alertPayload.level === "error"
+                  ? "error"
+                  : alertPayload.level === "warning" ? "warning" : "pending",
+              });
+              break;
             }
-            return false;
-          });
-        };
-
-        ws.onmessage = (event) => {
-          try {
-            const msg: WSMessage = JSON.parse(event.data);
-            dataBus.ingestWSMessage(msg);
-            switch (msg.type) {
-              case "qps_update":
-                setLiveQPS(msg.payload.qps);
-                setQpsTrend(msg.payload.trend);
-                break;
-              case "latency_update":
-                setLiveLatency(msg.payload.latency);
-                setLatencyTrend(msg.payload.trend);
-                break;
-              case "node_status":
-                // 真实 WS 全量快照：权威替换，清除 DEFAULT_NODES 模拟种子与已下线节点
-                mergeFromWS(msg.payload as NodeData[], { authoritative: true });
-                break;
-              case "alert": {
-                const alertPayload = msg.payload;
-                setAlerts((prev) => [alertPayload, ...prev].slice(0, 100));
-                // 真实告警 → 告警工单域持久化（幂等去重），TopBar/巡查/协同全局面板共享
-                useFollowUpSlice.getState().ingestWSAlert(alertPayload);
-                // 真实告警 → 日志域（persist，保留最近 200 条）
-                useLogSlice.getState().addLog({
-                  timestamp: alertPayload.timestamp || Date.now(),
-                  level: alertPayload.level === "critical" || alertPayload.level === "error"
-                    ? "error"
-                    : alertPayload.level === "warning" ? "warn" : "info",
-                  source: alertPayload.source,
-                  message: alertPayload.message,
-                });
-                // 真实告警 → 操作流域（会话级实时事件流，Dashboard 操作流真实呈现）
-                useAppSlice.getState().addRecentOp({
-                  id: `OP-ALERT-${alertPayload.source}-${alertPayload.id}`,
-                  action: "系统告警",
-                  target: alertPayload.message,
-                  user: alertPayload.source,
-                  time: new Date(alertPayload.timestamp || Date.now()).toLocaleTimeString("zh-CN", { hour12: false }),
-                  status: alertPayload.level === "critical" || alertPayload.level === "error"
-                    ? "error"
-                    : alertPayload.level === "warning" ? "warning" : "pending",
-                });
-                break;
-              }
-              case "throughput_history":
-                setThroughputHistory(msg.payload.slice(-MAX_THROUGHPUT_HISTORY));
-                break;
-              case "system_stats":
-                setActiveNodes(msg.payload.activeNodes);
-                setGpuUtil(msg.payload.gpuUtil);
-                setTokenThroughput(msg.payload.tokenThroughput);
-                setStorageUsed(msg.payload.storageUsed);
-                break;
-              case "heartbeat_ack":
-                break;
-            }
-            setLastSyncTime(new Date().toLocaleString("zh-CN", { hour12: false }));
-          } catch {
-            // silently ignore parse errors for non-critical messages
+            case "throughput_history":
+              throughputHistory = msg.payload.slice(-MAX_THROUGHPUT_HISTORY);
+              break;
+            case "system_stats":
+              activeNodes = msg.payload.activeNodes;
+              gpuUtil = msg.payload.gpuUtil;
+              tokenThroughput = msg.payload.tokenThroughput;
+              storageUsed = msg.payload.storageUsed;
+              break;
+            case "heartbeat_ack":
+              break;
           }
-        };
+          lastSyncTime = new Date().toLocaleString("zh-CN", { hour12: false });
+          commit();
+        } catch {
+          // silently ignore parse errors for non-critical messages
+        }
+      };
 
-        ws.onclose = () => {
-          clearTimeout(connectTimeout);
-          wsRef.current = null;
-          dataBus.unregisterWSSender();
-          if (heartbeatTimerRef.current) {
-            clearInterval(heartbeatTimerRef.current);
-            heartbeatTimerRef.current = null;
-          }
-          if (cancelled) { return; }
+      socket.onclose = () => {
+        clearTimeout(connectTimeout);
+        if (ws === socket) { ws = null; }
+        dataBus.unregisterWSSender();
+        if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
+        if (gen !== generation) { return; } // 旧代关闭（端点变更/手动重连）：不降级不重连
 
-          if (!wsConnected) {
-            startSimulation();
-          }
+        if (!connectCycleConnected) {
+          startSimulation();
+        }
+        // 自动重连开关关闭：如实置断开
+        if (!settings.autoReconnect) {
+          if (connectionState !== "simulated") { connectionState = "disconnected"; commit(); }
+          return;
+        }
+        // 重连间隔/最大次数取设置；超限如实置断开
+        if (reconnectAttempts >= settings.maxReconnect) {
+          if (connectionState !== "simulated") { connectionState = "disconnected"; commit(); }
+          return;
+        }
+        reconnectAttempts += 1;
+        reconnectTimer = setTimeout(() => {
+          if (gen !== generation) { return; }
+          reconnectCount += 1;
+          connectCycleConnected = false;
+          commit();
+          start();
+        }, settings.reconnectDelayMs);
+        commit();
+      };
 
-          // 落档 57：自动重连开关关闭时不再重试，如实置断开
-          if (!autoReconnectRef.current) {
-            setConnectionState((prev) => (prev === "simulated" ? prev : "disconnected"));
-            return;
-          }
-          // 落档 56：重连间隔/最大次数取设置；超限后如实置断开，不再无限重试
-          if (reconnectAttemptsRef.current >= maxReconnectRef.current) {
-            setConnectionState((prev) => (prev === "simulated" ? prev : "disconnected"));
-            return;
-          }
-          reconnectAttemptsRef.current += 1;
-          reconnectTimerRef.current = setTimeout(() => {
-            if (cancelled) { return; }
-            setReconnectCount((c) => c + 1);
-            wsConnected = false;
-            tryConnectWS();
-          }, reconnectDelayRef.current);
-        };
-
-        ws.onerror = () => {
-          ws.close();
-        };
-      } catch {
-        startSimulation();
-      }
-    };
-
-    connectWSRef.current = tryConnectWS;
-    tryConnectWS();
-
-    return () => {
-      cancelled = true;
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
-      }
-      if (simulateTimerRef.current) {
-        clearInterval(simulateTimerRef.current);
-        simulateTimerRef.current = null;
-      }
-      if (reconnectTimerRef.current) {
-        clearTimeout(reconnectTimerRef.current);
-        reconnectTimerRef.current = null;
-      }
-      if (heartbeatTimerRef.current) {
-        clearInterval(heartbeatTimerRef.current);
-        heartbeatTimerRef.current = null;
-      }
-      reconnectAttemptsRef.current = 0;
-    };
-  }, [mergeFromWS, runSimulation, wsEndpoint]);
-
-  // ----- public API -----
-  const manualReconnect = useCallback(() => {
-    if (wsRef.current) {
-      wsRef.current.close();
+      socket.onerror = () => {
+        socket.close();
+      };
+    } catch {
+      startSimulation();
     }
-    if (reconnectTimerRef.current) {
-      clearTimeout(reconnectTimerRef.current);
-      reconnectTimerRef.current = null;
-    }
-    setConnectionState("reconnecting");
-    connectWSRef.current?.();
-  }, []);
+  }
 
-  const clearAlerts = useCallback(() => {
-    setAlerts([]);
-  }, []);
+  function restart(): void {
+    // 端点变更：标记旧代失效并关闭旧连接，全新一代按新端点连接
+    generation += 1;
+    if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+    stopSimulation();
+    if (ws) { ws.close(); ws = null; }
+    reconnectAttempts = 0;
+    started = true;
+    start();
+  }
 
-  return {
-    connectionState,
-    isSimulated: connectionState === "simulated",
-    reconnectCount,
-    lastSyncTime,
-    liveQPS,
-    qpsTrend,
-    liveLatency,
-    latencyTrend,
-    activeNodes,
-    gpuUtil,
-    tokenThroughput,
-    storageUsed,
-
-    // ★ 节点数据从统一 Slice 返回 — 所有消费者拿到同一份
-    nodes: sliceNodes,
-
-    throughputHistory,
-    alerts,
+  controller = {
+    getSnapshot: () => snapshot,
+    subscribe: (cb) => {
+      listeners.add(cb);
+      return () => listeners.delete(cb);
+    },
+    ensureStarted: () => {
+      if (started) { return; }
+      started = true;
+      start();
+    },
     manualReconnect,
     clearAlerts,
+    dispose: () => {
+      unsubscribeSettings();
+      unsubscribeNodes();
+      generation += 1; // 使全部异步回调失效
+      if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+      stopSimulation();
+      if (heartbeatTimer) { clearInterval(heartbeatTimer); heartbeatTimer = null; }
+      if (ws) { try { ws.close(); } catch { /* ignore */ } ws = null; }
+    },
   };
+  return controller;
+}
+
+/** 供测试重置单例（生产代码勿用）：解除 store 订阅并丢弃控制器 */
+export function __resetWebSocketDataControllerForTests(): void {
+  if (!controller) { return; }
+  controller.dispose();
+  controller = null;
+}
+
+// ============================================================
+// Hook — 全部消费者共享同一控制器（落档 67 单实例）
+// ============================================================
+
+export function useWebSocketData(): WebSocketDataState {
+  const ctl = getController();
+  useEffect(() => {
+    ctl.ensureStarted();
+  }, [ctl]);
+  return useSyncExternalStore(ctl.subscribe, ctl.getSnapshot, ctl.getSnapshot);
 }

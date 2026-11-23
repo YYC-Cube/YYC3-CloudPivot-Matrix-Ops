@@ -14,6 +14,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 import { Login } from "../modules/shared/Login";
+import { useUserMgmtSlice } from "../store/slices/user-mgmt-slice";
 
 vi.mock("../modules/shared/YYC3Logo", () => ({
   YYC3Logo: () => <div data-testid="yyc3-logo">YYC3 Logo</div>,
@@ -25,6 +26,9 @@ describe("Login Component", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // C-2 认证用例涉及本地账号域：逐例重置（无账号 = 初始化模式）
+    localStorage.clear();
+    useUserMgmtSlice.setState({ users: [] });
   });
 
   afterEach(() => {
@@ -84,21 +88,42 @@ describe("Login Component", () => {
     expect(passwordInput).toHaveAttribute("type", "text");
   });
 
-  it("should enter on submit without credentials when ghost login is available", () => {
+  // 落档 68（C-2 认证）：「无凭据点击即进入」的 Ghost 语义已关停——
+  // 空凭据提交被本地认证拒止，不再触发任何登录回调
+  it("空凭据提交被拒止（关 Ghost 后本地认证生效）", () => {
     render(<Login onLoginSuccess={mockOnLoginSuccess} onGhostLogin={mockOnGhostLogin} />);
 
     fireEvent.click(screen.getByTestId("login-submit-button"));
 
-    expect(mockOnGhostLogin).toHaveBeenCalledTimes(1);
+    expect(mockOnGhostLogin).not.toHaveBeenCalled();
     expect(mockOnLoginSuccess).not.toHaveBeenCalled();
+    expect(screen.getByTestId("login-error")).toBeInTheDocument();
   });
 
-  it("should fall back to onLoginSuccess when ghost login is unavailable", () => {
+  it("初始化模式：设置口令并提交即创建管理员并进入（onLoginSuccess）", async () => {
     render(<Login onLoginSuccess={mockOnLoginSuccess} />);
 
+    fireEvent.change(screen.getByTestId("login-email-input"), { target: { value: "admin" } });
+    fireEvent.change(screen.getByTestId("login-password-input"), { target: { value: "local-test-pwd" } });
+    fireEvent.change(screen.getByTestId("login-confirm-password-input"), { target: { value: "local-test-pwd" } });
     fireEvent.click(screen.getByTestId("login-submit-button"));
 
-    expect(mockOnLoginSuccess).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(mockOnLoginSuccess).toHaveBeenCalledTimes(1));
+    // 账号已落 user-mgmt（口令哈希，不含明文）
+    const users = useUserMgmtSlice.getState().users;
+    expect(users).toHaveLength(1);
+    expect(JSON.stringify(users)).not.toContain("local-test-pwd");
+  });
+
+  it("两次口令不一致被拒止", () => {
+    render(<Login onLoginSuccess={mockOnLoginSuccess} />);
+
+    fireEvent.change(screen.getByTestId("login-password-input"), { target: { value: "abcdef" } });
+    fireEvent.change(screen.getByTestId("login-confirm-password-input"), { target: { value: "ghijkl" } });
+    fireEvent.click(screen.getByTestId("login-submit-button"));
+
+    expect(screen.getByTestId("login-error")).toBeInTheDocument();
+    expect(mockOnLoginSuccess).not.toHaveBeenCalled();
   });
 
   it("should call onGhostLogin when ghost mode is activated", async () => {

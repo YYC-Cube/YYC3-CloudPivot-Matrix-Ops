@@ -127,11 +127,11 @@ const DEFAULT_SOURCES: DataSourceEntry[] = [
   {
     id: "src-db",
     kind: "db",
-    label: "PostgreSQL（本机）",
+    label: "PostgreSQL（NAS 主库 · 本机备库）",
     url: "http://127.0.0.1:5433",
     enabled: false,
     builtin: true,
-    note: "当前无 /api/db 后端；启用前先补服务端实现",
+    note: "主库 NAS yyc3-45:5433（全家族唯一写入口，PgBouncer :6432，kb :5434）· 本机 yyc3-22:5433 只读从库（写将被 read-only 拒绝）；CP-IM 经 /api/db 服务端代理访问（未实现，启用前先补）；连接变量权威源 OPS docs/connections.env",
     createdAt: 0,
   },
   {
@@ -181,14 +181,20 @@ export const useSourceRegistry = create<SourceRegistrySlice>()(
     }),
     {
       name: "yyc3-source-registry",
-      version: 1,
+      version: 2,
       partialize: (s) => ({ sources: s.sources }),
-      // v1：补齐内置源（新版本新增的内置源不会被旧持久化挡住），保留用户自建源
+      // v2：内置源条目（label/note 等说明性字段）以代码为准刷新——用户改的
+      // url/enabled/lastTest 原样保留，仅补齐新增内置源
       migrate: (persisted) => {
         const state = (persisted ?? {}) as { sources?: DataSourceEntry[] };
         const existing = Array.isArray(state.sources) ? state.sources : [];
-        const missing = DEFAULT_SOURCES.filter((d) => !existing.some((e) => e.id === d.id));
-        return { ...state, sources: [...existing, ...missing] };
+        const refreshed = existing.map((e) => {
+          if (!e.builtin || Boolean(e.binding)) { return e; }
+          const canonical = DEFAULT_SOURCES.find((d) => d.id === e.id);
+          return canonical ? { ...e, label: canonical.label, note: canonical.note } : e;
+        });
+        const missing = DEFAULT_SOURCES.filter((d) => !refreshed.some((e) => e.id === d.id));
+        return { ...state, sources: [...refreshed, ...missing] };
       },
     },
   ),

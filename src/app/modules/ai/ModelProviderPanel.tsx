@@ -94,7 +94,7 @@ export function ModelProviderPanel() {
       <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[rgba(0,212,255,0.05)] border border-[rgba(0,212,255,0.12)]">
         <Cpu className="w-4 h-4 text-[#00d4ff] shrink-0" />
         <span className="text-[rgba(224,240,255,0.5)]" style={{ fontSize: "0.7rem" }}>
-          模型数据由「系统设置 → 模型管理」统一管控。此处可选择、测试，增删改请前往全局设置。
+          模型数据由「系统设置 → 模型管理 / 数据源」统一管控。此处可选择、测试，增删改请前往全局设置。
         </span>
       </div>
 

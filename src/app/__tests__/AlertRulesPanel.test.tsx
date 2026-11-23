@@ -25,6 +25,7 @@ const mockSetSelectedRule = vi.fn();
 const mockSetFilterSeverity = vi.fn();
 const mockSetIsCreating = vi.fn();
 const mockSetEditingRule = vi.fn();
+const mockReadbackAgentRules = vi.fn().mockResolvedValue({ status: "synced", agentRuleCount: 2 });
 
 const mockRules = [
   {
@@ -111,6 +112,9 @@ const defaultMockState = {
   setIsCreating: mockSetIsCreating,
   editingRule: null,
   setEditingRule: mockSetEditingRule,
+  // 落档 69：规则下发同步状态（下行→落盘→GET 回读对账）
+  syncState: { status: "synced", localRuleCount: 2, agentRuleCount: 2, at: Date.now() },
+  readbackAgentRules: mockReadbackAgentRules,
 };
 
 let mockAlertRulesState = { ...defaultMockState };

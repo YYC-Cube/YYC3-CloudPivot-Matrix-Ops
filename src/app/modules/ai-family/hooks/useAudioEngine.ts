@@ -10,6 +10,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 
 export type Emotion = "happy" | "sad" | "energetic" | "calm" | "neutral";
 export type AudioMode = "demo" | "file" | "stream";
@@ -494,7 +495,16 @@ export function useAudioEngine(config: AudioEngineConfig = {}): AudioEngineRetur
         const audio = audioElRef.current!;
         const currentTrack = currentTrackRef.current;
 
-        if (currentTrack?.audioUrl && (!audio.src || audio.src === "")) {
+        // 落档 71：音频文件模式但曲目无 audioUrl（演示目录未本地化）——
+        // 如实空态提示并停止，不再对空 src 调 play（零外联）
+        if (!currentTrack?.audioUrl) {
+          isPlayingRef.current = false;
+          setIsPlaying(false);
+          toast.info(`「${currentTrack?.title ?? "当前曲目"}」暂无本地音频（演示目录未本地化）——请上传本地文件或接入网关曲库`);
+          return;
+        }
+
+        if ((!audio.src || audio.src === "")) {
           audio.src = currentTrack.audioUrl;
           audio.load();
         }

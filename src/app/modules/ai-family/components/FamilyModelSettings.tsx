@@ -355,13 +355,17 @@ export function FamilyModelSettings() {
 
   const apiKeys = useMemo(() => {
     const keys: Record<string, string> = {};
+    // 落档 65：服务商级 Key 优先（认证 SSOT），模型级 Key 作为回退
+    for (const p of providerSlice.providers) {
+      if (p.apiKey) { keys[p.id] = p.apiKey; }
+    }
     for (const cm of providerSlice.configuredModels) {
       if (cm.apiKey && !keys[cm.providerId]) {
         keys[cm.providerId] = cm.apiKey;
       }
     }
     return keys;
-  }, [providerSlice.configuredModels]);
+  }, [providerSlice.providers, providerSlice.configuredModels]);
 
   const PROVIDERS: ProviderDef[] = useMemo(() => {
     const mapped = providerSlice.providers.map(p => ({
@@ -432,10 +436,15 @@ export function FamilyModelSettings() {
 
   // Handlers
   const handleKeyChange = useCallback((providerId: string, key: string) => {
-    const existing = providerSlice.configuredModels.find(cm => cm.providerId === providerId);
-    if (existing) {
-      providerSlice.updateModel(existing.id, { apiKey: key });
+    // 落档 65：写服务商级 Key（provider-slice 会同步到该服务商下未单独设 Key 的模型）。
+    // 原实现只改「第一个模型」，多模型/无模型时 Key 不生效或丢失。
+    const exists = providerSlice.providers.some((p) => p.id === providerId);
+    if (exists) {
+      providerSlice.updateProvider(providerId, { apiKey: key });
+      return;
     }
+    const existing = providerSlice.configuredModels.find(cm => cm.providerId === providerId);
+    if (existing) { providerSlice.updateModel(existing.id, { apiKey: key }); }
   }, [providerSlice]);
 
   const handleChangeModel = useCallback((memberId: string, providerId: string, modelId: string) => {

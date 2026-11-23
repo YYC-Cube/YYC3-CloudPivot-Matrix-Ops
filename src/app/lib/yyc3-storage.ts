@@ -441,7 +441,8 @@ export const LOCALSTORAGE_KEYS = {
   sdkStats: "yyc3_sdk_stats",         // SDK 使用统计
 
   // ── 同步与队列 ──
-  syncQueue: "yyc3_sync_queue",        // 后台同步队列
+  syncQueue: "yyc3_sync_queue",        // 后台同步队列（SyncItem，lib/backgroundSync）
+  familySyncQueue: "yyc3_family_sync_queue", // Family 同步队列（SyncQueueItem，落档 71 命名空间拆分）
   errorLog: "yyc3_error_log",         // 错误日志
 
   // ── 网络 ──

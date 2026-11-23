@@ -30,6 +30,46 @@ const UPSTREAM_PROXY_MAP: Record<string, string> = {
   deepseek: "/api/v1/llm/deepseek",
 };
 
+/** 解析上游错误体：兼容 {detail:{error:{message}}} / {error:{message}} / {message} */
+function extractUpstreamMessage(body: string): string {
+  try {
+    const data = JSON.parse(body) as Record<string, unknown>;
+    const detail = data.detail as Record<string, unknown> | undefined;
+    const nested = detail?.error as Record<string, unknown> | undefined;
+    const err = data.error as Record<string, unknown> | undefined;
+    const candidate = nested?.message ?? err?.message ?? data.message ?? data.detail;
+    if (typeof candidate === "string" && candidate.trim()) { return candidate.trim().slice(0, 300); }
+  } catch { /* 非 JSON：按原文截断 */ }
+  return body.trim().slice(0, 200);
+}
+
+/**
+ * 把上游状态码翻译成可执行的结论（落档 65）。
+ * 目的：不再让「拦截」这种笼统提示误导成 Key 问题——按网关真实语义区分。
+ */
+function explainUpstreamStatus(status: number, message: string): string | undefined {
+  if (status === 400 && /guardrail|内容安全|安全策略/.test(message)) {
+    return "上游内容安全策略拦截（与 API Key 无关）：网关会拦输入注入特征、输出中的邮箱/手机号/证件号等 PII";
+  }
+  if (status === 401) { return "上游认证失败：Key 未送达或已失效"; }
+  if (status === 403 && /model_not_allowed|无权访问模型/.test(message)) {
+    return "该 Key 未被授权访问此模型：请在上游密钥策略中放行该模型";
+  }
+  if (status === 402) { return "上游虚拟密钥预算已耗尽"; }
+  if (status === 429) { return "上游限流触发（TPM/速率）"; }
+  if (status === 502 || status === 504) {
+    return "本地反代不可达：上游服务未启动或地址错误（系统管理 → 数据源 可改并立即生效）";
+  }
+  return undefined;
+}
+
+/** 统一 HTTP 错误文案（含结构化原因 + 可执行提示） */
+function formatUpstreamFailure(status: number, body: string, url: string): string {
+  const message = body ? extractUpstreamMessage(body) : "";
+  const hint = explainUpstreamStatus(status, message);
+  return `模型服务返回 HTTP ${status}${message ? `：${message}` : ""}${hint ? `｜${hint}` : ""}（${url}）`;
+}
+
 /**
  * 解析实际请求根：显式 proxyUrl > 同源反代（http 环境）> 直连 baseUrl。
  * 全站唯一路由决策点（聊天 / 测试 / 上游模型发现共用）。
@@ -46,6 +86,15 @@ export function resolveRequestRoot(
     };
   }
   const isHttp = typeof window !== "undefined" && /^https?:$/.test(window.location.protocol);
+  // 落档 65：反代基址写死 localhost 时按当前页面 origin 重写——
+  // 两块办公地（静态 IP / Tailscale）或局域网设备访问时，localhost 指向客户端而非服务器。
+  if (
+    typeof window !== "undefined"
+    && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/api\/v1\/llm\//i.test(base)
+  ) {
+    const pathPart = base.replace(/^https?:\/\/[^/]+/, "");
+    return { root: `${window.location.origin}${pathPart}`.replace(/\/+$/, ""), viaProxy: true };
+  }
   const mapped = UPSTREAM_PROXY_MAP[model.providerId];
   if (isHttp && mapped && /^https?:\/\//.test(base)) {
     const pathPart = base.replace(/^https?:\/\/[^/]+/, "");
@@ -121,7 +170,7 @@ export async function callConfiguredModel(
       });
       if (!res.ok) {
         const body = await res.text().catch(() => "");
-        return { text: "", success: false, error: `模型服务返回 HTTP ${res.status}${body ? `：${body.slice(0, 200)}` : ""}（${url}）` };
+        return { text: "", success: false, error: formatUpstreamFailure(res.status, body, url) };
       }
       const data = await res.json() as {
         content?: Array<{ type?: string; text?: string }>;
@@ -183,7 +232,7 @@ export async function callConfiguredModel(
       return {
         text: "",
         success: false,
-        error: `模型服务返回 HTTP ${response.status}${body ? `：${body.slice(0, 200)}` : ""}（${url}）`,
+        error: formatUpstreamFailure(response.status, body, url),
       };
     }
 

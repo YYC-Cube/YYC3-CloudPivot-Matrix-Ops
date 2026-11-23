@@ -510,6 +510,7 @@ const enUS: TranslationKeys = {
     network: "Network",
     cluster: "Cluster",
     model: "Model Management",
+    sources: "Data Sources",
     storage: "Storage",
     websocket: "WebSocket",
     aiLlm: "AI / LLM",

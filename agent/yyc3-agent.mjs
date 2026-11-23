@@ -295,6 +295,193 @@ function checkHttpAuth(req, url) {
 }
 
 // ============================================================
+// 运维执行动作（落档 70 · #10 八动作第一批 · 不经 OpsPanel）
+// - 白名单注册表：内置 DGX 四脚本（口径=主控批复端口集，sha256 钉扎前 16 位）；
+//   ~/.yyc3-cloud-matrix/actions.json 存在时全量覆盖（源控在主控，可增删改）
+// - GET /actions 列表回读（含最近回执摘要）；GET /actions/history 回执历史；
+//   POST /actions/exec {actionId} 执行并返回回执
+// - 安全：同 agent-token 鉴权；脚本路径+sha256 校验（不符拒绝执行）；
+//   固定超时强杀；单动作并发锁 + 全局并发上限；输出尾部截断 8KB；
+//   回执持久化最近 50 条（0600）
+// ============================================================
+
+import { spawn } from "node:child_process";
+
+const ACTIONS_CONFIG_FILE = path.join(os.homedir(), ".yyc3-cloud-matrix", "actions.json");
+const ACTIONS_HISTORY_FILE = path.join(os.homedir(), ".yyc3-cloud-matrix", "action-history.json");
+const ACTION_OUTPUT_TAIL_BYTES = 8 * 1024;
+const ACTIONS_HISTORY_MAX = 50;
+const MAX_CONCURRENT_ACTIONS = 2;
+
+/** 内置白名单（OPS scripts/dgx，落档 54 sha256 钉扎；本机执行、脚本内部自封装 ssh） */
+const BUILTIN_ACTIONS = [
+  {
+    id: "dgx-node-health-probe",
+    name: "DGX 健康探针",
+    description: "n1/n2 vLLM+DCGM 端口探活与 ssh 22 探活（只读）",
+    script: "/Users/yanyu/models/OPS/scripts/dgx/dgx-node-health-probe.sh",
+    sha256_16: "953d971c3a111504",
+    timeoutMs: 60_000,
+    destructive: false,
+    target: "yyc3-n1/n2",
+    risk: "low",
+  },
+  {
+    id: "dgx-queue-watermark",
+    name: "DGX 队列水位（只读）",
+    description: "vLLM 队列水位只读采样",
+    script: "/Users/yanyu/models/OPS/scripts/dgx/dgx-queue-watermark.sh",
+    sha256_16: "332439d83ee2b0ee",
+    timeoutMs: 60_000,
+    destructive: false,
+    target: "yyc3-n1/n2",
+    risk: "low",
+  },
+  {
+    id: "dgx-clean-cache",
+    name: "DGX 清理缓存",
+    description: "磁盘层缓存清理（不 kill 进程）",
+    script: "/Users/yanyu/models/OPS/scripts/dgx/dgx-clean-cache.sh",
+    sha256_16: "cf1b438fad6f9f3b",
+    timeoutMs: 300_000,
+    destructive: true,
+    target: "yyc3-n1/n2",
+    risk: "medium",
+  },
+  {
+    id: "dgx-vllm-restart",
+    name: "DGX vLLM 重启",
+    description: "重启 vLLM 服务（destructive：推理短暂中断）",
+    script: "/Users/yanyu/models/OPS/scripts/dgx/dgx-vllm-restart.sh",
+    sha256_16: "a770f102bf7f942a",
+    timeoutMs: 300_000,
+    destructive: true,
+    target: "yyc3-n1/n2",
+    risk: "high",
+  },
+];
+
+function loadActionsRegistry() {
+  try {
+    if (fs.existsSync(ACTIONS_CONFIG_FILE)) {
+      const parsed = JSON.parse(fs.readFileSync(ACTIONS_CONFIG_FILE, "utf8"));
+      if (parsed && Array.isArray(parsed.actions)) {
+        return { actions: parsed.actions.slice(0, 50), source: ACTIONS_CONFIG_FILE };
+      }
+    }
+  } catch (err) {
+    warn("actions.json 读取失败，使用内置白名单：", err instanceof Error ? err.message : err);
+  }
+  return { actions: BUILTIN_ACTIONS, source: "builtin-defaults" };
+}
+
+let ACTIONS = loadActionsRegistry();
+const runningActions = new Map(); // actionId -> true（并发锁）
+
+function sha256_16Of(file) {
+  try {
+    return crypto.createHash("sha256").update(fs.readFileSync(file)).digest("hex").slice(0, 16);
+  } catch {
+    return null;
+  }
+}
+
+function tailOf(buf) {
+  const text = buf.toString("utf8");
+  return text.length > ACTION_OUTPUT_TAIL_BYTES
+    ? { text: text.slice(-ACTION_OUTPUT_TAIL_BYTES), truncated: true }
+    : { text, truncated: false };
+}
+
+function loadActionHistory() {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(ACTIONS_HISTORY_FILE, "utf8"));
+    if (parsed && Array.isArray(parsed.receipts)) { return parsed.receipts.slice(-ACTIONS_HISTORY_MAX); }
+  } catch { /* 首次无历史 */ }
+  return [];
+}
+
+function appendActionHistory(receipt) {
+  try {
+    const receipts = [...loadActionHistory(), receipt].slice(-ACTIONS_HISTORY_MAX);
+    fs.writeFileSync(ACTIONS_HISTORY_FILE, JSON.stringify({ receipts, updatedAt: new Date().toISOString() }, null, 2), { mode: 0o600 });
+  } catch (err) {
+    warn("action-history 写入失败：", err instanceof Error ? err.message : err);
+  }
+}
+
+function publicAction(a) {
+  return {
+    id: a.id, name: a.name, description: a.description, target: a.target,
+    destructive: Boolean(a.destructive), risk: a.risk ?? "low", timeoutMs: a.timeoutMs,
+  };
+}
+
+function runAction(actionId) {
+  return new Promise((resolve) => {
+    const action = ACTIONS.actions.find((x) => x.id === actionId);
+    if (!action) { resolve({ status: 404, body: { ok: false, error: "unknown action" } }); return; }
+    if (runningActions.has(actionId)) { resolve({ status: 409, body: { ok: false, error: "action already running" } }); return; }
+    if (!fs.existsSync(action.script)) {
+      resolve({ status: 400, body: { ok: false, error: `script missing: ${action.script}` } });
+      return;
+    }
+    const actualHash = sha256_16Of(action.script);
+    if (action.sha256_16 && actualHash !== action.sha256_16) {
+      resolve({ status: 400, body: { ok: false, error: `sha256 mismatch: expect ${action.sha256_16} got ${actualHash}（脚本被改动，拒绝执行；如为有意变更请更新 actions.json）` } });
+      return;
+    }
+    if (runningActions.size >= MAX_CONCURRENT_ACTIONS) {
+      resolve({ status: 429, body: { ok: false, error: "too many concurrent actions" } });
+      return;
+    }
+
+    runningActions.set(actionId, true);
+    const startedAt = Date.now();
+    const child = spawn("/bin/bash", [action.script], {
+      cwd: path.dirname(action.script),
+      env: process.env,
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let out = Buffer.alloc(0);
+    let errBuf = Buffer.alloc(0);
+    let killed = false;
+    const timer = setTimeout(() => {
+      killed = true;
+      child.kill("SIGKILL");
+    }, action.timeoutMs || 60_000);
+    child.stdout.on("data", (c) => { out = Buffer.concat([out, c]).slice(-ACTION_OUTPUT_TAIL_BYTES); });
+    child.stderr.on("data", (c) => { errBuf = Buffer.concat([errBuf, c]).slice(-ACTION_OUTPUT_TAIL_BYTES); });
+    child.on("close", (code, signal) => {
+      clearTimeout(timer);
+      runningActions.delete(actionId);
+      const durationMs = Date.now() - startedAt;
+      const outTail = tailOf(out);
+      const errTail = tailOf(errBuf);
+      const receipt = {
+        id: `act-${startedAt}-${crypto.randomBytes(3).toString("hex")}`,
+        actionId, name: action.name, target: action.target,
+        startedAt, durationMs,
+        exitCode: code === null ? null : code,
+        signal: signal ?? null,
+        killedByTimeout: killed,
+        ok: !killed && code === 0,
+        stdoutTail: outTail.text, stdoutTruncated: outTail.truncated,
+        stderrTail: errTail.text, stderrTruncated: errTail.truncated,
+      };
+      appendActionHistory(receipt);
+      log(`动作 ${actionId} 完成（exit=${code} ${durationMs}ms${killed ? " 超时强杀" : ""}）`);
+      resolve({ status: 200, body: { ok: true, receipt } });
+    });
+    child.on("error", (err) => {
+      clearTimeout(timer);
+      runningActions.delete(actionId);
+      resolve({ status: 500, body: { ok: false, error: `spawn failed: ${err.message}` } });
+    });
+  });
+}
+
+// ============================================================
 // 本机文件浏览（只读浏览 + 内容读写，白名单根目录）
 // 根目录固定为 agent 数据目录 ~/.yyc3-cloud-matrix；
 // 路径穿越（..）与绝对路径逃逸一律拒绝；内容上限 512KB 读 / 1MB 写
@@ -762,6 +949,68 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  // 运维执行动作（落档 70）：GET 列表回读 / GET 历史 / POST 执行（带回执）
+  if (url.pathname === "/actions" && req.method === "GET") {
+    if (!checkHttpAuth(req, url)) {
+      res.writeHead(401, { "Content-Type": "application/json; charset=utf-8" });
+      res.end(JSON.stringify({ ok: false, error: "unauthorized" }));
+      return;
+    }
+    const history = loadActionHistory();
+    const lastByAction = {};
+    for (const r of history) {
+      lastByAction[r.actionId] = { receiptId: r.id, ok: r.ok, at: r.startedAt, durationMs: r.durationMs };
+    }
+    res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+    res.end(JSON.stringify({
+      ok: true,
+      actions: ACTIONS.actions.map((a) => ({ ...publicAction(a), lastReceipt: lastByAction[a.id] ?? null })),
+      running: Array.from(runningActions.keys()),
+      source: ACTIONS.source,
+    }));
+    return;
+  }
+  if (url.pathname === "/actions/history" && req.method === "GET") {
+    if (!checkHttpAuth(req, url)) {
+      res.writeHead(401, { "Content-Type": "application/json; charset=utf-8" });
+      res.end(JSON.stringify({ ok: false, error: "unauthorized" }));
+      return;
+    }
+    res.writeHead(200, { "Content-Type": "application/json; charset=utf-8" });
+    res.end(JSON.stringify({ ok: true, receipts: loadActionHistory().slice().reverse() }));
+    return;
+  }
+  if (url.pathname === "/actions/exec" && req.method === "POST") {
+    if (!checkHttpAuth(req, url)) {
+      warn(`拒绝未授权动作执行（${req.socket.remoteAddress ?? "unknown"}）`);
+      res.writeHead(401, { "Content-Type": "application/json; charset=utf-8" });
+      res.end(JSON.stringify({ ok: false, error: "unauthorized" }));
+      return;
+    }
+    const chunks = [];
+    req.on("data", (c) => {
+      chunks.push(c);
+      if (Buffer.concat(chunks).length > 16 * 1024) {
+        res.writeHead(413, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify({ ok: false, error: "payload too large" }));
+        req.destroy();
+      }
+    });
+    req.on("end", () => {
+      if (res.writableEnded) { return; }
+      let body;
+      try { body = JSON.parse(Buffer.concat(chunks).toString("utf8")); }
+      catch { res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify({ ok: false, error: "invalid JSON" })); return; }
+      const actionId = typeof body?.actionId === "string" ? body.actionId : "";
+      if (!actionId) { res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify({ ok: false, error: "actionId required" })); return; }
+      void runAction(actionId).then((r) => {
+        res.writeHead(r.status, { "Content-Type": "application/json; charset=utf-8" });
+        res.end(JSON.stringify(r.body));
+      });
+    });
+    return;
+  }
+
   // 本机文件浏览（白名单根目录 ~/.yyc3-cloud-matrix）
   if (url.pathname === "/files" && req.method === "GET") {
     if (!checkHttpAuth(req, url)) {
@@ -851,6 +1100,7 @@ async function main() {
   log(`  Health:    http://${CONFIG.host}:${CONFIG.port}/healthz`);
   log(`  Node:      ${CONFIG.nodeId} · 间隔 ${CONFIG.intervalMs}ms · Ollama ${CONFIG.ollamaBaseUrl}`);
   log(`  Rules:     ${RULES.rules.length} 条（来源 ${RULES.source}）· GET/PUT http://${CONFIG.host}:${CONFIG.port}/rules?token=<agent-token>`);
+  log(`  Actions:   ${ACTIONS.actions.length} 个白名单动作（来源 ${ACTIONS.source}）· GET /actions · POST /actions/exec`);
   log(`  Auth:      令牌来源 ${AUTH.source}（前端「系统设置 → WebSocket → WS 访问令牌」填入同一令牌）`);
   timer = setInterval(() => {
     pushSnapshot().catch((err) => warn("采集失败：", err instanceof Error ? err.message : err));

@@ -13,7 +13,7 @@ import React, { useState, useCallback, useMemo } from "react";
 import {
   Users, UserPlus, Search, Shield, ShieldCheck, ShieldAlert, Crown,
   Edit2, Trash2, Lock, Unlock, Activity,
-  Eye, XCircle, Save, X, Plus, Check, RotateCcw
+  Eye, XCircle, Save, X, Plus, Check, RotateCcw, KeyRound
 } from "lucide-react";
 import { GlassCard } from "../shared/GlassCard";
 import { useI18n } from "../../hooks/useI18n";
@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import type { UserRecord } from "../../types";
 import { useUserMgmtSlice } from "../../store/slices/user-mgmt-slice";
 import { useShallow } from "zustand/shallow";
+import { hashPassword, passwordIssue } from "../../lib/auth-credentials";
 
 const ROLE_LIST = ["超级管理员", "运维工程师", "开发者", "数据分析师", "测试工程师", "AI 研究员", "系统服务", "自动化运维"];
 
@@ -47,8 +48,8 @@ type ModalMode = "view" | "edit" | "add" | null;
 
 export function UserManagement() {
   const { t } = useI18n();
-  const { users, addUser, updateUser, removeUser, toggleLock } = useUserMgmtSlice(
-    useShallow((s) => ({ users: s.users, addUser: s.addUser, updateUser: s.updateUser, removeUser: s.removeUser, toggleLock: s.toggleLock }))
+  const { users, addUser, updateUser, removeUser, toggleLock, setUserCredentials } = useUserMgmtSlice(
+    useShallow((s) => ({ users: s.users, addUser: s.addUser, updateUser: s.updateUser, removeUser: s.removeUser, toggleLock: s.toggleLock, setUserCredentials: s.setUserCredentials }))
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedUser, setSelectedUser] = useState<UserRecord | null>(null);
@@ -146,6 +147,36 @@ export function UserManagement() {
     toggleLock(user.id);
     toast.success(user.locked ? `${user.name} 已解锁` : `${user.name} 已锁定`, { style: toastStyle });
   }, [toggleLock]);
+
+  // ── 落档 68/69：本地登录口令（PBKDF2 哈希，零明文落盘） ──
+  const [pwUser, setPwUser] = useState<UserRecord | null>(null);
+  const [pw1, setPw1] = useState("");
+  const [pw2, setPw2] = useState("");
+  const [pwError, setPwError] = useState<string | null>(null);
+  const [pwBusy, setPwBusy] = useState(false);
+
+  const openPassword = useCallback((user: UserRecord) => {
+    setPwUser(user);
+    setPw1(""); setPw2(""); setPwError(null);
+  }, []);
+
+  const handleSavePassword = useCallback(async () => {
+    if (!pwUser || pwBusy) { return; }
+    const weak = passwordIssue(pw1);
+    if (weak) { setPwError(weak); return; }
+    if (pw1 !== pw2) { setPwError("两次输入的口令不一致"); return; }
+    setPwBusy(true);
+    try {
+      const hash = await hashPassword(pw1);
+      setUserCredentials(pwUser.id, hash);
+      toast.success(`账号 ${pwUser.username} 的登录口令已设置（PBKDF2 哈希存储）`, { style: toastStyle });
+      setPwUser(null);
+    } catch (err) {
+      setPwError(err instanceof Error ? err.message : "口令设置失败");
+    } finally {
+      setPwBusy(false);
+    }
+  }, [pwUser, pw1, pw2, pwBusy, setUserCredentials]);
 
   const handleResetUsers = useCallback(() => {
     toast.info("用户列表已重置为默认值", { style: toastStyle });
@@ -267,6 +298,9 @@ export function UserManagement() {
                         <button onClick={() => openEdit(user)} className="p-1 rounded hover:bg-[rgba(0,212,255,0.1)] transition-all" title="编辑">
                           <Edit2 className="w-3.5 h-3.5 text-[rgba(0,212,255,0.4)]" />
                         </button>
+                        <button onClick={() => openPassword(user)} className="p-1 rounded hover:bg-[rgba(0,212,255,0.1)] transition-all" title={user.passwordHash ? "修改登录口令" : "设置登录口令"}>
+                          <KeyRound className={`w-3.5 h-3.5 ${user.passwordHash ? "text-[#00ff88]" : "text-[rgba(0,212,255,0.4)]"}`} />
+                        </button>
                         <button onClick={() => handleToggleLock(user)} className="p-1 rounded hover:bg-[rgba(0,212,255,0.1)] transition-all" title={user.locked ? "解锁" : "锁定"}>
                           {user.locked ? <Unlock className="w-3.5 h-3.5 text-[#ff3366]" /> : <Lock className="w-3.5 h-3.5 text-[rgba(0,212,255,0.4)]" />}
                         </button>
@@ -377,6 +411,66 @@ export function UserManagement() {
       </div>
 
       {/* ======== User Modal (View / Edit / Add) ======== */}
+      {/* 落档 68/69：设置/修改本地登录口令（PBKDF2 哈希，零明文） */}
+      {pwUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-0" onClick={() => setPwUser(null)}>
+          <div className="absolute inset-0 bg-[rgba(0,0,0,0.6)] backdrop-blur-sm" />
+          <div className="relative w-full max-w-[420px] rounded-2xl bg-[rgba(8,25,55,0.95)] backdrop-blur-2xl border border-[rgba(0,180,255,0.2)] shadow-[0_0_60px_rgba(0,180,255,0.1)] p-5 md:p-6" onClick={(e) => e.stopPropagation()} data-testid="password-modal">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-[#e0f0ff] flex items-center gap-2" style={{ fontSize: "1rem" }}>
+                <KeyRound className="w-4 h-4 text-[#00ff88]" />
+                {pwUser.passwordHash ? "修改登录口令" : "设置登录口令"}
+              </h3>
+              <button onClick={() => setPwUser(null)} title="关闭" className="p-1.5 rounded-lg hover:bg-[rgba(0,212,255,0.1)]">
+                <XCircle className="w-5 h-5 text-[rgba(0,212,255,0.4)]" />
+              </button>
+            </div>
+            <p className="text-[rgba(0,212,255,0.4)] mb-4" style={{ fontSize: "0.68rem" }}>
+              账号 @{pwUser.username} · 口令经 PBKDF2-SHA256 哈希后存储，系统不保存明文；该账号将以此口令在登录页进入面板。
+            </p>
+            <div className="space-y-3">
+              <input
+                type="password"
+                value={pw1}
+                onChange={(e) => setPw1(e.target.value)}
+                placeholder="新口令（≥6 位）"
+                data-testid="password-new-input"
+                className="w-full px-3 py-2.5 rounded-xl bg-[rgba(0,40,80,0.4)] border border-[rgba(0,180,255,0.15)] text-[#e0f0ff] placeholder-[rgba(0,212,255,0.25)] focus:outline-none focus:border-[rgba(0,212,255,0.5)]"
+                style={{ fontSize: "0.82rem" }}
+              />
+              <input
+                type="password"
+                value={pw2}
+                onChange={(e) => setPw2(e.target.value)}
+                placeholder="确认新口令"
+                data-testid="password-confirm-input"
+                className="w-full px-3 py-2.5 rounded-xl bg-[rgba(0,40,80,0.4)] border border-[rgba(0,180,255,0.15)] text-[#e0f0ff] placeholder-[rgba(0,212,255,0.25)] focus:outline-none focus:border-[rgba(0,212,255,0.5)]"
+                style={{ fontSize: "0.82rem" }}
+              />
+              {pwError && (
+                <p className="px-3 py-2 rounded-lg border border-[rgba(255,51,102,0.25)] bg-[rgba(255,51,102,0.08)] text-[rgba(255,150,170,0.95)]" style={{ fontSize: "0.7rem" }} data-testid="password-error">
+                  {pwError}
+                </p>
+              )}
+              <div className="flex gap-3 pt-1">
+                <button
+                  onClick={() => { void handleSavePassword(); }}
+                  disabled={pwBusy}
+                  data-testid="password-save-btn"
+                  className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-[#00d4ff] to-[#0066ff] text-white disabled:opacity-60"
+                  style={{ fontSize: "0.82rem" }}
+                >
+                  {pwBusy ? "哈希计算中…" : "保存口令"}
+                </button>
+                <button onClick={() => setPwUser(null)} className="px-4 py-2.5 rounded-xl border border-[rgba(0,180,255,0.15)] text-[rgba(0,212,255,0.55)]" style={{ fontSize: "0.82rem" }}>
+                  取消
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {modalMode && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-0" onClick={closeModal}>
           <div className="absolute inset-0 bg-[rgba(0,0,0,0.6)] backdrop-blur-sm" />

@@ -10,9 +10,13 @@
  */
 
 import React, { useState, useCallback } from "react";
-import { Lock, Mail, Eye, EyeOff, Zap, Ghost } from "lucide-react";
+import { Lock, Mail, Eye, EyeOff, Zap, Ghost, ShieldCheck } from "lucide-react";
 import { APP_BRAND } from "../../config/app-brand";
 import { YYC3Logo } from "./YYC3Logo";
+import {
+  hasLocalAdminAccount, initAdminAccount, localSignIn,
+} from "../../lib/mock-auth";
+import { hashPassword, passwordIssue } from "../../lib/auth-credentials";
 
 interface LoginProps {
   onLoginSuccess: () => void;
@@ -22,20 +26,48 @@ interface LoginProps {
 export function Login({ onLoginSuccess, onGhostLogin }: LoginProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [password2, setPassword2] = useState("");
   const [showPwd, setShowPwd] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const [ghostHover, setGhostHover] = useState(false);
   const [ghostActivating, setGhostActivating] = useState(false);
 
   /**
-   * 本地闭环系统 · 无后端鉴权
-   * 主登录按钮点击即进入（幽灵语义），账密输入框仅为视觉引导，不做校验。
+   * C-2 本地认证（落档 68）：无本地账号 → 初始化管理员；已有账号 → 口令登录。
+   * 账号存 user-mgmt-slice（PBKDF2 哈希，零明文）；Ghost 旁路已按主控裁决关停
+   * （onGhostLogin 仅保留给测试/历史调用，App 不再传入）。
    */
-  const handleSubmit = (e: React.FormEvent) => {
+  const initMode = !hasLocalAdminAccount();
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (onGhostLogin) {
-      onGhostLogin();
-    } else {
-      onLoginSuccess();
+    if (busy) { return; }
+    setError(null);
+    const account = email.trim();
+    if (initMode) {
+      const weak = passwordIssue(password);
+      if (weak) { setError(weak); return; }
+      if (password !== password2) { setError("两次输入的口令不一致"); return; }
+      setBusy(true);
+      try {
+        const hash = await hashPassword(password);
+        await initAdminAccount(account || "admin", password, hash);
+        onLoginSuccess();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "初始化失败");
+      } finally {
+        setBusy(false);
+      }
+      return;
+    }
+    setBusy(true);
+    try {
+      const r = await localSignIn(account, password);
+      if ("session" in r) { onLoginSuccess(); }
+      else { setError(r.error); }
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -108,18 +140,31 @@ export function Login({ onLoginSuccess, onGhostLogin }: LoginProps) {
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Email */}
+            {/* 模式说明（落档 68：初始化管理员 / 本地登录） */}
+            <div
+              className="flex items-center gap-2 px-3 py-2 rounded-xl bg-[rgba(0,212,255,0.05)] border border-[rgba(0,212,255,0.12)]"
+              data-testid="login-mode-label"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-[#00ff88] shrink-0" />
+              <span className="text-[rgba(0,212,255,0.5)]" style={{ fontSize: "0.66rem" }}>
+                {initMode
+                  ? "首次使用：创建本地管理员账号（口令 PBKDF2 哈希存储，零明文）"
+                  : "本地账号登录 · 口令错误将拒止 · Ghost 旁路已关停"}
+              </span>
+            </div>
+
+            {/* 账号 */}
             <div>
               <label className="block text-[rgba(0,212,255,0.5)] mb-1.5" style={{ fontSize: "0.72rem" }}>
-                登录邮箱
+                {initMode ? "管理员名称" : "账号（用户名/邮箱）"}
               </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[rgba(0,212,255,0.3)]" />
                 <input
-                  type="email"
+                  type="text"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="输入邮箱（可选）"
+                  placeholder={initMode ? "admin" : "输入账号"}
                   data-testid="login-email-input"
                   className="w-full pl-10 pr-4 py-3 rounded-xl bg-[rgba(0,40,80,0.4)] border border-[rgba(0,180,255,0.15)] text-[#e0f0ff] placeholder-[rgba(0,212,255,0.25)] focus:outline-none focus:border-[rgba(0,212,255,0.5)] focus:shadow-[0_0_15px_rgba(0,180,255,0.1)] transition-all"
                   style={{ fontSize: "0.85rem" }}
@@ -130,7 +175,7 @@ export function Login({ onLoginSuccess, onGhostLogin }: LoginProps) {
             {/* Password */}
             <div>
               <label className="block text-[rgba(0,212,255,0.5)] mb-1.5" style={{ fontSize: "0.72rem" }}>
-                密码
+                {initMode ? "设置口令（≥6 位）" : "口令"}
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[rgba(0,212,255,0.3)]" />
@@ -138,7 +183,7 @@ export function Login({ onLoginSuccess, onGhostLogin }: LoginProps) {
                   type={showPwd ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="输入密码（可选）"
+                  placeholder={initMode ? "设置口令" : "输入口令"}
                   data-testid="login-password-input"
                   className="w-full pl-10 pr-12 py-3 rounded-xl bg-[rgba(0,40,80,0.4)] border border-[rgba(0,180,255,0.15)] text-[#e0f0ff] placeholder-[rgba(0,212,255,0.25)] focus:outline-none focus:border-[rgba(0,212,255,0.5)] focus:shadow-[0_0_15px_rgba(0,180,255,0.1)] transition-all"
                   style={{ fontSize: "0.85rem" }}
@@ -156,14 +201,43 @@ export function Login({ onLoginSuccess, onGhostLogin }: LoginProps) {
               </div>
             </div>
 
-            {/* Submit · 点击即进入 */}
+            {/* Confirm（仅初始化模式） */}
+            {initMode && (
+              <div>
+                <label className="block text-[rgba(0,212,255,0.5)] mb-1.5" style={{ fontSize: "0.72rem" }}>
+                  确认口令
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[rgba(0,212,255,0.3)]" />
+                  <input
+                    type={showPwd ? "text" : "password"}
+                    value={password2}
+                    onChange={(e) => setPassword2(e.target.value)}
+                    placeholder="再次输入口令"
+                    data-testid="login-confirm-password-input"
+                    className="w-full pl-10 pr-4 py-3 rounded-xl bg-[rgba(0,40,80,0.4)] border border-[rgba(0,180,255,0.15)] text-[#e0f0ff] placeholder-[rgba(0,212,255,0.25)] focus:outline-none focus:border-[rgba(0,212,255,0.5)] transition-all"
+                    style={{ fontSize: "0.85rem" }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* 错误提示 */}
+            {error && (
+              <p className="px-3 py-2 rounded-lg border border-[rgba(255,51,102,0.25)] bg-[rgba(255,51,102,0.08)] text-[rgba(255,150,170,0.95)]" style={{ fontSize: "0.7rem" }} data-testid="login-error">
+                {error}
+              </p>
+            )}
+
+            {/* Submit · 本地认证 */}
             <button
               type="submit"
+              disabled={busy}
               data-testid="login-submit-button"
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-[#00d4ff] to-[#0066ff] text-white transition-all hover:shadow-[0_0_25px_rgba(0,180,255,0.4)] relative overflow-hidden min-h-[48px]"
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-[#00d4ff] to-[#0066ff] text-white transition-all hover:shadow-[0_0_25px_rgba(0,180,255,0.4)] relative overflow-hidden min-h-[48px] disabled:opacity-60"
               style={{ fontSize: "0.9rem", letterSpacing: "0.1em" }}
             >
-              进入系统
+              {busy ? "校验中…" : initMode ? "初始化管理员并进入" : "登录"}
             </button>
           </form>
 

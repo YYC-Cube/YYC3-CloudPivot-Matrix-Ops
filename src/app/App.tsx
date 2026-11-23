@@ -28,7 +28,7 @@ import { router } from "./routes";
 import { Login } from "./modules/shared/Login";
 import { ErrorBoundary } from "./modules/shared/ErrorBoundary";
 import { installGlobalErrorListeners } from "./lib/error-handler";
-import { ghostSignIn, isGhostMode, getLocalSession, signOutLocal } from "./lib/mock-auth";
+import { isGhostMode, getLocalSession, signOutLocal, ensureRealAuthSession } from "./lib/mock-auth";
 import { useYYC3Head } from "./hooks/useYYC3Head";
 import { useI18nProvider, I18nContext } from "./hooks/useI18n";
 import { AuthContext } from "./lib/authContext";
@@ -147,11 +147,12 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    // P2 解耦（落档 31）：本地会话检查改为同步读取（原 supabase 异步 + 3s 超时兜底不再需要）
-    const session = getLocalSession();
+    // C-2 认证（落档 68）：历史 ghost 会话一律作废并强制真实登录；
+    // 有效本地会话直接进入。同步读取（本地键控，无网络等待）。
+    const session = ensureRealAuthSession();
     setAuthenticated(!!session);
     if (session) {
-      setUserEmail(session.user?.email ?? "ghost@yyc3.local");
+      setUserEmail(session.user?.email ?? "");
       setUserRole(session.user?.role ?? "admin");
       setIsGhost(isGhostMode());
     }
@@ -159,19 +160,9 @@ export default function App() {
 
   const handleLoginSuccess = useCallback(() => {
     const session = getLocalSession();
-    setUserEmail(session?.user?.email ?? "ghost@yyc3.local");
+    setUserEmail(session?.user?.email ?? "");
     setUserRole(session?.user?.role ?? "admin");
     setIsGhost(isGhostMode());
-    setAuthenticated(true);
-  }, []);
-
-  /** ��灵登录 · 跳过认证直接进入 */
-  const handleGhostLogin = useCallback(() => {
-    const session = ghostSignIn();
-    if (!session) { return; }
-    setUserEmail(session.user.email);
-    setUserRole(session.user.role as UserRole);
-    setIsGhost(true);
     setAuthenticated(true);
   }, []);
 
@@ -200,9 +191,9 @@ export default function App() {
     );
   }
 
-  // 未登录 - 显示登录页
+  // 未登录 - 显示登录页（C-2：本地账号认证，Ghost 旁路已关停——不传 onGhostLogin）
   if (!authenticated) {
-    return <Login onLoginSuccess={handleLoginSuccess} onGhostLogin={handleGhostLogin} />;
+    return <Login onLoginSuccess={handleLoginSuccess} />;
   }
 
   // 已登录 - 显示主应用

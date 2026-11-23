@@ -20,9 +20,11 @@ import type {
 } from "./types";
 
 /** 公共演示音频（SoundHelix 免费示例曲目，1-12） */
-export function getDemoAudioUrl(index: number): string {
-  const n = ((index - 1) % 12) + 1;
-  return `https://www.soundhelix.com/examples/mp3/SoundHelix-Song-${n}.mp3`;
+/** 演示目录条目无本地音频（落档 71 零外联收尾）：返回空串，播放器 load 守卫
+ *  会如实空态提示；接入本地曲库/网关曲库后由数据源填入真实 url */
+export function getDemoAudioUrl(_index: number): string {
+  void _index;
+  return "";
 }
 
 /** 本地占位封面（SVG data URI，零外联；落档 62） */

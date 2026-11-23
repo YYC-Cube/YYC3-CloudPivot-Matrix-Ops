@@ -31,3 +31,6 @@ yyc3-cn-assistant.json
 
 # 用户个人参照截图（82M，个人资产不入库）
 public/项目导航-对齐截图/
+
+# 运行时数据源上游配置（本机路径/端口，不随仓库分发）
+deploy/.sources.json

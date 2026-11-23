@@ -53,18 +53,20 @@ export const CATEGORY_META: OperationCategoryMeta[] = [
 // ============================================================
 
 const QUICK_ACTIONS: OperationItem[] = [
-  { id: "qa1", category: "node",   label: "重启节点",  description: "重启指定 GPU 计算节点",        icon: "RotateCw",    status: "pending" },
-  { id: "qa2", category: "model",  label: "部署模型",  description: "部署新模型到指定节点",          icon: "Upload",      status: "pending" },
-  { id: "qa3", category: "system", label: "清理缓存",  description: "清理推理缓存和临时文件",        icon: "Trash2",      status: "pending" },
+  // 落档 70：qa1/qa3/qa6/qa10 已接 yyc3-agent 白名单动作（不经 OpsPanel，回执可查）；
+  // qa2/qa7/qa8/qa9 尚无服务端能力，如实标注「未接」而非伪造成功
+  { id: "qa1", category: "node",   label: "重启 vLLM 服务",  description: "重启 DGX vLLM（destructive：推理短暂中断）", icon: "RotateCw",    status: "pending", dangerous: true },
+  { id: "qa2", category: "model",  label: "部署模型",  description: "未接：无服务端部署通道（如实标注）", icon: "Upload",      status: "pending" },
+  { id: "qa3", category: "system", label: "清理缓存",  description: "DGX 磁盘层缓存清理（不 kill 进程）", icon: "Trash2",      status: "pending", dangerous: true },
   { id: "qa4", category: "system", label: "导出日志",  description: "导出系统日志到本地文件",        icon: "Download",    status: "pending" },
   { id: "qa5", category: "system", label: "生成报告",  description: "生成系统性能报告 (JSON/PDF)",   icon: "FileText",    status: "pending" },
-  { id: "qa6", category: "node",   label: "批量重启",  description: "批量重启所有异常节点",          icon: "RefreshCw",   status: "pending", dangerous: true },
-  { id: "qa7", category: "model",  label: "模型迁移",  description: "将模型迁移到负载更低的节点",     icon: "ArrowRightLeft", status: "pending" },
-  { id: "qa8", category: "task",   label: "暂停队列",  description: "暂停推理任务队列",              icon: "Pause",       status: "pending" },
-  { id: "qa9", category: "task",   label: "恢复队列",  description: "恢复推理任务队列",              icon: "Play",        status: "pending" },
-  { id: "qa10", category: "node",  label: "健康检查",  description: "对所有节点执行健康检查",        icon: "HeartPulse",  status: "pending" },
+  { id: "qa6", category: "node",   label: "批量重启 vLLM",  description: "DGX 双机 vLLM 服务重启（整机重启未接）", icon: "RefreshCw",   status: "pending", dangerous: true },
+  { id: "qa7", category: "model",  label: "模型迁移",  description: "未接：无服务端迁移通道（如实标注）", icon: "ArrowRightLeft", status: "pending" },
+  { id: "qa8", category: "task",   label: "暂停队列",  description: "未接：vLLM 无暂停端点（如实标注）", icon: "Pause",       status: "pending" },
+  { id: "qa9", category: "task",   label: "恢复队列",  description: "未接：vLLM 无恢复端点（如实标注）", icon: "Play",        status: "pending" },
+  { id: "qa10", category: "node",  label: "DGX 健康探针",  description: "n1/n2 vLLM+DCGM 端口与 ssh 探活（只读）", icon: "HeartPulse",  status: "pending" },
   { id: "qa11", category: "system",label: "备份配置",  description: "备份当前系统配置到本地",        icon: "HardDrive",   status: "pending" },
-  { id: "qa12", category: "custom",label: "自定义脚本",description: "执行自定义运维脚本",           icon: "Terminal",    status: "pending" },
+  { id: "qa12", category: "custom",label: "自定义脚本",description: "未接：仅白名单动作可执行（actions.json）", icon: "Terminal",    status: "pending" },
 ];
 
 // ============================================================
@@ -173,6 +175,35 @@ const REAL_EXECUTORS: Record<string, () => Promise<RealActionResult> | RealActio
   qa11: runBackupConfig,
 };
 
+// ── 落档 70：agent 白名单动作映射（不经 OpsPanel，回执可查） ──
+// qa10 优先走 DGX 全量探针（比 /healthz 更全面）；失败回退 /healthz
+import { execOpsAction } from "../lib/agent-actions";
+
+const AGENT_ACTION_BY_QA: Record<string, string> = {
+  qa1: "dgx-vllm-restart",
+  qa6: "dgx-vllm-restart",
+  qa3: "dgx-clean-cache",
+  qa10: "dgx-node-health-probe",
+};
+
+async function runAgentMappedAction(agentActionId: string, label: string): Promise<RealActionResult> {
+  const r = await execOpsAction(agentActionId);
+  if (!r.ok) {
+    return { ok: false, note: `agent 动作未执行：${r.reason === "no-token" ? "未配置 agent 令牌" : r.reason ?? "失败"}` };
+  }
+  const receipt = r.receipt!;
+  const tail = receipt.stdoutTail.trim().split("\n").slice(-4).join(" · ").slice(0, 180);
+  const statusWord = receipt.ok
+    ? `exit=0 · ${receipt.durationMs}ms`
+    : receipt.killedByTimeout
+      ? "超时强杀"
+      : `exit=${receipt.exitCode ?? "null"}${receipt.signal ? ` (${receipt.signal})` : ""}`;
+  return {
+    ok: receipt.ok,
+    note: `${label} 回执 ${receipt.id}（${statusWord}）${tail ? `：${tail}` : ""}`,
+  };
+}
+
 // ============================================================
 // Hook
 // ============================================================
@@ -239,9 +270,13 @@ export function useOperationCenter() {
     const action = actions.find((a) => a.id === actionId);
     if (!action) {return;}
 
-    const realExecutor = REAL_EXECUTORS[actionId];
-    if (!realExecutor && !demoMode) {
-      toast.info(`「${action.label}」需要接入对应服务端能力（演示模式下可演练，请在系统设置中开启）`);
+    // ── 落档 70：agent 白名单动作（真实执行，回执可查；不受 demoMode 门控） ──
+    const agentActionId = AGENT_ACTION_BY_QA[actionId];
+    // qa10 保留 /healthz 快检作为回退执行器；映射存在时优先 agent 全量探针
+    const realExecutor = agentActionId ? undefined : REAL_EXECUTORS[actionId];
+    if (!agentActionId && !realExecutor && !demoMode) {
+      // 如实标注未接能力，不伪造执行
+      toast.info(`「${action.label}」${action.description.includes("未接") ? "尚未接入服务端能力" : "需要接入对应服务端能力"}（描述见按钮说明）`);
       return;
     }
 
@@ -254,7 +289,19 @@ export function useOperationCenter() {
     let duration: number;
     let note = "";
 
-    if (realExecutor) {
+    if (agentActionId) {
+      // ── agent 白名单动作：真实执行 + 回执 ──
+      const started = performance.now();
+      try {
+        const result = await runAgentMappedAction(agentActionId, action.label);
+        finalStatus = result.ok ? "success" : "failed";
+        note = result.note;
+      } catch (err) {
+        finalStatus = "failed";
+        note = err instanceof Error ? err.message : String(err);
+      }
+      duration = Math.round(performance.now() - started);
+    } else if (realExecutor) {
       // ── 真实动作：实测耗时与结果 ──
       const started = performance.now();
       try {

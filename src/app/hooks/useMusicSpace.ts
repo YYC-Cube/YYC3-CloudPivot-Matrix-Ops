@@ -10,6 +10,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import {
   audioPlayerService,
   type AudioAnalyzerData,
@@ -167,7 +168,9 @@ export function useMusicSpace(options: UseMusicSpaceOptions = {}): UseMusicSpace
       const started = await audioPlayerService.play();
       setIsPlaying(started);
     } else {
+      // 落档 71：演示目录条目无本地音频（零外联）——如实空态提示，不外链兜底
       setIsPlaying(false);
+      toast.info(`「${song.title}」暂无本地音频（演示目录未本地化）——请使用本地文件或网关曲库`);
     }
     optionsRef.current.onSongChange?.(song);
   }, []);

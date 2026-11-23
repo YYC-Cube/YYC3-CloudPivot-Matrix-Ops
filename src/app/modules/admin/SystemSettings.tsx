@@ -64,6 +64,7 @@ import { NetworkConfig } from "./NetworkConfig";
 import { ThemeCustomizer } from "../dev/ThemeCustomizer";
 import { UnifiedModelManager } from "../../components/UnifiedModelManager";
 import { YYC3Logo } from "../shared/YYC3Logo";
+import { SourceRegistryPage } from "./SourceRegistryPage";
 
 // ============================================================
 // Settings sections config
@@ -74,6 +75,7 @@ const settingsSections = [
   { id: "network", labelKey: "settings.network", icon: Globe },
   { id: "cluster", labelKey: "settings.cluster", icon: Server },
   { id: "model", labelKey: "settings.model", icon: Cpu },
+  { id: "sources", labelKey: "settings.sources", icon: Database },
   { id: "storage", labelKey: "settings.storage", icon: Database },
   { id: "websocket", labelKey: "settings.websocket", icon: Wifi },
   { id: "ai", labelKey: "settings.aiLlm", icon: Sliders },
@@ -1007,6 +1009,9 @@ export function SystemSettings() {
 
       case "model":
         return <ModelManagementSection settings={settings} toggleSetting={toggleSetting} />;
+
+      case "sources":
+        return <SourceRegistryPage embedded />;
 
       case "storage":
         return (

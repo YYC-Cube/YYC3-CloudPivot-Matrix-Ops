@@ -14,7 +14,7 @@ import {
   Bell, BellRing, Plus, Trash2, ToggleLeft, ToggleRight,
   AlertTriangle, ShieldAlert, Info,
   CheckCircle2, XCircle, Clock, TrendingUp,
-  Filter, Zap, Settings, ArrowUpRight, Pencil, Wifi,
+  Filter, Zap, Settings, ArrowUpRight, Pencil, Wifi, RefreshCw,
 } from "lucide-react";
 import { GlassCard } from "../shared/GlassCard";
 import { useI18n } from "../../hooks/useI18n";
@@ -379,8 +379,25 @@ export function AlertRulesPanel() {
     createRule, updateRule,
     isCreating, setIsCreating,
     editingRule, setEditingRule,
+    syncState, readbackAgentRules,
   } = state;
   const [viewMode, setViewMode] = useState<"rules" | "events">("rules");
+
+  // 落档 69：同步状态回显（下行→落盘→GET 回读闭环，如实地呈现未同步原因）
+  const syncChip = React.useMemo(() => {
+    const label = (() => {
+      switch (syncState.status) {
+        case "never": return "未下发";
+        case "syncing": return "同步中…";
+        case "synced": return syncState.localRuleCount !== undefined && syncState.agentRuleCount !== undefined && syncState.localRuleCount !== syncState.agentRuleCount
+          ? `已下发 ${syncState.localRuleCount} 条 · agent 回读 ${syncState.agentRuleCount} 条（数量不一致）`
+          : `已同步 ${syncState.agentRuleCount ?? syncState.localRuleCount ?? 0} 条（含回读）`;
+        case "failed": return `未同步：${syncState.reason === "no-token" ? "未配置 agent 令牌" : syncState.reason === "network" ? "agent 不可达" : syncState.reason ?? "失败"}`;
+      }
+    })();
+    const color = syncState.status === "synced" ? "#00ff88" : syncState.status === "syncing" ? "#ffaa00" : syncState.status === "failed" ? "#ff3366" : "rgba(0,212,255,0.4)";
+    return { label, color };
+  }, [syncState]);
 
   // 可选目标节点 = 真实在线节点 ∪ 既有规则目标（编辑旧规则时不丢已选节点）
   // 禁止内置假节点清单（唯一禁忌：可选项拒绝硬编码）
@@ -435,6 +452,21 @@ export function AlertRulesPanel() {
         <span className="text-[rgba(0,212,255,0.4)]">
           <Wifi className="w-3 h-3 inline mr-1" />
           {wsData.connectionState === "connected" ? "WebSocket Connected" : wsData.connectionState === "simulated" ? "Simulated Data" : "Disconnected"}
+        </span>
+        {/* 落档 69：规则下发同步状态（PUT → agent 落盘 → GET 回读对账） */}
+        <span className="ml-3" style={{ color: syncChip.color }}>
+          <RefreshCw
+            className={`w-3 h-3 inline mr-1 ${syncState.status === "syncing" ? "animate-spin" : ""}`}
+          />
+          <span data-testid="rules-sync-status">{syncChip.label}</span>
+          <button
+            onClick={() => { void readbackAgentRules(); }}
+            className="ml-2 underline text-[rgba(0,212,255,0.45)] hover:text-[#00d4ff]"
+            style={{ fontSize: "0.6rem" }}
+            data-testid="rules-readback-btn"
+          >
+            回读对账
+          </button>
         </span>
       </div>
 

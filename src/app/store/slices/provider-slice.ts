@@ -221,19 +221,35 @@ export const useProviderSlice = create<ProviderSlice>()(
       },
 
       updateProvider: (id, updates) => {
-        set((s) => ({
-          providers: s.providers.map((p) =>
-            p.id === id ? { ...p, ...updates, updatedAt: Date.now() } : p
-          ),
-          // 同步更新已配置模型中的 providerLabel / baseUrl
-          configuredModels: updates.label || updates.baseUrl
-            ? s.configuredModels.map((m) =>
-              m.providerId === id
-                ? { ...m, providerLabel: updates.label ?? m.providerLabel, baseUrl: updates.baseUrl ?? m.baseUrl }
-                : m
-            )
-            : s.configuredModels,
-        }));
+        set((s) => {
+          const previous = s.providers.find((p) => p.id === id);
+          const keyChanged = typeof updates.apiKey === "string" && updates.apiKey !== (previous?.apiKey ?? "");
+          return {
+            providers: s.providers.map((p) =>
+              p.id === id ? { ...p, ...updates, updatedAt: Date.now() } : p
+            ),
+            // 同步更新已配置模型中的 providerLabel / baseUrl / apiKey（落档 65）
+            // 服务商级 Key 是认证 SSOT：换了服务商 Key，挂在它下面「未单独设 Key」
+            // 或仍沿用旧服务商 Key 的模型必须一起改——否则界面显示已配置，
+            // 实际请求仍带旧 Key/空 Key（「密钥换了还是不通」的根因）。
+            configuredModels: s.configuredModels.map((m) => {
+              if (m.providerId !== id) { return m; }
+              let next = m;
+              if (updates.label || updates.baseUrl) {
+                next = {
+                  ...next,
+                  providerLabel: updates.label ?? next.providerLabel,
+                  baseUrl: updates.baseUrl ?? next.baseUrl,
+                };
+              }
+              if (keyChanged) {
+                const inherited = !m.apiKey || m.apiKey === (previous?.apiKey ?? "");
+                if (inherited) { next = { ...next, apiKey: updates.apiKey ?? "" }; }
+              }
+              return next;
+            }),
+          };
+        });
       },
 
       removeProvider: (id) => {
@@ -309,7 +325,8 @@ export const useProviderSlice = create<ProviderSlice>()(
           providerId,
           providerLabel: provider.label,
           model,
-          apiKey,
+          // 落档 65：模型 Key 未填时继承服务商级 Key（此前恒为空 → 服务商面板填了 Key 也不生效）
+          apiKey: apiKey || provider.apiKey || "",
           baseUrl: customBaseUrl || provider.baseUrl,
           proxyUrl: proxyUrl || undefined,
           // 格式继承：显式 extras 优先 → 服务商默认 → 按 baseUrl 启发（/anthropic 路径）

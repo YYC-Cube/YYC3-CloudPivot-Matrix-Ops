@@ -932,6 +932,12 @@ function PredictionSection({ isMobile, throughputHistory }: { isMobile: boolean;
 }
 
 const NodeCard = memo(function NodeCard({ node, onClick }: { node: NodeData; onClick: (n: NodeData) => void }) {
+  // 落档 67：口径与设备性能页/节点详情统一——无实时证据（available=false 或
+  // 旧数据无旗标且值为 0）显示「—」，不拿 0 冒充 GPU/温度
+  const gpuNoEvidence = node.gpuAvailable === false
+    || (node.gpuAvailable === undefined && node.gpu === 0);
+  const tempNoEvidence = node.tempAvailable === false
+    || (node.tempAvailable === undefined && node.temp === 0);
   return (
     <div
       onClick={() => onClick(node)}
@@ -958,11 +964,11 @@ const NodeCard = memo(function NodeCard({ node, onClick }: { node: NodeData; onC
       <div className="mb-1">
         <div className="flex justify-between mb-0.5">
           <span className="text-[rgba(0,212,255,0.4)]" style={{ fontSize: "0.58rem" }}>GPU</span>
-          <span style={{ fontSize: "0.58rem", color: node.gpuAvailable === false ? "rgba(0,212,255,0.35)" : node.gpu > 90 ? "#ff3366" : "#00d4ff" }}>{node.gpuAvailable === false ? "—" : `${node.gpu}%`}</span>
+          <span style={{ fontSize: "0.58rem", color: gpuNoEvidence ? "rgba(0,212,255,0.35)" : node.gpu > 90 ? "#ff3366" : "#00d4ff" }}>{gpuNoEvidence ? "—" : `${node.gpu}%`}</span>
         </div>
         <div className="w-full h-1 rounded-full bg-[rgba(0,180,255,0.1)]">
           <div className="h-full rounded-full transition-all duration-500" style={{
-            width: `${node.gpuAvailable === false ? 0 : node.gpu}%`,
+            width: `${gpuNoEvidence ? 0 : node.gpu}%`,
             background: node.gpu > 90 ? "linear-gradient(90deg, #ff6600, #ff3366)" : "linear-gradient(90deg, #00d4ff, #00ff88)",
           }} />
         </div>
@@ -982,7 +988,7 @@ const NodeCard = memo(function NodeCard({ node, onClick }: { node: NodeData; onC
       </div>
       <div className="flex items-center justify-between mt-1.5">
         <span className="text-[rgba(0,212,255,0.3)]" style={{ fontSize: "0.56rem" }}>{node.model}</span>
-        <span className="text-[rgba(0,212,255,0.3)]" style={{ fontSize: "0.56rem" }}>{node.temp}°C</span>
+        <span className="text-[rgba(0,212,255,0.3)]" style={{ fontSize: "0.56rem" }}>{tempNoEvidence ? "—" : `${node.temp}°C`}</span>
       </div>
     </div>
   );

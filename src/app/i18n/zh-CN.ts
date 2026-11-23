@@ -508,6 +508,7 @@ const zhCN = {
     network: "网络连接",
     cluster: "集群配置",
     model: "模型管理",
+    sources: "数据源",
     storage: "存储配置",
     websocket: "WebSocket",
     aiLlm: "AI / LLM",

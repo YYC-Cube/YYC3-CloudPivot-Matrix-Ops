@@ -22,6 +22,16 @@ import type {
 } from "./ai-family.types";
 
 // ============================================================
+// 存储键（落档 71：队列命名空间拆分）
+// - Family 队列独立键 yyc3_family_sync_queue（SyncQueueItem 形态）
+// - 旧共享键 yyc3_sync_queue 归还 backgroundSync（SyncItem 形态）
+// - 首次加载时按形态识别迁移（loadDeviceState）
+// ============================================================
+
+const FAMILY_SYNC_QUEUE_KEY = "yyc3_family_sync_queue";
+const LEGACY_SYNC_QUEUE_KEY = "yyc3_sync_queue";
+
+// ============================================================
 // 同步类型定义
 // ============================================================
 
@@ -683,9 +693,32 @@ export class AIFamilySyncEngine {
         this.lastFullSyncAt = state.lastFullSyncAt || 0;
       }
 
-      const queueRaw = localStorage.getItem("yyc3_sync_queue");
-      if (queueRaw) {
-        this.syncQueue = JSON.parse(queueRaw);
+      // 落档 71：队列命名空间拆分——Family 用 yyc3_family_sync_queue，
+      // 与 backgroundSync 的 yyc3_sync_queue（SyncItem 形态）不再互踩。
+      // 一次性迁移：新键缺失且旧键数组里存在 Family 形态条目（payload+retryCount）
+      // 时迁移到新键，并把已迁移条目从旧键剔除（旧键只保留 SyncItem 形态）。
+      const familyQueueRaw = localStorage.getItem(FAMILY_SYNC_QUEUE_KEY);
+      if (familyQueueRaw) {
+        const parsed = JSON.parse(familyQueueRaw);
+        if (Array.isArray(parsed)) { this.syncQueue = parsed as SyncQueueItem[]; }
+      } else {
+        const legacyRaw = localStorage.getItem(LEGACY_SYNC_QUEUE_KEY);
+        if (legacyRaw) {
+          try {
+            const legacy = JSON.parse(legacyRaw);
+            if (Array.isArray(legacy)) {
+              const familyItems = legacy.filter(
+                (it) => it && typeof it === "object" && "payload" in it && "retryCount" in it,
+              );
+              if (familyItems.length > 0) {
+                this.syncQueue = familyItems as SyncQueueItem[];
+                const remainder = legacy.filter((it) => !familyItems.includes(it));
+                localStorage.setItem(LEGACY_SYNC_QUEUE_KEY, JSON.stringify(remainder));
+                localStorage.setItem(FAMILY_SYNC_QUEUE_KEY, JSON.stringify(this.syncQueue));
+              }
+            }
+          } catch { /* 旧键损坏则放弃迁移 */ }
+        }
       }
     } catch (error) {
       console.error("[AIFamilySync] Failed to load state:", error);
@@ -708,7 +741,8 @@ export class AIFamilySyncEngine {
 
   private saveQueueState(): void {
     try {
-      localStorage.setItem("yyc3_sync_queue", JSON.stringify(this.syncQueue));
+      // 落档 71：Family 队列独立命名空间（与 backgroundSync 的 SyncItem 队列分离）
+      localStorage.setItem(FAMILY_SYNC_QUEUE_KEY, JSON.stringify(this.syncQueue));
     } catch (error) {
       console.error("[AIFamilySync] Failed to save queue:", error);
     }

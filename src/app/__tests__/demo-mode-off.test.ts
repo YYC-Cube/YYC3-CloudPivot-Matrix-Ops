@@ -144,14 +144,27 @@ describe("useReportExporter · 演示模式关闭", () => {
 });
 
 describe("useOperationCenter · 演示模式关闭", () => {
-  it("executeAction 不执行模拟操作、不产生日志", async () => {
+  it("未接动作不伪造执行、不产生日志（落档 70 后 qa2 仍为未接）", async () => {
     const { result } = renderHook(() => useOperationCenter());
-    const firstAction = result.current.allActions[0];
+    // qa2 部署模型 = 无服务端能力的未接动作：如实拒止，不产生日志
     await act(async () => {
-      await result.current.executeAction(firstAction.id);
+      await result.current.executeAction("qa2");
     });
     expect(result.current.isExecuting).toBeNull();
     expect(result.current.logs).toEqual([]);
+  });
+
+  it("已接 agent 动作真实执行：失败也如实落日志（demo 关闭不阻拦真实动作）", async () => {
+    const { result } = renderHook(() => useOperationCenter());
+    // qa1 重启 vLLM = agent 白名单动作（落档 70）：测试环境无 agent 令牌 →
+    // 如实失败并记录日志（真实执行不受演示模式开关约束）
+    await act(async () => {
+      await result.current.executeAction("qa1");
+    });
+    expect(result.current.isExecuting).toBeNull();
+    expect(result.current.logs).toHaveLength(1);
+    expect(result.current.logs[0]?.status).toBe("failed");
+    expect(result.current.logs[0]?.action).toContain("未配置 agent 令牌");
   });
 
   it("操作日志为空（不展示模拟种子，含 allLogs）", () => {

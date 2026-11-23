@@ -11,7 +11,16 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import { usePersistedList } from "./usePersistedState";
-import { syncAlertRulesToAgent } from "../lib/agent-rules-sync";
+import { syncAlertRulesToAgent, fetchAgentRules } from "../lib/agent-rules-sync";
+
+/** 规则下发同步状态（落档 69：下行→落盘→回读闭环回显） */
+export interface AlertRulesSyncState {
+  status: "never" | "syncing" | "synced" | "failed";
+  reason?: string;
+  localRuleCount?: number;
+  agentRuleCount?: number;
+  at?: number;
+}
 
 // ============================================================
 // Types — centralized in types/index.ts
@@ -90,17 +99,44 @@ export function useAlertRules(opts: AlertRulesOptions = {}) {
 
   // ── 规则下发 yyc3-agent（防抖）：编辑即生效的下行链路 ──
   // agent 端按规则实时评估 cpu/memory/disk 并推送 alert（上行闭环）
+  // 落档 69：PUT 成功后 GET 回读对账，状态机供面板回显（已同步/原因）
+  const [syncState, setSyncState] = useState<AlertRulesSyncState>({ status: "never" });
   const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (!rulesLoaded) {return;}
     if (syncTimerRef.current) {clearTimeout(syncTimerRef.current);}
     syncTimerRef.current = setTimeout(() => {
-      void syncAlertRulesToAgent(rulesRef.current);
+      setSyncState((s) => ({ ...s, status: "syncing" }));
+      void syncAlertRulesToAgent(rulesRef.current).then((r) => {
+        setSyncState({
+          status: r.ok ? "synced" : "failed",
+          reason: r.reason,
+          localRuleCount: r.localRuleCount,
+          agentRuleCount: r.agentRuleCount,
+          at: Date.now(),
+        });
+      });
     }, 800);
     return () => {
       if (syncTimerRef.current) {clearTimeout(syncTimerRef.current);}
     };
   }, [rules, rulesLoaded]);
+
+  /** 手动回读：GET /rules 对账（落档 69） */
+  const readbackAgentRules = useCallback(async (): Promise<AlertRulesSyncState> => {
+    setSyncState((s) => ({ ...s, status: "syncing" }));
+    const local = rulesRef.current.length;
+    const r = await fetchAgentRules();
+    const next: AlertRulesSyncState = {
+      status: r.ok ? "synced" : "failed",
+      reason: r.reason,
+      localRuleCount: local,
+      agentRuleCount: r.agentRuleCount,
+      at: Date.now(),
+    };
+    setSyncState(next);
+    return next;
+  }, []);
 
   useEffect(() => {
     if (!opts.liveNodes || opts.liveNodes.length === 0) {return;}
@@ -250,5 +286,7 @@ export function useAlertRules(opts: AlertRulesOptions = {}) {
     createRule,
     updateRule,
     stats,
+    syncState,
+    readbackAgentRules,
   };
 }
