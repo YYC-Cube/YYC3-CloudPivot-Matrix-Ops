@@ -85,3 +85,43 @@ test("操作中心 DGX 健康探针真实执行并产生回执", async ({ page }
   // 探针为真实执行（60s 超时预算 + 探针内部多次 ssh/HTTP），回执 toast 含 exit=0
   await expect(page.locator("[data-sonner-toast]")).toContainText("exit=0", { timeout: 70_000 });
 });
+
+test("告警规则创建 → 下发 → agent 回读全链路（落档 73）", async ({ page }) => {
+  await ensureAgentSession(page);
+  await page.goto(`/?v=${Date.now()}#/alerts`);
+  await expect(page.getByTestId("create-rule-btn")).toBeVisible({ timeout: 20_000 });
+
+  // 建规则：命名 + 选真实 WS 节点（异步到达，先等节点 chips 渲染）+ 默认阈值 → 提交
+  await page.getByTestId("create-rule-btn").click();
+  await expect(page.getByTestId("create-rule-modal")).toBeVisible();
+  await page.getByTestId("rule-name-input").fill("e2e-closure-rule");
+  const nodeChip = page.locator('[data-testid^="node-"]').first();
+  await expect(nodeChip).toBeVisible({ timeout: 20_000 });
+  await nodeChip.click();
+  await page.getByTestId("submit-rule-btn").click();
+  await expect(page.getByTestId("create-rule-modal")).toBeHidden({ timeout: 10_000 });
+
+  // 防抖下发（800ms）+ PUT + GET 回读 → chip 应显示已同步且数量一致
+  await expect(page.getByTestId("rules-sync-status")).toContainText("已同步 1 条", { timeout: 15_000 });
+
+  // Node 侧回读 agent 权威数据（闭环的外部证据）
+  await expect
+    .poll(async () => {
+      const r = await fetch(`http://localhost:3113/rules?token=${encodeURIComponent(AGENT_TOKEN)}`);
+      const d = (await r.json()) as { rules?: Array<{ name?: string }> };
+      return (d.rules ?? []).some((x) => x.name === "e2e-closure-rule");
+    }, { timeout: 15_000, intervalMs: 1_000 })
+    .toBe(true);
+
+  // 清理：面板删除该规则（按文本定位卡片，agent 侧 id 可能被 sanitize 重写）
+  const card = page.locator('[data-testid^="rule-card-"]').filter({ hasText: "e2e-closure-rule" }).first();
+  await card.scrollIntoViewIfNeeded();
+  await card.getByTestId("delete-rule-btn").click();
+  await expect
+    .poll(async () => {
+      const r = await fetch(`http://localhost:3113/rules?token=${encodeURIComponent(AGENT_TOKEN)}`);
+      const d = (await r.json()) as { rules?: Array<{ name?: string }> };
+      return (d.rules ?? []).some((x) => x.name === "e2e-closure-rule");
+    }, { timeout: 15_000, intervalMs: 1_000 })
+    .toBe(false);
+});

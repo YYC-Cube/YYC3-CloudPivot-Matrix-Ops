@@ -99,6 +99,7 @@ function RuleCard({
   return (
     <GlassCard
       className="p-4 cursor-pointer"
+      data-testid={`rule-card-${rule.id}`}
       onClick={onSelect}
       glowColor={rule.enabled ? `${severityColor(rule.severity)}15` : undefined}
     >
@@ -130,6 +131,8 @@ function RuleCard({
           <button
             onClick={onDelete}
             className="text-[rgba(255,51,102,0.4)] hover:text-[#ff3366] transition-all"
+            aria-label="删除规则"
+            data-testid="delete-rule-btn"
           >
             <Trash2 className="w-4 h-4" />
           </button>

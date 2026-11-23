@@ -1319,6 +1319,24 @@
    "related_docs": [
     "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/71-存储外联收尾-Family同步队列拆命名空间-soundhelix零外联空态-20261123.md"
    ]
+  },
+  {
+   "trace_id": "TRC-20261124001",
+   "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/73-D阶段第二批-告警全链路e2e-单测补齐覆盖率上调-20261124.md",
+   "action": "create",
+   "timestamp": "2026-11-24T04:30:00+08:00",
+   "version": "v1.0.0",
+   "checksum": "6ca3d6f6ead4acf0",
+   "author": "YYC³ Team",
+   "changes": [
+    {
+     "field": "content",
+     "summary": "D 阶段第二批（DGX 部署缓办）：告警全链路 e2e（创建→下发→回读→删除，RuleCard 补 testid/删除钮补 aria-label）；新增 upstream-error-semantics 10 例 + agent-sync-and-actions 9 例；覆盖率 54.78/42.53/56.31/55.71，棘轮 branches 41→42"
+    }
+   ],
+   "related_docs": [
+    "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/72-E阶段治理第一批-Playwright冒烟入CI-覆盖率棘轮上调-20261124.md"
+   ]
   }
  ]
 }

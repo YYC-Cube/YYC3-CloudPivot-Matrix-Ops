@@ -31,7 +31,7 @@ const UPSTREAM_PROXY_MAP: Record<string, string> = {
 };
 
 /** 解析上游错误体：兼容 {detail:{error:{message}}} / {error:{message}} / {message} */
-function extractUpstreamMessage(body: string): string {
+export function extractUpstreamMessage(body: string): string {
   try {
     const data = JSON.parse(body) as Record<string, unknown>;
     const detail = data.detail as Record<string, unknown> | undefined;
@@ -47,7 +47,7 @@ function extractUpstreamMessage(body: string): string {
  * 把上游状态码翻译成可执行的结论（落档 65）。
  * 目的：不再让「拦截」这种笼统提示误导成 Key 问题——按网关真实语义区分。
  */
-function explainUpstreamStatus(status: number, message: string): string | undefined {
+export function explainUpstreamStatus(status: number, message: string): string | undefined {
   if (status === 400 && /guardrail|内容安全|安全策略/.test(message)) {
     return "上游内容安全策略拦截（与 API Key 无关）：网关会拦输入注入特征、输出中的邮箱/手机号/证件号等 PII";
   }
