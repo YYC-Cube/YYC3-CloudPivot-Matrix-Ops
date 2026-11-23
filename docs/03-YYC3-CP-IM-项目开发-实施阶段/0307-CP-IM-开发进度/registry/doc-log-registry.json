@@ -1283,6 +1283,24 @@
    "related_docs": [
     "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/70-D阶段运维闭环第一批-agent动作白名单-Ollama拉起-20261123.md"
    ]
+  },
+  {
+   "trace_id": "TRC-20261123007",
+   "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/72-E阶段治理第一批-Playwright冒烟入CI-覆盖率棘轮上调-20261124.md",
+   "action": "create",
+   "timestamp": "2026-11-24T01:30:00+08:00",
+   "version": "v1.0.0",
+   "checksum": "ba12ff066b481805",
+   "author": "YYC³ Team",
+   "changes": [
+    {
+     "field": "content",
+     "summary": "E 阶段治理第一批：Playwright 脚手架 + 冒烟 4 例入 CI（新增 e2e job：build 产物 + chromium + 报告归档；E2E_EXECUTABLE_PATH 本地直驱免下载）；覆盖率棘轮 45/44/31/44 → 55/56/41/54（实测过线）；Mimosa 深扫完成 inconclusive（复查范围 0 发现，非运行时验证）如实登记"
+    }
+   ],
+   "related_docs": [
+    "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/71-存储外联收尾-Family同步队列拆命名空间-soundhelix零外联空态-20261123.md"
+   ]
   }
  ]
 }
