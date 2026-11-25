@@ -181,7 +181,7 @@ const REAL_EXECUTORS: Record<string, () => Promise<RealActionResult> | RealActio
 // qa10 优先走 DGX 全量探针（比 /healthz 更全面）；失败回退 /healthz。
 // qa2/qa7/qa8/qa9 = 落档 74 新动作的【计划模式】（缺 CONFIRM 脚本只输出计划，
 // 实际执行需 CONFIRM=destructive-confirm 两步确认——面板确认 UI 为后续批次）。
-import { execOpsAction } from "../lib/agent-actions";
+import { execOpsAction, fetchOpsActions } from "../lib/agent-actions";
 
 const AGENT_ACTION_BY_QA: Record<string, string> = {
   qa1: "dgx-vllm-restart",
@@ -193,6 +193,12 @@ const AGENT_ACTION_BY_QA: Record<string, string> = {
   qa8: "dgx-queue-pause",
   qa9: "dgx-queue-resume",
 };
+
+/** 需要参数输入的 agent 动作（打开参数 modal，不经 QuickActionGrid 直执行） */
+const PARAM_ACTIONS = new Set(["qa2", "qa7", "qa8", "qa9"]);
+
+/** agent 端参数 schema 回读缓存（GET /actions 的 args 字段，与校验同源零漂移） */
+let agentArgsSchemaCache: Record<string, Record<string, { pattern: string; required?: boolean; desc: string }>> = {};
 
 async function runAgentMappedAction(agentActionId: string, label: string): Promise<RealActionResult> {
   const r = await execOpsAction(agentActionId);
@@ -238,6 +244,17 @@ export function useOperationCenter() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isExecuting, setIsExecuting] = useState<string | null>(null);
 
+  // ── 落档 75：agent 端参数 schema 回读缓存（GET /actions 同源，供参数 modal 渲染） ──
+  useEffect(() => {
+    void fetchOpsActions()
+      .then((r) => {
+        for (const a of r.actions ?? []) {
+          if (a.args) { agentArgsSchemaCache[a.id] = a.args; }
+        }
+      })
+      .catch(() => undefined);
+  }, []);
+
   // ── 历史假种子一次性清除（IndexedDB 加载完成后执行） ──
   useEffect(() => {
     if (!templatesLoaded) {return;}
@@ -274,6 +291,84 @@ export function useOperationCenter() {
   })();
 
   // Execute an action
+  // 落档 75：带参数的 agent 动作（qa2/qa7/qa8/qa9）走参数 modal——
+  // executeArgsAction 才是真实执行入口；executeAction 仅负责分流/守卫
+  const [paramAction, setParamAction] = useState<{
+    actionId: string;
+    agentActionId: string;
+    label: string;
+    category: OperationCategoryType;
+    destructive: boolean;
+    fields: Array<{ key: string; desc: string; required: boolean; pattern: string }>;
+  } | null>(null);
+
+  const executeArgsAction = useCallback(async (
+    actionId: string,
+    agentActionId: string,
+    label: string,
+    category: OperationCategoryType,
+    args: Record<string, string>,
+  ) => {
+    setIsExecuting(actionId);
+    setActions((prev) =>
+      prev.map((a) => (a.id === actionId ? { ...a, status: "running" as const } : a))
+    );
+
+    let finalStatus: OperationStatus;
+    let duration: number;
+    let note = "";
+    const started = performance.now();
+    try {
+      const r = await execOpsAction(agentActionId, args);
+      if (!r.ok) {
+        finalStatus = "failed";
+        note = `agent 动作未执行：${r.reason === "no-token" ? "未配置 agent 令牌" : r.reason ?? "失败"}`;
+      } else {
+        const receipt = r.receipt!;
+        const tail = receipt.stdoutTail.trim().split("\n").slice(-4).join(" · ").slice(0, 180);
+        const statusWord = receipt.ok
+          ? `exit=0 · ${receipt.durationMs}ms`
+          : receipt.killedByTimeout
+            ? "超时强杀"
+            : `exit=${receipt.exitCode ?? "null"}${receipt.signal ? ` (${receipt.signal})` : ""}`;
+        finalStatus = receipt.ok ? "success" : "failed";
+        note = `${label} 回执 ${receipt.id}（${statusWord}）${tail ? `：${tail}` : ""}`;
+      }
+    } catch (err) {
+      finalStatus = "failed";
+      note = err instanceof Error ? err.message : String(err);
+    }
+    duration = Math.round(performance.now() - started);
+
+    setActions((prev) =>
+      prev.map((a) => (a.id === actionId ? { ...a, status: finalStatus } : a))
+    );
+
+    const newLog: OperationLogEntry = {
+      id: `log-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      timestamp: Date.now(),
+      category,
+      action: note ? `${label} — ${note}` : label,
+      user: "admin",
+      status: finalStatus,
+      duration,
+    };
+    await prependLog(newLog);
+    setIsExecuting(null);
+
+    if (finalStatus === "success") {
+      toast.success(`${label} 执行成功`, note ? { description: note } : undefined);
+    } else {
+      toast.error(`${label} 执行失败`, { description: note || "请检查日志获取详情" });
+    }
+
+    setTimeout(() => {
+      setActions((prev) =>
+        prev.map((a) => (a.id === actionId ? { ...a, status: "pending" as const } : a))
+      );
+    }, 3000);
+  }, [prependLog]);
+
   const executeAction = useCallback(async (actionId: string) => {
     const action = actions.find((a) => a.id === actionId);
     if (!action) {return;}
@@ -285,6 +380,22 @@ export function useOperationCenter() {
     if (!agentActionId && !realExecutor && !demoMode) {
       // 如实标注未接能力，不伪造执行
       toast.info(`「${action.label}」${action.description.includes("未接") ? "尚未接入服务端能力" : "需要接入对应服务端能力"}（描述见按钮说明）`);
+      return;
+    }
+
+    // ── 落档 75：需要参数的 agent 动作 → 打开参数 modal（不在 QuickActionGrid 直执行） ──
+    if (agentActionId && PARAM_ACTIONS.has(actionId)) {
+      const schema = agentArgsSchemaCache[agentActionId] ?? {};
+      setParamAction({
+        actionId,
+        agentActionId,
+        label: action.label,
+        category: action.category,
+        destructive: true,
+        fields: Object.entries(schema).map(([key, rule]) => ({
+          key, desc: rule.desc, required: Boolean(rule.required), pattern: rule.pattern,
+        })),
+      });
       return;
     }
 
@@ -412,6 +523,14 @@ export function useOperationCenter() {
     toast.info("模板已删除");
   }, [removeTemplate]);
 
+  // ── 落档 75：参数化动作 modal 状态与提交 ──
+  const submitParamAction = useCallback(async (args: Record<string, string>) => {
+    if (!paramAction) { return; }
+    const { actionId, agentActionId, label, category } = paramAction;
+    setParamAction(null);
+    await executeArgsAction(actionId, agentActionId, label, category, args);
+  }, [paramAction, executeArgsAction]);
+
   return {
     // Category
     categories: CATEGORY_META,
@@ -422,6 +541,10 @@ export function useOperationCenter() {
     allActions: actions,
     isExecuting,
     executeAction,
+    // Params modal (落档 75)
+    paramAction,
+    submitParamAction,
+    closeParamAction: () => setParamAction(null),
     // Templates
     templates,
     templatesLoaded,

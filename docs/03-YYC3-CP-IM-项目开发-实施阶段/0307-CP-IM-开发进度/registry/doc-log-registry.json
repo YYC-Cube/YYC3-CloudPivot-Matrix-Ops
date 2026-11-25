@@ -1373,6 +1373,24 @@
    "related_docs": [
     "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/73-D阶段第二批-告警全链路e2e-单测补齐覆盖率上调-20261124.md"
    ]
+  },
+  {
+   "trace_id": "TRC-20261126002",
+   "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/75-D阶段第三批-动作参数化UI-参数modal-CONFIRM两步-20261126.md",
+   "action": "create",
+   "timestamp": "2026-11-26T12:30:00+08:00",
+   "version": "v1.0.0",
+   "checksum": "9744c2eee75a98ce",
+   "author": "YYC³ Team",
+   "changes": [
+    {
+     "field": "content",
+     "summary": "动作参数化执行 UI：agent GET /actions 回传 args schema（与校验同源）→ 操作中心参数 modal（schema 渲染/必填标注/CONFIRM 自动携带/客户端预检）→ execOpsAction args 透传；qa2/qa7/qa8/qa9 从面板完成填参→确认→实执行→回执；demo-mode-off qa2 用例按两步流重写"
+    }
+   ],
+   "related_docs": [
+    "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/74-DGX部署链路规划-Ollama常驻跨设备-动作参数框架-20261126.md"
+   ]
   }
  ]
 }

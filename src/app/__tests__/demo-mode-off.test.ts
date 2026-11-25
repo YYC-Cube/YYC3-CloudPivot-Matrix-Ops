@@ -154,10 +154,21 @@ describe("useOperationCenter · 演示模式关闭", () => {
     expect(result.current.logs).toEqual([]);
   });
 
-  it("qa2 部署模型 = agent 计划模式：无令牌如实失败落日志（落档 74 已接线）", async () => {
+  it("qa2 部署模型 = 参数化动作：先开参数 modal，提交后无令牌如实失败落日志（落档 75）", async () => {
     const { result } = renderHook(() => useOperationCenter());
+    // 第一步：executeAction 分流到参数 modal（不直接执行）
     await act(async () => {
       await result.current.executeAction("qa2");
+    });
+    expect(result.current.paramAction).not.toBeNull();
+    expect(result.current.paramAction?.agentActionId).toBe("dgx-model-deploy");
+    expect(result.current.logs).toEqual([]);
+    // 第二步：提交参数（无令牌环境 → agent 请求如实失败落日志）
+    await act(async () => {
+      await result.current.submitParamAction({
+        MODEL: "/data/models/e2e-demo",
+        SERVED_NAME: "e2e-demo-model",
+      });
     });
     expect(result.current.isExecuting).toBeNull();
     expect(result.current.logs).toHaveLength(1);

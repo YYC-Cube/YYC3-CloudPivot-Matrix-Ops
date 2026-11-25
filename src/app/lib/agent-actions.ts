@@ -20,6 +20,12 @@
 import { getAPIConfig } from "./api-config";
 import { useSettingsSSOT } from "../store/slices/settings-ssot-slice";
 
+export interface OpsActionArgRule {
+  pattern: string;
+  required?: boolean;
+  desc: string;
+}
+
 export interface OpsActionDef {
   id: string;
   name: string;
@@ -28,6 +34,8 @@ export interface OpsActionDef {
   destructive: boolean;
   risk: string;
   timeoutMs: number;
+  /** 落档 75：参数 schema 回传（与 agent 校验同源）——面板据此渲染参数输入框 */
+  args?: Record<string, OpsActionArgRule> | null;
   lastReceipt?: { receiptId: string; ok: boolean; at: number; durationMs: number } | null;
 }
 
@@ -87,8 +95,8 @@ export async function fetchOpsActions(): Promise<
   }
 }
 
-/** POST /actions/exec：执行白名单动作并取回回执 */
-export async function execOpsAction(actionId: string): Promise<
+/** POST /actions/exec：执行白名单动作并取回回执（args 经服务端白名单二次校验） */
+export async function execOpsAction(actionId: string, args?: Record<string, string>): Promise<
   { ok: boolean; reason?: string; receipt?: OpsActionReceipt }
 > {
   const base = agentBase();
@@ -101,7 +109,7 @@ export async function execOpsAction(actionId: string): Promise<
     const res = await fetch(`${base}/actions/exec${q}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ actionId }),
+      body: JSON.stringify(args ? { actionId, args } : { actionId }),
       signal: controller.signal,
     });
     const data = await res.json() as { ok?: boolean; error?: string; receipt?: OpsActionReceipt };

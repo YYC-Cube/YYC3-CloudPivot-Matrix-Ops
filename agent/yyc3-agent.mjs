@@ -485,6 +485,8 @@ function publicAction(a) {
   return {
     id: a.id, name: a.name, description: a.description, target: a.target,
     destructive: Boolean(a.destructive), risk: a.risk ?? "low", timeoutMs: a.timeoutMs,
+    // 落档 75：参数 schema 回传——面板据此渲染参数输入框（与校验同源，零漂移）
+    args: a.args ?? null,
   };
 }
 
