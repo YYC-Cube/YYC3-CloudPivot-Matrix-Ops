@@ -95,6 +95,16 @@ const DEFAULT_SOURCES: DataSourceEntry[] = [
     createdAt: 0,
   },
   {
+    id: "src-ollama-77",
+    kind: "ollama",
+    label: "Ollama（yyc3-77 门面 · qwen3-coder-30b）",
+    url: "http://100.98.206.18:11434",
+    enabled: true,
+    builtin: true,
+    note: "yyc3-77 iMac M4：ollama_proxy TS 门面（:11434）→ 本机 Ollama serve（qwen3-coder-30b 30.5B Q4_K_M · 262K ctx，launchd com.ollama.ollama.server 常驻）；embed bge-m3 同端口；台账 OPS YYC3-节点与模型部署台账 §3.2（2026-11-26 ssh 实测核对）",
+    createdAt: 0,
+  },
+  {
     id: "src-nas",
     kind: "nas-gateway",
     label: "NAS 统一网关（真实上游）",
@@ -181,7 +191,7 @@ export const useSourceRegistry = create<SourceRegistrySlice>()(
     }),
     {
       name: "yyc3-source-registry",
-      version: 3,
+      version: 4,
       partialize: (s) => ({ sources: s.sources }),
       // v3：内置源条目（label/note 等说明性字段）以代码为准刷新——用户改的
       // url/enabled/lastTest 原样保留，仅补齐新增内置源

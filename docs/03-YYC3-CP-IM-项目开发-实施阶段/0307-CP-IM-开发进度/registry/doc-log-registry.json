@@ -1355,6 +1355,24 @@
    "related_docs": [
     "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/73-D阶段第二批-告警全链路e2e-单测补齐覆盖率上调-20261124.md"
    ]
+  },
+  {
+   "trace_id": "TRC-20261126001",
+   "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/74-DGX部署链路规划-Ollama常驻跨设备-动作参数框架-20261126.md",
+   "action": "update",
+   "timestamp": "2026-11-26T11:30:00+08:00",
+   "version": "v1.0.1",
+   "checksum": "e95d6da99f5a0b5a",
+   "author": "YYC³ Team",
+   "changes": [
+    {
+     "field": "content",
+     "summary": "增补（主控令 yyc3-77 台账核对+ssh 实测）：yyc3-77 六服务在役 + Ollama serve 本体 qwen3-coder-30b 30.5B（launchd 常驻回环）+ ollama_proxy TS 门面跨设备 200 + swap 28.5G 近满恶化；OPS 双台账同步（§3.2 补本体行/段尾核对注记/节点台账 77 行）；面板数据源新增 src-ollama-77（registry v4）；e2e 7/7"
+    }
+   ],
+   "related_docs": [
+    "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/73-D阶段第二批-告警全链路e2e-单测补齐覆盖率上调-20261124.md"
+   ]
   }
  ]
 }
