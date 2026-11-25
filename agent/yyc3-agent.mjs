@@ -500,6 +500,8 @@ function validateActionArgs(action, args) {
     if (!rule) { return { ok: false, error: `未知参数: ${key}` }; }
     const v = String(value);
     if (v.length > 128) { return { ok: false, error: `参数过长: ${key}` }; }
+    // 非必填参数留空 = 采用脚本默认值，跳过 pattern 校验（不注入 env）
+    if (!rule.required && v === "") { continue; }
     if (!new RegExp(rule.pattern).test(v)) { return { ok: false, error: `参数不合法: ${key}（${rule.desc}）` }; }
     clean[key] = v;
   }

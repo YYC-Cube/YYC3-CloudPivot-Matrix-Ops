@@ -1391,6 +1391,24 @@
    "related_docs": [
     "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/74-DGX部署链路规划-Ollama常驻跨设备-动作参数框架-20261126.md"
    ]
+  },
+  {
+   "trace_id": "TRC-20261126003",
+   "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/76-E阶段第二批-参数化UI-e2e-覆盖率棘轮微收紧-20261126.md",
+   "action": "create",
+   "timestamp": "2026-11-26T13:00:00+08:00",
+   "version": "v1.0.0",
+   "checksum": "5e3f9df129e6d221",
+   "author": "YYC³ Team",
+   "changes": [
+    {
+     "field": "content",
+     "summary": "参数化 modal e2e 第 4 例（qa2 modal 填参→plan 回执 exit=0，1.4s）；三坑修复登记（agent 进程 stale 致 args 回读 null / GET /actions 启发式缓存 t= 防缓存 / 非必填空值跳过 pattern 校验双侧修正）；覆盖率棘轮 statements 54→54.5 微收紧过线"
+    }
+   ],
+   "related_docs": [
+    "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/75-D阶段第三批-动作参数化UI-参数modal-CONFIRM两步-20261126.md"
+   ]
   }
  ]
 }

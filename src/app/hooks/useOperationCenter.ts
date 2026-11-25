@@ -383,9 +383,12 @@ export function useOperationCenter() {
       return;
     }
 
-    // ── 落档 75：需要参数的 agent 动作 → 打开参数 modal（不在 QuickActionGrid 直执行） ──
+    // ── 落档 75/76：需要参数的 agent 动作 → 打开参数 modal（不在 QuickActionGrid 直执行） ──
     if (agentActionId && PARAM_ACTIONS.has(actionId)) {
-      const schema = agentArgsSchemaCache[agentActionId] ?? {};
+      // schema 实时回读（令牌注入后 GET /actions 才能成功；缓存仅作回退）
+      const r = await fetchOpsActions();
+      const live = (r.actions ?? []).find((x) => x.id === agentActionId)?.args;
+      const schema = live ?? agentArgsSchemaCache[agentActionId] ?? {};
       setParamAction({
         actionId,
         agentActionId,

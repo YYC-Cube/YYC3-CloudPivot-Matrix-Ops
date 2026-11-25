@@ -133,3 +133,33 @@ test("告警规则创建 → 下发 → agent 回读全链路（落档 73）", a
     }, { timeout: 15_000, intervalMs: 1_000 })
     .toBe(false);
 });
+
+test("qa2 部署模型参数化计划模式：modal 填参 → plan 回执（落档 76）", async ({ page }) => {
+  await ensureAgentSession(page);
+  await page.goto(`/?v=${Date.now()}#/operations`);
+  await expect(page.getByText("部署模型（计划）").first()).toBeVisible({ timeout: 20_000 });
+
+  // 点击 qa2 卡片 → executeAction 分流到参数 modal（不直执行）
+  const clicked = await page.evaluate(() => {
+    const btns = Array.prototype.slice.call(document.querySelectorAll("button"));
+    const card = btns.find((b) => (b.textContent || "").indexOf("部署模型（计划）") >= 0);
+    if (!card) { return false; }
+    card.click();
+    return true;
+  });
+  expect(clicked).toBe(true);
+
+  // 参数 modal 渲染（schema 来自 GET /actions 回读）
+  const modal = page.getByTestId("action-param-modal");
+  await expect(modal).toBeVisible({ timeout: 10_000 });
+  await expect(modal).toContainText("destructive");
+
+  // 填必填参数（MODEL/SERVED_NAME；其余留空用默认）
+  await page.getByTestId("action-arg-MODEL").fill("/data/models/e2e-demo");
+  await page.getByTestId("action-arg-SERVED_NAME").fill("e2e-demo-model");
+
+  // 执行（plan 模式：无 CONFIRM → 脚本只输出部署计划，exit=0，不动 DGX）
+  await page.getByTestId("action-param-submit").click();
+  await expect(page.locator("[data-sonner-toast]").first()).toContainText("执行成功", { timeout: 30_000 });
+  await expect(page.locator("[data-sonner-toast]").first()).toContainText("plan-only", { timeout: 10_000 });
+});

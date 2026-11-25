@@ -183,14 +183,18 @@ export function OperationCenter() {
             <div className="flex gap-3 mt-5">
               <button
                 onClick={() => {
-                  // 必填客户端预检 + 非法值预检（pattern）
+                  // 必填客户端预检；非必填留空 = 脚本默认值（不注入）
+                  const args: Record<string, string> = {};
                   for (const f of fields) {
                     const v = (paramValues[f.key] ?? "").trim();
                     if (f.required && !v) { setParamError(`缺少必填参数: ${f.key}`); return; }
-                    if (v && !new RegExp(f.pattern).test(v)) { setParamError(`参数不合法: ${f.key}（${f.desc}）`); return; }
+                    if (v) {
+                      if (!new RegExp(f.pattern).test(v)) { setParamError(`参数不合法: ${f.key}（${f.desc}）`); return; }
+                      args[f.key] = v;
+                    }
                   }
                   setParamError(null);
-                  void submitParamAction(paramValues);
+                  void submitParamAction(args);
                 }}
                 disabled={isExecuting !== null}
                 data-testid="action-param-submit"

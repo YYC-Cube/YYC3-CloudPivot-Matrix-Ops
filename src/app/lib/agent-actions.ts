@@ -84,7 +84,8 @@ export async function fetchOpsActions(): Promise<
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 5000);
   try {
-    const res = await fetch(`${base}/actions${q}`, { signal: controller.signal });
+    // t= 时间戳防启发式缓存（GET /actions 的旧 null-args 响应会导致面板字段缺失）
+    const res = await fetch(`${base}/actions${q}&t=${Date.now()}`, { signal: controller.signal });
     if (!res.ok) { return { ok: false, reason: `http-${res.status}` }; }
     const data = await res.json() as { actions?: OpsActionDef[]; running?: string[]; source?: string };
     return { ok: true, actions: data.actions ?? [], running: data.running ?? [], source: data.source };
