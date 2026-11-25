@@ -53,17 +53,19 @@ export const CATEGORY_META: OperationCategoryMeta[] = [
 // ============================================================
 
 const QUICK_ACTIONS: OperationItem[] = [
-  // 落档 70：qa1/qa3/qa6/qa10 已接 yyc3-agent 白名单动作（不经 OpsPanel，回执可查）；
-  // qa2/qa7/qa8/qa9 尚无服务端能力，如实标注「未接」而非伪造成功
+  // 落档 70/74：qa1/qa3/qa6/qa10 已接 yyc3-agent 白名单动作（不经 OpsPanel，回执可查）；
+  // 落档 74：qa2/qa7/qa8/qa9 接入 DGX 部署/迁移/队列四动作的【计划模式】——
+  //   缺 CONFIRM 时脚本输出执行计划（安全默认），实际执行需带
+  //   CONFIRM=destructive-confirm 的两步确认（后续批次补面板确认 UI/curl）
   { id: "qa1", category: "node",   label: "重启 vLLM 服务",  description: "重启 DGX vLLM（destructive：推理短暂中断）", icon: "RotateCw",    status: "pending", dangerous: true },
-  { id: "qa2", category: "model",  label: "部署模型",  description: "未接：无服务端部署通道（如实标注）", icon: "Upload",      status: "pending" },
+  { id: "qa2", category: "model",  label: "部署模型（计划）",  description: "DGX 起新 vLLM 容器：需 MODEL/SERVED_NAME 参数（当前计划模式）", icon: "Upload",      status: "pending" },
   { id: "qa3", category: "system", label: "清理缓存",  description: "DGX 磁盘层缓存清理（不 kill 进程）", icon: "Trash2",      status: "pending", dangerous: true },
   { id: "qa4", category: "system", label: "导出日志",  description: "导出系统日志到本地文件",        icon: "Download",    status: "pending" },
   { id: "qa5", category: "system", label: "生成报告",  description: "生成系统性能报告 (JSON/PDF)",   icon: "FileText",    status: "pending" },
   { id: "qa6", category: "node",   label: "批量重启 vLLM",  description: "DGX 双机 vLLM 服务重启（整机重启未接）", icon: "RefreshCw",   status: "pending", dangerous: true },
-  { id: "qa7", category: "model",  label: "模型迁移",  description: "未接：无服务端迁移通道（如实标注）", icon: "ArrowRightLeft", status: "pending" },
-  { id: "qa8", category: "task",   label: "暂停队列",  description: "未接：vLLM 无暂停端点（如实标注）", icon: "Pause",       status: "pending" },
-  { id: "qa9", category: "task",   label: "恢复队列",  description: "未接：vLLM 无恢复端点（如实标注）", icon: "Play",        status: "pending" },
+  { id: "qa7", category: "model",  label: "模型迁移（计划）",  description: "起新→等健康→停旧：需 HEALTH_URL 参数（当前计划模式）", icon: "ArrowRightLeft", status: "pending", dangerous: true },
+  { id: "qa8", category: "task",   label: "暂停队列（计划）",  description: "docker pause 冻结容器：空闲护栏，当前计划模式", icon: "Pause",       status: "pending", dangerous: true },
+  { id: "qa9", category: "task",   label: "恢复队列（计划）",  description: "docker unpause 恢复容器（与 qa8 配对）", icon: "Play",        status: "pending" },
   { id: "qa10", category: "node",  label: "DGX 健康探针",  description: "n1/n2 vLLM+DCGM 端口与 ssh 探活（只读）", icon: "HeartPulse",  status: "pending" },
   { id: "qa11", category: "system",label: "备份配置",  description: "备份当前系统配置到本地",        icon: "HardDrive",   status: "pending" },
   { id: "qa12", category: "custom",label: "自定义脚本",description: "未接：仅白名单动作可执行（actions.json）", icon: "Terminal",    status: "pending" },
@@ -175,8 +177,10 @@ const REAL_EXECUTORS: Record<string, () => Promise<RealActionResult> | RealActio
   qa11: runBackupConfig,
 };
 
-// ── 落档 70：agent 白名单动作映射（不经 OpsPanel，回执可查） ──
-// qa10 优先走 DGX 全量探针（比 /healthz 更全面）；失败回退 /healthz
+// ── 落档 70/74：agent 白名单动作映射（不经 OpsPanel，回执可查） ──
+// qa10 优先走 DGX 全量探针（比 /healthz 更全面）；失败回退 /healthz。
+// qa2/qa7/qa8/qa9 = 落档 74 新动作的【计划模式】（缺 CONFIRM 脚本只输出计划，
+// 实际执行需 CONFIRM=destructive-confirm 两步确认——面板确认 UI 为后续批次）。
 import { execOpsAction } from "../lib/agent-actions";
 
 const AGENT_ACTION_BY_QA: Record<string, string> = {
@@ -184,6 +188,10 @@ const AGENT_ACTION_BY_QA: Record<string, string> = {
   qa6: "dgx-vllm-restart",
   qa3: "dgx-clean-cache",
   qa10: "dgx-node-health-probe",
+  qa2: "dgx-model-deploy",
+  qa7: "dgx-model-migrate",
+  qa8: "dgx-queue-pause",
+  qa9: "dgx-queue-resume",
 };
 
 async function runAgentMappedAction(agentActionId: string, label: string): Promise<RealActionResult> {

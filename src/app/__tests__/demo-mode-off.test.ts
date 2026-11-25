@@ -144,14 +144,25 @@ describe("useReportExporter · 演示模式关闭", () => {
 });
 
 describe("useOperationCenter · 演示模式关闭", () => {
-  it("未接动作不伪造执行、不产生日志（落档 70 后 qa2 仍为未接）", async () => {
+  it("未接动作不伪造执行、不产生日志（落档 74 后 qa12 仍为未接）", async () => {
     const { result } = renderHook(() => useOperationCenter());
-    // qa2 部署模型 = 无服务端能力的未接动作：如实拒止，不产生日志
+    // qa12 自定义脚本 = 无白名单映射的未接动作：如实拒止，不产生日志
+    await act(async () => {
+      await result.current.executeAction("qa12");
+    });
+    expect(result.current.isExecuting).toBeNull();
+    expect(result.current.logs).toEqual([]);
+  });
+
+  it("qa2 部署模型 = agent 计划模式：无令牌如实失败落日志（落档 74 已接线）", async () => {
+    const { result } = renderHook(() => useOperationCenter());
     await act(async () => {
       await result.current.executeAction("qa2");
     });
     expect(result.current.isExecuting).toBeNull();
-    expect(result.current.logs).toEqual([]);
+    expect(result.current.logs).toHaveLength(1);
+    expect(result.current.logs[0]?.status).toBe("failed");
+    expect(result.current.logs[0]?.action).toContain("未配置 agent 令牌");
   });
 
   it("已接 agent 动作真实执行：失败也如实落日志（demo 关闭不阻拦真实动作）", async () => {

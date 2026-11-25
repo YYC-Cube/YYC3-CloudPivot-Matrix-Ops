@@ -1337,6 +1337,24 @@
    "related_docs": [
     "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/72-E阶段治理第一批-Playwright冒烟入CI-覆盖率棘轮上调-20261124.md"
    ]
+  },
+  {
+   "trace_id": "TRC-20261126001",
+   "document": "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/74-DGX部署链路规划-Ollama常驻跨设备-动作参数框架-20261126.md",
+   "action": "create",
+   "timestamp": "2026-11-26T10:00:00+08:00",
+   "version": "v1.0.0",
+   "checksum": "8b86dabda7b8bceb",
+   "author": "YYC³ Team",
+   "changes": [
+    {
+     "field": "content",
+     "summary": "DGX 部署链路规划（现状实勘 Docker svl2-head/worker TP2 + 大会话护栏）+ 四新脚本起草（deploy/migrate/queue-pause/queue-resume，plan→confirm+参数白名单+sha 钉扎）+ agent 参数框架（argsSchema 校验→ACTION_ARG_* env，三态 curl 实测）+ 8 动作注册表 + Ollama launchd 常驻跨设备（0.0.0.0 三网段 200）+ yyc3-77 接入路径登记"
+    }
+   ],
+   "related_docs": [
+    "docs/20-YYC3-CP-IM-团队通用-标准规范/YYC3-项目推进-总结报告/73-D阶段第二批-告警全链路e2e-单测补齐覆盖率上调-20261124.md"
+   ]
   }
  ]
 }

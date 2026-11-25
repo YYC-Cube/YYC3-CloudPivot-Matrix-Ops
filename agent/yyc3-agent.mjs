@@ -359,6 +359,77 @@ const BUILTIN_ACTIONS = [
     target: "yyc3-n1/n2",
     risk: "high",
   },
+  {
+    id: "dgx-model-deploy",
+    name: "DGX 模型部署",
+    description: "docker 起 vLLM 服务新模型（plan→confirm 两步：缺 CONFIRM 输出执行计划）",
+    script: "/Users/yanyu/models/OPS/scripts/dgx/dgx-model-deploy.sh",
+    sha256_16: "054ead94eace05b5",
+    timeoutMs: 600_000,
+    destructive: true,
+    target: "yyc3-n1/n2",
+    risk: "high",
+    args: {
+      NODE_ALIAS: { pattern: "^yyc3-n[12]$", desc: "节点 yyc3-n1|yyc3-n2" },
+      MODEL: { pattern: "^/[A-Za-z0-9._/-]{1,120}$", required: true, desc: "模型目录绝对路径" },
+      PORT: { pattern: "^[0-9]{4,5}$", desc: "服务端口（默认 8899）" },
+      SERVED_NAME: { pattern: "^[A-Za-z0-9._-]{1,64}$", required: true, desc: "served-model-name" },
+      GPUS: { pattern: "^[0-9,]{1,20}$", desc: "GPU 编号（默认 0）" },
+      CONTAINER: { pattern: "^[A-Za-z0-9._-]{1,40}$", desc: "容器名" },
+      CONFIRM: { pattern: "^destructive-confirm$", desc: "两步确认值（缺省=plan-only）" },
+    },
+  },
+  {
+    id: "dgx-model-migrate",
+    name: "DGX 模型迁移",
+    description: "起新→等健康→停旧（drain 切换，plan→confirm 两步）",
+    script: "/Users/yanyu/models/OPS/scripts/dgx/dgx-model-migrate.sh",
+    sha256_16: "99a4d70c5a60fb83",
+    timeoutMs: 600_000,
+    destructive: true,
+    target: "yyc3-n1/n2",
+    risk: "high",
+    args: {
+      NODE_ALIAS: { pattern: "^yyc3-n[12]$", desc: "节点" },
+      OLD_CONTAINER: { pattern: "^[A-Za-z0-9._-]{1,40}$", desc: "旧容器名（默认 svl2-head）" },
+      NEW_CONTAINER: { pattern: "^[A-Za-z0-9._-]{1,40}$", desc: "新容器名" },
+      HEALTH_URL: { pattern: "^https?://[A-Za-z0-9.:_/-]{1,120}$", required: true, desc: "新容器健康 URL" },
+      CONFIRM: { pattern: "^destructive-confirm$", desc: "两步确认值（缺省=plan-only）" },
+    },
+  },
+  {
+    id: "dgx-queue-pause",
+    name: "DGX 队列暂停",
+    description: "docker pause 冻结容器（空闲护栏；plan→confirm 两步）",
+    script: "/Users/yanyu/models/OPS/scripts/dgx/dgx-queue-pause.sh",
+    sha256_16: "d3c486335067a5d5",
+    timeoutMs: 60_000,
+    destructive: true,
+    target: "yyc3-n1/n2",
+    risk: "high",
+    args: {
+      NODE_ALIAS: { pattern: "^yyc3-n[12]$", desc: "节点" },
+      CONTAINER: { pattern: "^[A-Za-z0-9._-]{1,40}$", desc: "容器名（默认 svl2-head）" },
+      METRICS_URL: { pattern: "^https?://[A-Za-z0-9.:_/-]{1,120}$", desc: "metrics URL（护栏取证）" },
+      CONFIRM: { pattern: "^destructive-confirm$", desc: "两步确认值（缺省=plan-only）" },
+    },
+  },
+  {
+    id: "dgx-queue-resume",
+    name: "DGX 队列恢复",
+    description: "docker unpause 恢复容器（plan→confirm 两步）",
+    script: "/Users/yanyu/models/OPS/scripts/dgx/dgx-queue-resume.sh",
+    sha256_16: "f945b78abef2c639",
+    timeoutMs: 60_000,
+    destructive: true,
+    target: "yyc3-n1/n2",
+    risk: "medium",
+    args: {
+      NODE_ALIAS: { pattern: "^yyc3-n[12]$", desc: "节点" },
+      CONTAINER: { pattern: "^[A-Za-z0-9._-]{1,40}$", desc: "容器名（默认 svl2-head）" },
+      CONFIRM: { pattern: "^destructive-confirm$", desc: "两步确认值（缺省=plan-only）" },
+    },
+  },
 ];
 
 function loadActionsRegistry() {
@@ -417,10 +488,31 @@ function publicAction(a) {
   };
 }
 
-function runAction(actionId) {
+/** 参数白名单校验（落档 74）：key 必须在 def.args 声明、值命中 pattern、
+ *  required 缺失即拒。通过后映射为大写 env（ACTION_ARG_<KEY>）。 */
+function validateActionArgs(action, args) {
+  const schema = action.args ?? {};
+  const clean = {};
+  for (const [key, value] of Object.entries(args ?? {})) {
+    const rule = schema[key];
+    if (!rule) { return { ok: false, error: `未知参数: ${key}` }; }
+    const v = String(value);
+    if (v.length > 128) { return { ok: false, error: `参数过长: ${key}` }; }
+    if (!new RegExp(rule.pattern).test(v)) { return { ok: false, error: `参数不合法: ${key}（${rule.desc}）` }; }
+    clean[key] = v;
+  }
+  for (const [key, rule] of Object.entries(schema)) {
+    if (rule.required && !clean[key]) { return { ok: false, error: `缺少必填参数: ${key}（${rule.desc}）` }; }
+  }
+  return { ok: true, env: clean };
+}
+
+function runAction(actionId, args) {
   return new Promise((resolve) => {
     const action = ACTIONS.actions.find((x) => x.id === actionId);
     if (!action) { resolve({ status: 404, body: { ok: false, error: "unknown action" } }); return; }
+    const checked = validateActionArgs(action, args);
+    if (!checked.ok) { resolve({ status: 400, body: { ok: false, error: checked.error } }); return; }
     if (runningActions.has(actionId)) { resolve({ status: 409, body: { ok: false, error: "action already running" } }); return; }
     if (!fs.existsSync(action.script)) {
       resolve({ status: 400, body: { ok: false, error: `script missing: ${action.script}` } });
@@ -438,9 +530,14 @@ function runAction(actionId) {
 
     runningActions.set(actionId, true);
     const startedAt = Date.now();
+    // 白名单参数 → 大写 env 注入（ACTION_ARG_<KEY>），脚本内以 ${ACTION_ARG_X:-默认} 取值
+    const argEnv = {};
+    for (const [k, v] of Object.entries(checked.env ?? {})) {
+      argEnv[`ACTION_ARG_${k.toUpperCase()}`] = v;
+    }
     const child = spawn("/bin/bash", [action.script], {
       cwd: path.dirname(action.script),
-      env: process.env,
+      env: { ...process.env, ...argEnv },
       stdio: ["ignore", "pipe", "pipe"],
     });
     let out = Buffer.alloc(0);
@@ -1003,7 +1100,10 @@ const server = http.createServer((req, res) => {
       catch { res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify({ ok: false, error: "invalid JSON" })); return; }
       const actionId = typeof body?.actionId === "string" ? body.actionId : "";
       if (!actionId) { res.writeHead(400, { "Content-Type": "application/json; charset=utf-8" }); res.end(JSON.stringify({ ok: false, error: "actionId required" })); return; }
-      void runAction(actionId).then((r) => {
+      const args = (body?.args && typeof body.args === "object" && !Array.isArray(body.args))
+        ? Object.fromEntries(Object.entries(body.args).map(([k, v]) => [k, String(v)]))
+        : {};
+      void runAction(actionId, args).then((r) => {
         res.writeHead(r.status, { "Content-Type": "application/json; charset=utf-8" });
         res.end(JSON.stringify(r.body));
       });

@@ -87,11 +87,11 @@ const DEFAULT_SOURCES: DataSourceEntry[] = [
   {
     id: "src-ollama",
     kind: "ollama",
-    label: "Ollama（本地推理）",
+    label: "Ollama（yyc3-22 常驻 · 跨设备可用）",
     url: "http://localhost:11434",
     enabled: true,
     builtin: true,
-    note: "模型发现 /api/tags；聊天走模型自身 baseUrl",
+    note: "launchd 常驻（com.yyc3.ollama，0.0.0.0:11434 · KeepAlive）——本机 http://localhost:11434，yyc3-77 等私网设备用 http://100.87.159.21:11434（TS）或 http://192.168.3.22:11434（LAN）；Ollama 无鉴权，仅限私网（数据不出本地）；模型发现 /api/tags",
     createdAt: 0,
   },
   {
@@ -181,9 +181,9 @@ export const useSourceRegistry = create<SourceRegistrySlice>()(
     }),
     {
       name: "yyc3-source-registry",
-      version: 2,
+      version: 3,
       partialize: (s) => ({ sources: s.sources }),
-      // v2：内置源条目（label/note 等说明性字段）以代码为准刷新——用户改的
+      // v3：内置源条目（label/note 等说明性字段）以代码为准刷新——用户改的
       // url/enabled/lastTest 原样保留，仅补齐新增内置源
       migrate: (persisted) => {
         const state = (persisted ?? {}) as { sources?: DataSourceEntry[] };
